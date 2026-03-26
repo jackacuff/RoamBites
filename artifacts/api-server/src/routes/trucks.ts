@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable } from "@workspace/db";
-import { eq, and, ilike, or, inArray } from "drizzle-orm";
+import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable } from "@workspace/db";
+import { eq, and, ilike, or, inArray, avg, count } from "drizzle-orm";
 import { CreateTruckBody, UpdateTruckBody, CheckInTruckBody } from "@workspace/api-zod";
 import { requireAuth, requireRole, optionalAuth } from "../lib/auth";
 import { computeTruckStatus, slugify } from "../lib/truckStatus";
@@ -109,9 +109,14 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const schedules = await db.select().from(scheduleEntriesTable).where(eq(scheduleEntriesTable.truckId, truck.id));
-  const menuItems = await db.select().from(menuItemsTable).where(eq(menuItemsTable.truckId, truck.id));
-  const eventTrucks = await db.select().from(eventTrucksTable).where(eq(eventTrucksTable.truckId, truck.id));
+  const [schedules, menuItems, eventTrucks, reviewStats] = await Promise.all([
+    db.select().from(scheduleEntriesTable).where(eq(scheduleEntriesTable.truckId, truck.id)),
+    db.select().from(menuItemsTable).where(eq(menuItemsTable.truckId, truck.id)),
+    db.select().from(eventTrucksTable).where(eq(eventTrucksTable.truckId, truck.id)),
+    db.select({ avgRating: avg(reviewsTable.rating), total: count(reviewsTable.id) })
+      .from(reviewsTable).where(eq(reviewsTable.truckId, truck.id)),
+  ]);
+
   const eventIds = eventTrucks.map((et) => et.eventId);
   let truckEvents: any[] = [];
   if (eventIds.length > 0) {
@@ -131,6 +136,8 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
   }
 
   const { status, activeSchedule, currentLocation, currentCity } = computeTruckStatus(schedules, truck.isLive);
+  const avgRating = reviewStats[0]?.avgRating ? parseFloat(reviewStats[0].avgRating as string) : null;
+  const reviewCount = Number(reviewStats[0]?.total ?? 0);
 
   res.json({
     id: truck.id,
@@ -143,9 +150,16 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
     website: truck.website,
     isApproved: truck.isApproved,
     isLive: truck.isLive,
+    isOpenForReservations: truck.isOpenForReservations,
+    reservationEmail: truck.reservationEmail,
+    reservationPhone: truck.reservationPhone,
+    reservationContactPreference: truck.reservationContactPreference,
+    reservationNotes: truck.reservationNotes,
     status,
     currentLocation,
     currentCity,
+    avgRating,
+    reviewCount,
     vendorUserId: truck.vendorUserId,
     createdAt: truck.createdAt,
     menuItems,
@@ -217,12 +231,18 @@ router.put("/trucks/:id", requireRole("vendor", "admin"), async (req, res): Prom
 
   const updateData: any = {};
   const body = parsed.data;
+  const rawBody = req.body;
   if (body.name !== undefined && body.name !== null) updateData.name = body.name;
   if (body.cuisine !== undefined && body.cuisine !== null) updateData.cuisine = body.cuisine;
   if (body.description !== undefined) updateData.description = body.description;
   if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
   if (body.phone !== undefined) updateData.phone = body.phone;
   if (body.website !== undefined) updateData.website = body.website;
+  if (rawBody.isOpenForReservations !== undefined) updateData.isOpenForReservations = !!rawBody.isOpenForReservations;
+  if (rawBody.reservationEmail !== undefined) updateData.reservationEmail = rawBody.reservationEmail || null;
+  if (rawBody.reservationPhone !== undefined) updateData.reservationPhone = rawBody.reservationPhone || null;
+  if (rawBody.reservationContactPreference !== undefined) updateData.reservationContactPreference = rawBody.reservationContactPreference || "email";
+  if (rawBody.reservationNotes !== undefined) updateData.reservationNotes = rawBody.reservationNotes || null;
 
   const [updated] = await db.update(trucksTable).set(updateData).where(eq(trucksTable.id, id)).returning();
   const schedules = await db.select().from(scheduleEntriesTable).where(eq(scheduleEntriesTable.truckId, id));
