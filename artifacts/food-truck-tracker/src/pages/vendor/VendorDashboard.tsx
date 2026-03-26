@@ -5,15 +5,28 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus } from "lucide-react";
+import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getApiUrl, authHeaders } from "@/lib/api";
+import { format } from "date-fns";
 
 export default function VendorDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [resLoading, setResLoading] = useState(true);
 
   const { data: trucks, isLoading } = useListTrucks();
   const myTruck = trucks?.find(t => t.vendorUserId === user?.id);
+
+  useEffect(() => {
+    fetch(getApiUrl("/api/vendor/reservations"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setReservations(data); })
+      .catch(() => {})
+      .finally(() => setResLoading(false));
+  }, []);
 
   const checkInMutation = useCheckInTruck();
   const checkOutMutation = useCheckOutTruck();
@@ -139,6 +152,47 @@ export default function VendorDashboard() {
                 title="Event Invitations"
                 description="View and respond to event invites"
               />
+            </div>
+
+            {/* Booking Requests */}
+            <div className="mt-8">
+              <h2 className="text-xl font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-primary" />
+                Booking Requests
+                {reservations.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-bold">{reservations.length}</span>
+                )}
+              </h2>
+              {resLoading ? (
+                <div className="p-6 bg-muted rounded-2xl text-center text-muted-foreground text-sm">Loading...</div>
+              ) : reservations.length === 0 ? (
+                <div className="p-6 bg-muted/40 rounded-2xl border border-dashed border-border text-center text-muted-foreground text-sm">
+                  No booking requests yet. Enable reservations in your Truck Profile to start receiving them.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reservations.map(r => (
+                    <div key={r.id} className="p-5 rounded-2xl bg-card border border-border shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
+                        <div>
+                          <p className="font-bold text-foreground text-lg">{r.name}</p>
+                          <p className="text-sm text-muted-foreground">{r.truckName}</p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold whitespace-nowrap">
+                          {r.eventDate}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mb-3">
+                        <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{r.email}</span>
+                        {r.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{r.phone}</span>}
+                        <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{r.eventLocation}</span>
+                      </div>
+                      <p className="text-sm text-foreground bg-muted/50 rounded-xl p-3">{r.message}</p>
+                      <p className="text-xs text-muted-foreground mt-2">Received {format(new Date(r.createdAt), "MMM d, yyyy 'at' h:mm a")}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Quick stats */}

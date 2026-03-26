@@ -1,13 +1,25 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { UtensilsCrossed, Menu, X, LogOut, User } from "lucide-react";
-import { useState } from "react";
+import { UtensilsCrossed, Menu, X, LogOut, User, Heart, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -17,9 +29,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const getDashboardLink = () => {
     if (!user) return null;
-    if (user.role === 'vendor') return "/vendor";
-    if (user.role === 'organizer') return "/organizer";
-    if (user.role === 'admin') return "/admin";
+    if (user.role === "vendor") return { href: "/vendor", label: "Vendor Dashboard" };
+    if (user.role === "organizer") return { href: "/organizer", label: "Organizer Dashboard" };
+    if (user.role === "admin") return { href: "/admin", label: "Admin Panel" };
     return null;
   };
 
@@ -31,22 +43,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href="/" className="flex items-center gap-2.5 group">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
                 <UtensilsCrossed className="w-5 h-5" />
               </div>
               <span className="font-display font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                OK Food Trucks
+                RoamBites
               </span>
             </Link>
 
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-8">
               {navLinks.map((link) => (
-                <Link 
-                  key={link.path} 
+                <Link
+                  key={link.path}
                   href={link.path}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${location === link.path ? 'text-primary' : 'text-muted-foreground'}`}
+                  className={`text-sm font-medium transition-colors hover:text-primary ${location === link.path ? "text-primary" : "text-muted-foreground"}`}
                 >
                   {link.name}
                 </Link>
@@ -54,24 +66,83 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </nav>
 
             {/* Auth Actions */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3">
               {isAuthenticated ? (
-                <div className="flex items-center gap-4">
-                  {dashboardLink && (
-                    <Link 
-                      href={dashboardLink}
-                      className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+                <div className="flex items-center gap-3" ref={profileRef}>
+                  {user?.role === "customer" && (
+                    <Link
+                      href="/favorites"
+                      className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+                      title="My Favorites"
                     >
-                      Dashboard
+                      <Heart className="w-5 h-5" />
                     </Link>
                   )}
-                  <button 
-                    onClick={() => logout()}
-                    className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
-                    title="Log out"
-                  >
-                    <LogOut className="w-5 h-5" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setProfileOpen(!profileOpen)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted text-sm font-medium transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary" />
+                      </div>
+                      <span className="text-foreground">{user?.name?.split(" ")[0]}</span>
+                      <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${profileOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    <AnimatePresence>
+                      {profileOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute right-0 top-full mt-2 w-52 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50"
+                        >
+                          <div className="px-4 py-3 border-b border-border">
+                            <p className="text-sm font-semibold text-foreground truncate">{user?.name}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                          </div>
+                          <div className="py-1">
+                            <Link
+                              href="/profile"
+                              onClick={() => setProfileOpen(false)}
+                              className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                            >
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              My Profile
+                            </Link>
+                            {user?.role === "customer" && (
+                              <Link
+                                href="/favorites"
+                                onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                              >
+                                <Heart className="w-4 h-4 text-muted-foreground" />
+                                My Favorites
+                              </Link>
+                            )}
+                            {dashboardLink && (
+                              <Link
+                                href={dashboardLink.href}
+                                onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                              >
+                                <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                                {dashboardLink.label}
+                              </Link>
+                            )}
+                            <button
+                              onClick={() => { logout(); setProfileOpen(false); }}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors"
+                            >
+                              <LogOut className="w-4 h-4" />
+                              Log out
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -86,7 +157,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Mobile Menu Toggle */}
-            <button 
+            <button
               className="md:hidden p-2 text-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -99,7 +170,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -107,11 +178,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             <div className="px-4 pt-2 pb-6 space-y-1">
               {navLinks.map((link) => (
-                <Link 
-                  key={link.path} 
+                <Link
+                  key={link.path}
                   href={link.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`block px-3 py-3 rounded-xl text-base font-medium ${location === link.path ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}`}
+                  className={`block px-3 py-3 rounded-xl text-base font-medium ${location === link.path ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"}`}
                 >
                   {link.name}
                 </Link>
@@ -119,18 +190,38 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="border-t border-border my-2 pt-2">
                 {isAuthenticated ? (
                   <>
+                    <div className="px-3 py-2 mb-1">
+                      <p className="text-sm font-semibold text-foreground">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-3 rounded-xl text-base font-medium text-foreground hover:bg-muted"
+                    >
+                      My Profile
+                    </Link>
+                    {user?.role === "customer" && (
+                      <Link
+                        href="/favorites"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-3 rounded-xl text-base font-medium text-foreground hover:bg-muted"
+                      >
+                        My Favorites
+                      </Link>
+                    )}
                     {dashboardLink && (
-                      <Link 
-                        href={dashboardLink}
+                      <Link
+                        href={dashboardLink.href}
                         onClick={() => setMobileMenuOpen(false)}
                         className="block px-3 py-3 rounded-xl text-base font-medium text-primary hover:bg-primary/10"
                       >
-                        Dashboard
+                        {dashboardLink.label}
                       </Link>
                     )}
-                    <button 
+                    <button
                       onClick={() => { logout(); setMobileMenuOpen(false); }}
-                      className="w-full text-left px-3 py-3 rounded-xl text-base font-medium text-muted-foreground hover:bg-muted"
+                      className="w-full text-left px-3 py-3 rounded-xl text-base font-medium text-destructive hover:bg-destructive/5"
                     >
                       Log out
                     </button>
@@ -157,12 +248,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <footer className="bg-card border-t border-border py-12 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-muted-foreground">
-          <div className="flex justify-center items-center gap-2 mb-4 opacity-50">
-            <UtensilsCrossed className="w-6 h-6" />
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white opacity-70">
+              <UtensilsCrossed className="w-4 h-4" />
+            </div>
           </div>
-          <p className="font-display font-medium text-foreground mb-2">Central Oklahoma Food Truck Tracker</p>
-          <p className="text-sm">Find your flavor across the Sooner State.</p>
-          <p className="text-xs mt-8 opacity-50">&copy; {new Date().getFullYear()} OK Food Trucks. All rights reserved.</p>
+          <p className="font-display font-bold text-foreground mb-1">RoamBites</p>
+          <p className="text-sm">Find your flavor, wherever you roam.</p>
+          <p className="text-xs mt-8 opacity-50">&copy; {new Date().getFullYear()} RoamBites. All rights reserved.</p>
         </div>
       </footer>
     </div>

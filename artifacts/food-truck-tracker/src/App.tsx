@@ -25,6 +25,8 @@ import OrganizerManageEvent from "./pages/organizer/OrganizerManageEvent";
 import OrganizerEditEvent from "./pages/organizer/OrganizerEditEvent";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import Favorites from "./pages/Favorites";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +61,8 @@ function Router() {
       <Route path="/organizer/events/:id/edit" component={OrganizerEditEvent} />
 
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/favorites" component={Favorites} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );

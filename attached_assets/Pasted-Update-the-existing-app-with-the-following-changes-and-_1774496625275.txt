@@ -1,0 +1,324 @@
+Update the existing app with the following changes and additions:
+
+APP NAME CHANGE
+Rename the application to:
+RoamBites
+
+Update:
+- App title
+- Navbar branding
+- Page titles
+- Any references to the previous name
+
+Tagline:
+Find food trucks near you. Follow favorites. Plan better events.
+
+CORE PRODUCT CHANGE
+The app must NOT require login for basic usage.
+
+Ensure that:
+- Users can browse trucks without logging in
+- Users can view truck details, schedules, and events without logging in
+- Login is ONLY required for enhanced features
+
+-----------------------------------
+CUSTOMER ACCOUNT SYSTEM
+-----------------------------------
+
+Add optional customer accounts with the following capabilities:
+
+Users can:
+- Sign up
+- Log in
+- Log out
+- View a basic profile page
+
+Do NOT block the main app behind login.
+
+-----------------------------------
+FAVORITES SYSTEM
+-----------------------------------
+
+Add ability for users to favorite food trucks.
+
+Requirements:
+- Add heart icon on each truck card and truck detail page
+- Logged in users:
+  - Favorites saved to database
+- Non-logged in users:
+  - Favorites saved in browser localStorage
+  - Show message prompting account creation for permanent saving
+
+Add a "My Favorites" page:
+- Displays all favorited trucks
+- Works for logged in users (database)
+- Works for guest users (local storage)
+
+-----------------------------------
+REVIEWS SYSTEM
+-----------------------------------
+
+Allow users to leave reviews on food trucks.
+
+Each review should include:
+- Rating (1 to 5 stars)
+- Short text comment
+- Created date
+
+On truck detail page:
+- Show average rating
+- Show total number of reviews
+- Show list of reviews
+
+Only logged in users can:
+- Submit reviews
+- Edit their own reviews
+- Delete their own reviews
+
+-----------------------------------
+NOTIFICATIONS SYSTEM (MVP STRUCTURE)
+-----------------------------------
+
+Add notification preferences without building full push notifications.
+
+Users can:
+- Toggle:
+  - Notify me when this truck is open
+  - Notify me when this truck is nearby
+
+Store preferences in database.
+
+Do NOT implement actual push notifications yet.
+
+-----------------------------------
+USER PROFILE PAGE
+-----------------------------------
+
+Create a profile page for logged in users that shows:
+- User info (name, email)
+- List of favorite trucks
+- List of reviews written
+- Notification preferences
+
+-----------------------------------
+RESERVATION / BOOKING FEATURE
+-----------------------------------
+
+Add a reservation inquiry feature for food trucks.
+
+VENDOR SIDE:
+
+On the vendor truck profile settings page, add:
+
+- Toggle:
+  "Open for Reservations"
+
+When enabled, allow vendor to set:
+- Contact Email
+- Contact Phone
+- Preferred Contact Method (email, phone, both)
+- Booking Notes (e.g. "Available for weddings, corporate events, minimum 50 people")
+
+If not provided, default contact email to vendor account email.
+
+Add to Truck model:
+- isOpenForReservations (boolean)
+- reservationEmail (string, nullable)
+- reservationPhone (string, nullable)
+- reservationContactPreference (enum: email, phone, both)
+- reservationNotes (text, nullable)
+
+-----------------------------------
+CUSTOMER BOOKING EXPERIENCE
+-----------------------------------
+
+On Truck Detail Page:
+
+If isOpenForReservations = true:
+
+Display a section:
+"Book This Truck"
+
+Include:
+- Badge: "Available for Reservations"
+- Vendor booking notes
+- Contact options
+
+CONTACT OPTIONS:
+
+1. Direct Contact:
+- Email button (mailto link)
+- Phone button (tel link if available)
+
+2. Booking Request Form:
+
+Fields:
+- Name
+- Email
+- Phone (optional)
+- Event Date
+- Event Location
+- Message
+
+Button:
+"Send Booking Request"
+
+-----------------------------------
+RESERVATION BACKEND
+-----------------------------------
+
+Create model:
+
+ReservationRequest
+- id
+- truckId
+- name
+- email
+- phone
+- eventDate
+- eventLocation
+- message
+- createdAt
+
+Create endpoint:
+
+POST /api/reservations
+
+On submit:
+- Save to database
+- Optionally log to console
+- Optionally send email if easy (not required)
+
+-----------------------------------
+VENDOR DASHBOARD ADDITION
+-----------------------------------
+
+Add section:
+"Booking Requests"
+
+Display list of:
+- Name
+- Event date
+- Location
+- Message
+- Contact info
+
+No status workflow needed yet (keep MVP simple)
+
+-----------------------------------
+DATA MODEL ADDITIONS
+-----------------------------------
+
+Review
+- id
+- userId
+- truckId
+- rating
+- comment
+- createdAt
+
+Favorite
+- id
+- userId
+- truckId
+
+NotificationPreference
+- id
+- userId
+- truckId
+- notifyWhenOpen
+- notifyWhenNearby
+
+Update Truck model to support:
+- reservation fields above
+- rating (derived)
+- review count (derived)
+
+-----------------------------------
+API ENDPOINTS
+-----------------------------------
+
+Reviews:
+- POST /api/reviews
+- PUT /api/reviews/:id
+- DELETE /api/reviews/:id
+- GET /api/trucks/:id/reviews
+
+Favorites:
+- POST /api/favorites
+- DELETE /api/favorites/:truckId
+- GET /api/favorites
+
+Notifications:
+- POST /api/notifications
+- GET /api/notifications
+
+Reservations:
+- POST /api/reservations
+
+-----------------------------------
+FRONTEND UI UPDATES
+-----------------------------------
+
+Truck Cards:
+- Add favorite (heart)
+- Show rating if exists
+
+Truck Detail Page:
+- Rating display
+- Review list
+- Review form (logged in only)
+- Favorite button
+- Notification toggles
+- Reservation section if enabled
+
+Navbar:
+- Login/signup (logged out)
+- Profile dropdown (logged in)
+
+Profile Page:
+- Favorites
+- Reviews
+- Notifications
+
+-----------------------------------
+UX REQUIREMENTS
+-----------------------------------
+
+If user favorites while not logged in:
+- Save locally
+- Show message:
+  "Create a free account to save your favorites across devices"
+
+If user tries to leave a review while not logged in:
+- Prompt login/signup
+
+Reservation requests:
+- Do NOT require login
+- Keep friction low
+
+Forms:
+- Validate inputs
+- Show success message:
+  "Your request has been sent to the vendor"
+
+-----------------------------------
+IMPORTANT
+-----------------------------------
+
+- Do NOT break existing functionality
+- Keep vendor, organizer, and admin dashboards working
+- Keep seeded demo data
+- Ensure app still runs immediately
+- Maintain responsive design
+- Keep UI polished
+
+-----------------------------------
+FINAL OUTPUT REQUIRED
+-----------------------------------
+
+After implementing, provide:
+1. Summary of changes made
+2. New database models
+3. New API endpoints
+4. Any new demo data

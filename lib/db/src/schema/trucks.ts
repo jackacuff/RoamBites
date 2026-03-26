@@ -14,6 +14,11 @@ export const trucksTable = pgTable("trucks", {
   website: text("website"),
   isApproved: boolean("is_approved").notNull().default(false),
   isLive: boolean("is_live").notNull().default(false),
+  isOpenForReservations: boolean("is_open_for_reservations").notNull().default(false),
+  reservationEmail: text("reservation_email"),
+  reservationPhone: text("reservation_phone"),
+  reservationContactPreference: text("reservation_contact_preference").default("email"),
+  reservationNotes: text("reservation_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

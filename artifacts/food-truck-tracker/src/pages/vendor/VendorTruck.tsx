@@ -7,6 +7,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { CalendarCheck } from "lucide-react";
 
 export default function VendorTruck() {
   const { user } = useAuth();
@@ -19,9 +20,22 @@ export default function VendorTruck() {
   const createMutation = useCreateTruck();
   const updateMutation = useUpdateTruck();
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
-    defaultValues: { name: "", cuisine: "", description: "" }
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      name: "",
+      cuisine: "",
+      description: "",
+      phone: "",
+      website: "",
+      isOpenForReservations: false,
+      reservationEmail: "",
+      reservationPhone: "",
+      reservationContactPreference: "email",
+      reservationNotes: "",
+    }
   });
+
+  const isOpenForReservations = watch("isOpenForReservations");
 
   useEffect(() => {
     if (myTruck) {
@@ -29,6 +43,13 @@ export default function VendorTruck() {
         name: myTruck.name,
         cuisine: myTruck.cuisine,
         description: myTruck.description ?? "",
+        phone: (myTruck as any).phone ?? "",
+        website: (myTruck as any).website ?? "",
+        isOpenForReservations: (myTruck as any).isOpenForReservations ?? false,
+        reservationEmail: (myTruck as any).reservationEmail ?? "",
+        reservationPhone: (myTruck as any).reservationPhone ?? "",
+        reservationContactPreference: (myTruck as any).reservationContactPreference ?? "email",
+        reservationNotes: (myTruck as any).reservationNotes ?? "",
       });
     }
   }, [myTruck, reset]);
@@ -93,6 +114,65 @@ export default function VendorTruck() {
               className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground resize-none"
               placeholder="Tell customers about your food truck..."
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+            <input
+              {...register("phone")}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+              placeholder="+1 (405) 555-0100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Website</label>
+            <input
+              {...register("website")}
+              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+              placeholder="https://yoursite.com"
+            />
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarCheck className="w-5 h-5 text-primary" />
+              <h3 className="font-semibold text-foreground">Reservation Settings</h3>
+            </div>
+            <label className="flex items-center gap-3 cursor-pointer mb-4">
+              <input type="checkbox" {...register("isOpenForReservations")} className="w-4 h-4 accent-primary" />
+              <span className="text-sm text-foreground font-medium">Accept booking / reservation requests</span>
+            </label>
+            {isOpenForReservations && (
+              <div className="space-y-3 pl-7">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Contact Email for Requests</label>
+                  <input
+                    {...register("reservationEmail")}
+                    type="email"
+                    className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                    placeholder="bookings@yourtruckname.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Contact Phone for Requests</label>
+                  <input
+                    {...register("reservationPhone")}
+                    className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                    placeholder="+1 (405) 555-0100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Notes for Customers</label>
+                  <textarea
+                    {...register("reservationNotes")}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground resize-none"
+                    placeholder="e.g. Minimum 50 guests, available on weekends only..."
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <button
