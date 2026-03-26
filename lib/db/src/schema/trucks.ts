@@ -14,6 +14,8 @@ export const trucksTable = pgTable("trucks", {
   website: text("website"),
   isApproved: boolean("is_approved").notNull().default(false),
   isLive: boolean("is_live").notNull().default(false),
+  logoUrl: text("logo_url"),
+  coverImageUrl: text("cover_image_url"),
   isOpenForReservations: boolean("is_open_for_reservations").notNull().default(false),
   reservationEmail: text("reservation_email"),
   reservationPhone: text("reservation_phone"),

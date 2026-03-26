@@ -1,0 +1,225 @@
+Add vendor branding and media upload features so food trucks can better present themselves inside the app.
+
+GOAL
+Give each food truck a stronger branded presence by allowing vendors to upload:
+- logo
+- truck photos
+- menu photos or menu files
+- featured cover image
+
+This should improve the public truck detail page and make vendor profiles feel more professional and marketable.
+
+CORE REQUIREMENTS
+
+Add media management to the vendor dashboard so a vendor can upload and manage their truck branding assets.
+
+VENDOR MEDIA FEATURES
+
+On the vendor dashboard, add a new section or navigation item:
+- Branding & Media
+
+In this section, vendors should be able to:
+
+1. Upload a logo
+2. Upload a cover image / hero image for their truck page
+3. Upload multiple truck/gallery photos
+4. Upload menu images
+5. Optionally upload a PDF menu file
+6. Reorder gallery images if practical
+7. Delete uploaded media
+8. Choose one image as the featured image for public display
+
+Keep the MVP practical:
+- If drag and drop sorting is too much, allow simple position ordering or “set as featured”
+- Focus on reliability and clean presentation
+
+TRUCK MODEL / MEDIA DATA MODEL
+
+Add support for branded media.
+
+Option A: Add a separate TruckMedia table
+Preferred structure:
+
+TruckMedia
+- id
+- truckId
+- type (logo, cover, gallery, menu_image, menu_pdf)
+- url
+- fileName
+- altText (nullable)
+- sortOrder (integer, nullable)
+- createdAt
+
+Keep Truck table capable of referencing primary branded assets if useful:
+- logoUrl
+- coverImageUrl
+
+If your current schema is simpler, use the best practical structure, but make sure the app can support multiple media files per truck.
+
+UPLOAD STORAGE
+
+Use the easiest Replit-friendly approach.
+For MVP:
+- local uploads folder is acceptable
+- or another simple file storage method if easier
+
+Requirements:
+- uploaded files must persist during app runtime
+- file paths should save to database
+- validate file type and size
+- prevent broken uploads
+
+ACCEPTED FILE TYPES
+
+Logo / images:
+- jpg
+- jpeg
+- png
+- webp
+
+Menu files:
+- pdf
+- jpg
+- jpeg
+- png
+- webp
+
+Add file size limits.
+Reasonable MVP limits:
+- images: 5MB each
+- PDFs: 10MB each
+
+VENDOR UI REQUIREMENTS
+
+In the Branding & Media section, include:
+
+1. Logo Upload
+- Upload one logo
+- Show current logo preview
+- Replace existing logo if new one uploaded
+
+2. Cover Image Upload
+- Upload one main cover image
+- Show preview
+- Replace existing cover image if new one uploaded
+
+3. Gallery Upload
+- Upload multiple truck photos
+- Display thumbnails in a grid
+- Allow delete
+- Allow set as featured image
+
+4. Menu Upload
+Two supported options:
+- Structured menu items already in app remain available
+- Also allow vendors to upload menu images or a menu PDF
+
+Display both options cleanly.
+This allows vendors to either:
+- build a structured digital menu
+- or simply upload their existing menu graphic/PDF
+
+PUBLIC TRUCK DETAIL PAGE UPDATES
+
+Upgrade the public truck detail page so trucks can better brand themselves.
+
+Display:
+- logo near truck name or header
+- cover image / hero image at top of page
+- gallery carousel or image grid
+- menu images or downloadable PDF menu if uploaded
+- structured menu items if they exist
+- better branded layout overall
+
+If both structured menu items and menu uploads exist:
+- show structured menu first
+- then show “Photo Menu” or “Menu File” section below
+
+PUBLIC UI GOAL
+
+The truck detail page should feel like a mini branded storefront, not just a plain listing.
+
+It should help a customer quickly understand:
+- what the truck looks like
+- what food they serve
+- how professional they are
+- whether they want to visit or book them
+
+API REQUIREMENTS
+
+Add endpoints for media upload and management, such as:
+
+- POST /api/trucks/:id/media/upload
+- GET /api/trucks/:id/media
+- DELETE /api/trucks/:id/media/:mediaId
+- PUT /api/trucks/:id/media/:mediaId
+
+If easier, split by purpose:
+- POST /api/trucks/:id/logo
+- POST /api/trucks/:id/cover
+- POST /api/trucks/:id/gallery
+- POST /api/trucks/:id/menu-media
+
+Use whichever structure fits the project best, but keep it organized.
+
+AUTHORIZATION
+
+Only the vendor who owns the truck or an admin can:
+- upload media
+- delete media
+- change featured image
+- replace logo or cover image
+
+Guests and customers can only view public media.
+
+FORM VALIDATION AND UX
+
+For uploads:
+- validate file type
+- validate file size
+- show upload success message
+- show upload failure message
+- show loading state while uploading
+
+For image management:
+- show thumbnail previews
+- clear labels for each media type
+- easy delete action
+- simple, polished UI
+
+ACCESSIBILITY / QUALITY
+
+Add alt text support if practical.
+If not, at least generate a basic fallback alt label from truck name + media type.
+
+SEED / FALLBACK CONTENT
+
+If no uploaded media exists for a truck:
+- show a clean placeholder logo/image
+- do not let the page look broken or empty
+
+IMPORTANT
+
+Do NOT remove the existing structured menu functionality.
+This new feature is meant to enhance branding, not replace the current menu setup.
+
+Do NOT break existing truck detail pages, dashboards, auth, or seeded data.
+
+Keep everything responsive and mobile friendly.
+
+DESIGN NOTES
+
+Make the truck page feel more premium by using:
+- hero image
+- branded logo placement
+- gallery section
+- menu photo section
+- strong spacing and card design
+
+FINAL OUTPUT REQUIRED
+
+After implementing, provide:
+1. Summary of branding/media upload features added
+2. New database models or schema changes
+3. New API endpoints
+4. Any setup notes for file uploads in Replit

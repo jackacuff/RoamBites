@@ -71,7 +71,18 @@ export default function TruckDetail() {
   const [resSuccess, setResSuccess] = useState(false);
   const [resError, setResError] = useState("");
 
+  const [media, setMedia] = useState<any[]>([]);
+  const [galleryIdx, setGalleryIdx] = useState(0);
+
   const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    if (!numId) return;
+    fetch(getApiUrl(`/api/trucks/${numId}/media`))
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setMedia(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, [numId]);
 
   useEffect(() => {
     if (!numId) return;
@@ -210,29 +221,41 @@ export default function TruckDetail() {
   return (
     <Layout>
       {/* Hero Header */}
-      <div className="relative h-[40vh] md:h-[50vh] bg-muted w-full overflow-hidden">
-        <img src={truck.imageUrl || fallbackImg} alt={truck.name} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        <div className="absolute bottom-0 w-full">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-            <button onClick={() => window.history.back()} className="inline-flex items-center text-white/80 hover:text-white mb-4 transition-colors">
-              <ChevronLeft className="w-5 h-5 mr-1" /> Back
-            </button>
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div>
-                <div className="flex flex-wrap items-center gap-3 mb-3">
-                  <span className="px-3 py-1 bg-primary text-primary-foreground text-sm font-bold rounded-full uppercase tracking-wider">{truck.cuisine}</span>
-                  <StatusBadge status={truck.status} isLive={truck.isLive} className="shadow-lg border-none" />
-                  {avgRating !== null && (
-                    <span className="flex items-center gap-1 px-3 py-1 bg-amber-500/90 text-white text-sm font-bold rounded-full">
-                      <Star className="w-3.5 h-3.5 fill-white" />
-                      {avgRating.toFixed(1)}
-                      <span className="font-normal opacity-80">({reviewTotal})</span>
-                    </span>
+      {(() => {
+        const coverMedia = media.find(m => m.type === "cover");
+        const logoMedia = media.find(m => m.type === "logo");
+        const heroSrc = coverMedia?.url || (truck as any).coverImageUrl || truck.imageUrl || fallbackImg;
+        return (
+        <div className="relative h-[40vh] md:h-[50vh] bg-muted w-full overflow-hidden">
+          <img src={heroSrc} alt={truck.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+          <div className="absolute bottom-0 w-full">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+              <button onClick={() => window.history.back()} className="inline-flex items-center text-white/80 hover:text-white mb-4 transition-colors">
+                <ChevronLeft className="w-5 h-5 mr-1" /> Back
+              </button>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div className="flex items-end gap-4">
+                  {logoMedia && (
+                    <div className="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 border-white/30 bg-white/10 backdrop-blur-sm shadow-lg">
+                      <img src={logoMedia.url} alt={`${truck.name} logo`} className="w-full h-full object-contain" />
+                    </div>
                   )}
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                      <span className="px-3 py-1 bg-primary text-primary-foreground text-sm font-bold rounded-full uppercase tracking-wider">{truck.cuisine}</span>
+                      <StatusBadge status={truck.status} isLive={truck.isLive} className="shadow-lg border-none" />
+                      {avgRating !== null && (
+                        <span className="flex items-center gap-1 px-3 py-1 bg-amber-500/90 text-white text-sm font-bold rounded-full">
+                          <Star className="w-3.5 h-3.5 fill-white" />
+                          {avgRating.toFixed(1)}
+                          <span className="font-normal opacity-80">({reviewTotal})</span>
+                        </span>
+                      )}
+                    </div>
+                    <h1 className="text-4xl md:text-6xl font-display font-extrabold text-white tracking-tight drop-shadow-md">{truck.name}</h1>
+                  </div>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-display font-extrabold text-white tracking-tight drop-shadow-md">{truck.name}</h1>
-              </div>
               {isAuthenticated && (
                 <button
                   onClick={toggleFavorite}
@@ -247,6 +270,8 @@ export default function TruckDetail() {
           </div>
         </div>
       </div>
+      );
+      })()}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -272,6 +297,30 @@ export default function TruckDetail() {
                 )}
               </div>
             </section>
+
+            {/* Photo Gallery */}
+            {(() => {
+              const gallery = media.filter(m => m.type === "gallery");
+              if (gallery.length === 0) return null;
+              return (
+                <section>
+                  <h2 className="text-2xl font-display font-bold text-foreground mb-4">Photos</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {gallery.map((m, i) => (
+                      <button key={m.id} type="button" onClick={() => setGalleryIdx(i)}
+                        className={`rounded-xl overflow-hidden border-2 transition ${galleryIdx === i ? "border-primary" : "border-transparent hover:border-primary/40"} aspect-square`}>
+                        <img src={m.url} alt={m.altText || `Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                  {gallery.length > 0 && (
+                    <div className="mt-4 rounded-2xl overflow-hidden border border-border shadow-sm aspect-video">
+                      <img src={gallery[galleryIdx]?.url} alt={gallery[galleryIdx]?.altText || "Selected photo"} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                </section>
+              );
+            })()}
 
             {/* Notifications (logged in only) */}
             {isAuthenticated && (

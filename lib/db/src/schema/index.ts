@@ -8,3 +8,4 @@ export * from "./reviews";
 export * from "./favorites";
 export * from "./notificationPreferences";
 export * from "./reservationRequests";
+export * from "./truckMedia";
