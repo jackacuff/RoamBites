@@ -18,6 +18,7 @@ import VendorTruck from "./pages/vendor/VendorTruck";
 import VendorMenu from "./pages/vendor/VendorMenu";
 import VendorSchedule from "./pages/vendor/VendorSchedule";
 import VendorEvents from "./pages/vendor/VendorEvents";
+import VendorBranding from "./pages/vendor/VendorBranding";
 
 import OrganizerDashboard from "./pages/organizer/OrganizerDashboard";
 import OrganizerNewEvent from "./pages/organizer/OrganizerNewEvent";
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/vendor/menu" component={VendorMenu} />
       <Route path="/vendor/schedule" component={VendorSchedule} />
       <Route path="/vendor/events" component={VendorEvents} />
+      <Route path="/vendor/branding" component={VendorBranding} />
 
       <Route path="/organizer" component={OrganizerDashboard} />
       <Route path="/organizer/events/new" component={OrganizerNewEvent} />

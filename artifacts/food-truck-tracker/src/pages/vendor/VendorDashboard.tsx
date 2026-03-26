@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin } from "lucide-react";
+import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
@@ -151,6 +151,12 @@ export default function VendorDashboard() {
                 icon={<CalendarCheck className="w-6 h-6" />}
                 title="Event Invitations"
                 description="View and respond to event invites"
+              />
+              <NavCard
+                href="/vendor/branding"
+                icon={<Palette className="w-6 h-6" />}
+                title="Branding &amp; Media"
+                description="Upload logo, cover photo, gallery, and menu"
               />
             </div>
 

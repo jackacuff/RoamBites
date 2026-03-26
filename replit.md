@@ -105,7 +105,7 @@ React + Vite frontend — Central Oklahoma Food Truck Tracker.
   - `/` Home, `/trucks` list, `/trucks/:id` detail
   - `/events` list, `/events/:id` detail (with embedded Leaflet map)
   - `/login`, `/signup`
-  - `/vendor` dashboard, `/vendor/truck`, `/vendor/menu`, `/vendor/schedule`, `/vendor/events`
+  - `/vendor` dashboard, `/vendor/truck`, `/vendor/menu`, `/vendor/schedule`, `/vendor/events`, `/vendor/branding`
   - `/organizer` dashboard, `/organizer/events/new`, `/organizer/events/:id/manage`, `/organizer/events/:id/edit`
   - `/admin` admin panel
 - **Maps**: `react-leaflet` + OpenStreetMap tiles. `MapView` component shows truck locations. Leaflet marker icon fix applied.
@@ -114,6 +114,25 @@ React + Vite frontend — Central Oklahoma Food Truck Tracker.
 
 ## Database Schema
 
-Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`
+Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`
 
+Truck fields include `logoUrl`, `coverImageUrl` (updated automatically when media is attached).
 Truck status logic (open/closing_soon/opening_later/closed) computed in `artifacts/api-server/src/lib/truckStatus.ts`.
+
+## Object Storage (Media Uploads)
+
+Replit Object Storage provisioned. Env vars: `DEFAULT_OBJECT_STORAGE_BUCKET_ID`, `PUBLIC_OBJECT_SEARCH_PATHS`, `PRIVATE_OBJECT_DIR`.
+
+Upload flow (2-step, no Uppy):
+1. `POST /api/storage/uploads/request-url` with `{name, size, contentType}` → returns `{uploadURL, objectPath}`
+2. `PUT uploadURL` with the file binary (direct to GCS)
+3. Save `objectPath` via `POST /api/trucks/:id/media`
+
+Media API routes:
+- `GET /api/trucks/:id/media` — list all media for a truck
+- `POST /api/trucks/:id/media` — attach uploaded media (vendor/admin only)
+- `PUT /api/trucks/:id/media/:mediaId` — update altText/sortOrder
+- `DELETE /api/trucks/:id/media/:mediaId` — remove media
+- `POST /api/trucks/:id/media/:mediaId/set-featured` — set as the truck card thumbnail
+
+Media types: `logo`, `cover`, `gallery`, `menu_image`, `menu_pdf`

@@ -10,6 +10,8 @@ import reviewsRouter from "./reviews";
 import favoritesRouter from "./favorites";
 import notificationsRouter from "./notifications";
 import reservationsRouter from "./reservations";
+import storageRouter from "./storage";
+import mediaRouter from "./media";
 
 const router: IRouter = Router();
 
@@ -24,5 +26,7 @@ router.use(reviewsRouter);
 router.use(favoritesRouter);
 router.use(notificationsRouter);
 router.use(reservationsRouter);
+router.use(storageRouter);
+router.use(mediaRouter);
 
 export default router;
