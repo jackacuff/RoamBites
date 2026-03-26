@@ -1,0 +1,560 @@
+Build a full stack responsive web application called Central Oklahoma Food Truck Tracker.
+
+The goal of this app is to help three user groups:
+1. Customers who want to find food trucks that are open now or opening soon
+2. Vendors who want to manage their truck profile, menu, and schedule
+3. Event organizers who want to create events and invite or assign food trucks
+
+This is an MVP, but I want it to feel polished, real, and testable. The app should be designed specifically for Central Oklahoma to start, with sample data focused on Oklahoma City, Edmond, Norman, Moore, Yukon, and surrounding areas.
+
+Build this as a responsive web app that works very well on both desktop and mobile browsers. It should feel close to a mobile app when viewed on a phone. Prioritize clean UI, easy navigation, and fast load times.
+
+TECH STACK
+Use a stack that works well in Replit and is easy to run and test.
+Preferred stack:
+- Frontend: React with Vite
+- Backend: Node.js with Express
+- Database: SQLite for MVP simplicity
+- ORM: Prisma if practical, otherwise use a simple structured SQLite setup
+- Styling: Tailwind CSS or a very clean modern CSS system
+- Maps: Use Leaflet with OpenStreetMap if possible so we do not need paid Google Maps keys for the MVP
+- Authentication: simple email/password auth with session based or token based auth
+- State management: keep it simple
+- Deployment: configure it so it can run inside Replit easily
+
+If any of the above needs to be adjusted to make it work better inside Replit, choose the best equivalent but keep it simple and production minded.
+
+GENERAL PRODUCT REQUIREMENTS
+The app should have:
+- A public homepage
+- A customer browsing experience
+- Vendor login and dashboard
+- Event organizer login and dashboard
+- Admin view for managing data
+- Seeded demo data so I can test immediately
+- A polished responsive interface
+- Clear navigation
+- Real working CRUD functionality
+
+BRANDING
+Use placeholder branding but make it look professional.
+App name: Central Oklahoma Food Truck Tracker
+Tagline: Find food trucks near you. Track schedules. Plan events.
+Use a modern design style with clean cards, subtle shadows, rounded corners, good spacing, and easy to read typography.
+
+USER ROLES
+Build role based functionality for:
+1. Customer
+2. Vendor
+3. Event Organizer
+4. Admin
+
+CUSTOMER FEATURES
+Customers do not need to log in for basic browsing, but they can create an account if needed later. For MVP, the public facing features should include:
+- View food trucks open now
+- View food trucks opening later today
+- Browse all trucks
+- Filter by city
+- Filter by cuisine
+- Filter by open now
+- Filter by event
+- Search by truck name
+- View truck detail page
+- View current location or next scheduled stop
+- View schedule for today and upcoming days
+- View menu items
+- View event appearances
+- View whether the truck is currently live checked in by the vendor
+- Favorite button in UI, even if favorites are stored locally in browser for MVP
+- Mobile friendly card list and map view toggle
+
+CUSTOMER PAGES
+1. Homepage
+   - Hero section
+   - Search bar
+   - Featured trucks
+   - Open now section
+   - Upcoming events section
+   - Quick links by city and cuisine
+2. Browse Trucks page
+   - Card grid or list
+   - Filters and search
+   - Toggle between list and map
+3. Truck Detail page
+   - Truck name
+   - Cover image placeholder
+   - Cuisine tags
+   - Description
+   - Menu
+   - Current status: Open now, Closed, Opening later, Live at location
+   - Current or next location
+   - Weekly schedule
+   - Upcoming events
+4. Events page
+   - List of events
+   - Event detail page showing participating trucks
+
+VENDOR FEATURES
+Each vendor should be able to:
+- Sign up and log in
+- Create and edit a truck profile
+- Upload a logo or image placeholder
+- Set cuisine type
+- Add description
+- Add menu items with prices
+- Add regular weekly schedule
+- Add one off schedule entries
+- Add location name, address, city, start time, end time
+- Mark a stop as active
+- Use a live check in button to mark current location as live
+- Use a live check out button to stop live tracking
+- View upcoming schedule
+- Edit or delete schedule items
+- See event invitations or assigned events
+- Confirm attendance for an event
+- See a simple dashboard summary
+
+For the live check in feature in MVP:
+- Do not build true background GPS tracking
+- Instead allow vendor to click Check In and manually set their current stop as live
+- Optional: include a browser geolocation button if easy, but the core should work without it
+- When checked in, customers should see the truck as Live Now at that location
+
+VENDOR PAGES
+1. Vendor Login page
+2. Vendor Dashboard
+   - Summary cards: upcoming stops, live status, upcoming events
+   - Quick actions: add schedule, check in, edit menu
+3. Manage Truck Profile page
+4. Manage Menu page
+5. Manage Schedule page
+6. Event Invitations or Assigned Events page
+
+EVENT ORGANIZER FEATURES
+Each event organizer should be able to:
+- Sign up and log in
+- Create an event
+- Edit event
+- Delete event
+- Set event name
+- Set date
+- Set start and end time
+- Set venue name
+- Set full address
+- Set city
+- Set description
+- Add notes for vendors
+- Assign or invite trucks to the event
+- View confirmed trucks
+- View pending trucks
+- View event details page publicly
+- View organizer dashboard with all events
+
+EVENT ORGANIZER PAGES
+1. Organizer Login page
+2. Organizer Dashboard
+3. Create Event page
+4. Edit Event page
+5. Event Management page
+
+ADMIN FEATURES
+Admin should have a basic interface for testing and management.
+Admin can:
+- View all users
+- View all trucks
+- View all schedules
+- View all events
+- Approve or deactivate trucks
+- Approve or deactivate users
+- See basic platform stats
+- Seed or reset demo data from admin panel if practical
+
+ADMIN LOGIN
+Create a seeded admin account for demo purposes:
+- Email: admin@okfoodtrucks.com
+- Password: password123
+
+DEMO ACCOUNTS
+Also seed demo accounts for testing:
+Vendor:
+- Email: vendor1@okfoodtrucks.com
+- Password: password123
+
+Organizer:
+- Email: organizer1@okfoodtrucks.com
+- Password: password123
+
+If role specific signup is easier, include it.
+
+SEED DATA
+Add realistic Central Oklahoma sample data for at least:
+- 8 food trucks
+- 5 events
+- 20 schedule entries across several days
+- Multiple cuisines such as tacos, burgers, barbecue, coffee, desserts, Asian fusion, pizza, and comfort food
+
+Include sample trucks like:
+- Red Dirt Tacos
+- Prairie Smoke BBQ
+- Okie Roast Coffee
+- Route 66 Burgers
+- Big Friendly Pizza
+- Hometown Sno Cones
+- Seoul Wagon
+- Boomtown Bites
+
+Include sample cities:
+- Oklahoma City
+- Edmond
+- Norman
+- Moore
+- Yukon
+- Mustang
+
+Include example venues:
+- Scissortail Park
+- Mitch Park
+- Downtown Edmond
+- University North Oval
+- Moore Central Park
+- Yukon City Park
+
+Make the data realistic with schedules such as lunch stops, dinner stops, breweries, parks, and community events.
+
+DATA MODEL
+Create a clean schema with relationships roughly like this:
+
+User
+- id
+- name
+- email
+- passwordHash
+- role
+- createdAt
+
+Truck
+- id
+- vendorUserId
+- name
+- slug
+- cuisine
+- description
+- imageUrl
+- phone
+- website
+- isApproved
+- createdAt
+
+MenuItem
+- id
+- truckId
+- name
+- description
+- price
+- category
+
+ScheduleEntry
+- id
+- truckId
+- title
+- venueName
+- address
+- city
+- latitude
+- longitude
+- startDateTime
+- endDateTime
+- isLive
+- isRecurring
+- notes
+
+Event
+- id
+- organizerUserId
+- name
+- slug
+- description
+- venueName
+- address
+- city
+- latitude
+- longitude
+- startDateTime
+- endDateTime
+- publicNotes
+- vendorNotes
+- createdAt
+
+EventTruck
+- id
+- eventId
+- truckId
+- status
+  values: invited, pending, confirmed, declined
+
+Favorite
+- id
+- customerIdentifier or userId
+- truckId
+
+If Prisma is used, define these models clearly.
+
+BUSINESS LOGIC
+Implement these key behaviors:
+1. A truck is Open Now if current time is between a schedule entry’s start and end time
+2. A truck is Opening Later Today if it has a schedule later the same day
+3. If a truck has isLive true on an active schedule entry, show Live Now badge
+4. If a truck is assigned to an event, display that on both truck and event detail pages
+5. Use Central Time assumptions for display
+6. Sort open trucks first on the browse page
+7. On mobile, filters should collapse into a drawer or accordion
+8. On desktop, filters can appear in a sidebar or top row
+
+UI REQUIREMENTS
+Make the app feel modern and usable, not like a plain scaffold.
+Include:
+- Responsive navbar
+- Mobile menu
+- Clean hero section
+- Card based layouts
+- Status badges such as Open Now, Live, Closed, Upcoming
+- Empty states for pages with no data
+- Loading states
+- Form validation
+- Friendly error messages
+- Reusable components
+
+Recommended reusable components:
+- Navbar
+- Footer
+- TruckCard
+- EventCard
+- FilterBar
+- SearchBar
+- StatusBadge
+- ScheduleList
+- MapView
+- DashboardCard
+- FormField
+- Modal or Drawer
+
+MAP FEATURES
+Use a map component for:
+- Browse page map view with truck pins
+- Truck detail page location preview
+- Event detail page location preview
+
+If full geocoding is too complex, seed latitude and longitude in the database and use those values directly.
+
+AUTHENTICATION
+Implement working authentication.
+Requirements:
+- Sign up
+- Log in
+- Log out
+- Role based redirects after login
+- Protected routes for vendor, organizer, and admin pages
+- Basic password hashing
+- Session persistence
+
+DASHBOARDS
+Vendor dashboard should show:
+- Truck name
+- Live status
+- Next 3 schedule entries
+- Upcoming events
+- Button to add schedule
+- Button to check in
+
+Organizer dashboard should show:
+- Event count
+- Upcoming events
+- Confirmed trucks per event
+- Button to create event
+
+Admin dashboard should show:
+- Total users
+- Total trucks
+- Total events
+- Trucks pending approval
+- Quick links to data tables
+
+API REQUIREMENTS
+Create a clean API structure such as:
+- GET /api/trucks
+- GET /api/trucks/:id
+- POST /api/trucks
+- PUT /api/trucks/:id
+- DELETE /api/trucks/:id
+
+- GET /api/schedules
+- POST /api/schedules
+- PUT /api/schedules/:id
+- DELETE /api/schedules/:id
+
+- POST /api/trucks/:id/checkin
+- POST /api/trucks/:id/checkout
+
+- GET /api/events
+- GET /api/events/:id
+- POST /api/events
+- PUT /api/events/:id
+- DELETE /api/events/:id
+
+- POST /api/events/:id/invite-truck
+- POST /api/events/:id/respond
+
+- POST /api/auth/signup
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
+
+Use whichever route structure fits the app, but keep it organized.
+
+PAGES AND ROUTING
+Create routes such as:
+- /
+- /trucks
+- /trucks/:slug
+- /events
+- /events/:slug
+- /login
+- /signup
+- /vendor/dashboard
+- /vendor/truck
+- /vendor/menu
+- /vendor/schedule
+- /vendor/events
+- /organizer/dashboard
+- /organizer/events
+- /organizer/events/new
+- /admin
+
+MVP PRIORITIES
+Priority 1:
+- Working public truck browsing
+- Working truck detail pages
+- Working vendor login
+- Working vendor schedule management
+- Working live check in
+- Working event organizer creation flow
+- Working seeded demo data
+- Responsive design
+
+Priority 2:
+- Map view
+- Favorites
+- Admin management
+- Event invite workflow
+
+Priority 3:
+- Image upload
+- Notifications
+- Better analytics
+- Reviews or ratings
+
+FORMS
+Build forms with good validation for:
+- Login
+- Signup
+- Truck profile
+- Menu items
+- Schedule entry
+- Event creation
+
+Each form should validate required fields and show helpful messages.
+
+SCHEDULE MANAGEMENT DETAILS
+The vendor should be able to add:
+- venue name
+- address
+- city
+- start date and time
+- end date and time
+- notes
+
+On the schedule management page:
+- Show schedule items in a list or table
+- Allow edit and delete
+- Highlight current active entry
+- Include a button to set an entry live now
+
+EVENT MANAGEMENT DETAILS
+Organizer can:
+- Create an event
+- Select date and time
+- Add venue details
+- Invite trucks from a list
+- View each truck invitation status
+- Public event page shows confirmed trucks
+
+SAMPLE MENU DATA
+Each sample truck should have at least 3 to 5 menu items with prices so the detail pages feel real.
+
+TESTING
+I want the app to run immediately after install with demo data loaded.
+Please include:
+- seed script
+- start script
+- clear README with setup instructions
+- any necessary environment examples
+
+REPLIT FRIENDLY SETUP
+Make the project easy to run inside Replit:
+- Install commands should be straightforward
+- Use one main run command if possible
+- Keep environment variables minimal
+- If using SQLite, store the database locally in the project
+
+README REQUIREMENTS
+Create a complete README that includes:
+- Project overview
+- Features
+- Tech stack
+- How to install
+- How to run
+- Demo login credentials
+- Folder structure
+- API overview
+- Future roadmap
+
+STRETCH GOALS IF TIME ALLOWS
+If practical, also include:
+- A simple notification banner on the homepage like “3 trucks are open in OKC right now”
+- A browse by city section
+- A browse by cuisine section
+- A simple local favorites system using browser storage
+- A dark mode toggle
+- Basic analytics cards in vendor dashboard such as total upcoming stops
+
+IMPORTANT IMPLEMENTATION NOTES
+- Keep code organized and readable
+- Use reusable components
+- Do not leave the app half scaffolded
+- Make the seeded data visible and useful
+- Make sure the public side actually feels real and populated
+- Make the mobile version strong
+- Make sure the app is actually testable in browser
+- Use realistic placeholder images or colored placeholders if needed
+- Do not overcomplicate the MVP with enterprise features
+- Focus on a polished core product
+
+FINAL OUTPUT I WANT
+I want a complete working MVP in Replit with:
+- frontend
+- backend
+- database
+- seeded demo data
+- authentication
+- public pages
+- vendor dashboard
+- organizer dashboard
+- admin page
+- responsive design
+- map integration if possible
+- clear instructions to run it
+
+After building, also provide:
+1. A short summary of what was built
+2. The demo login credentials
+3. Any remaining gaps or next steps

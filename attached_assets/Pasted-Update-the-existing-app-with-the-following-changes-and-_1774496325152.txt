@@ -1,0 +1,195 @@
+Update the existing app with the following changes and additions:
+
+APP NAME CHANGE
+Rename the application to:
+RoamBites
+
+Update:
+- App title
+- Navbar branding
+- Page titles
+- Any references to the previous name
+
+Tagline:
+Find food trucks near you. Follow favorites. Plan better events.
+
+CORE PRODUCT CHANGE
+The app must NOT require login for basic usage.
+
+Ensure that:
+- Users can browse trucks without logging in
+- Users can view truck details, schedules, and events without logging in
+- Login is ONLY required for enhanced features
+
+CUSTOMER ACCOUNT SYSTEM
+
+Add optional customer accounts with the following capabilities:
+
+Users can:
+- Sign up
+- Log in
+- Log out
+- View a basic profile page
+
+Do NOT block the main app behind login.
+
+FAVORITES SYSTEM
+
+Add ability for users to favorite food trucks.
+
+Requirements:
+- Add heart icon on each truck card and truck detail page
+- Logged in users:
+  - Favorites saved to database
+- Non-logged in users:
+  - Favorites saved in browser localStorage
+  - Show message prompting account creation for permanent saving
+
+Add a "My Favorites" page:
+- Displays all favorited trucks
+- Works for logged in users (database)
+- Works for guest users (local storage)
+
+REVIEWS SYSTEM
+
+Allow users to leave reviews on food trucks.
+
+Each review should include:
+- Rating (1 to 5 stars)
+- Short text comment
+- Created date
+
+On truck detail page:
+- Show average rating
+- Show total number of reviews
+- Show list of reviews
+
+Only logged in users can:
+- Submit reviews
+- Edit their own reviews
+- Delete their own reviews
+
+NOTIFICATIONS SYSTEM (MVP STRUCTURE ONLY)
+
+Add notification preferences without building full push notifications.
+
+Users can:
+- Toggle:
+  - Notify me when this truck is open
+  - Notify me when this truck is nearby
+
+Store preferences in database.
+
+Do NOT implement actual push notifications yet.
+Just create the structure for future use.
+
+USER PROFILE PAGE
+
+Create a profile page for logged in users that shows:
+- User info (name, email)
+- List of favorite trucks
+- List of reviews written
+- Notification preferences
+
+DATA MODEL ADDITIONS
+
+Add the following tables:
+
+Review
+- id
+- userId
+- truckId
+- rating (integer 1-5)
+- comment (text)
+- createdAt (datetime)
+
+Favorite
+- id
+- userId (nullable if using local storage for guests)
+- truckId
+
+NotificationPreference
+- id
+- userId
+- truckId
+- notifyWhenOpen (boolean)
+- notifyWhenNearby (boolean)
+
+Update Truck model to include:
+- averageRating (computed or derived)
+- reviewCount (computed or derived)
+
+BACKEND API ADDITIONS
+
+Add endpoints:
+
+Reviews:
+- POST /api/reviews
+- PUT /api/reviews/:id
+- DELETE /api/reviews/:id
+- GET /api/trucks/:id/reviews
+
+Favorites:
+- POST /api/favorites
+- DELETE /api/favorites/:truckId
+- GET /api/favorites
+
+Notification Preferences:
+- POST /api/notifications
+- GET /api/notifications
+
+FRONTEND UI ADDITIONS
+
+Update UI to include:
+
+Truck Cards:
+- Add favorite (heart) icon
+- Show rating if available
+
+Truck Detail Page:
+- Rating display
+- Review list
+- Review form (if logged in)
+- Favorite button
+- Notification toggle (if logged in)
+
+Navbar:
+- Show login/signup when logged out
+- Show profile dropdown when logged in
+
+Profile Page:
+- Favorites section
+- Reviews section
+- Notification settings
+
+UX REQUIREMENTS
+
+If user clicks favorite while not logged in:
+- Save locally
+- Show message:
+  "Create a free account to save your favorites across devices"
+
+If user tries to leave a review while not logged in:
+- Prompt login or signup
+
+Keep UX smooth and non-intrusive.
+
+IMPORTANT
+
+Do NOT break existing functionality.
+
+Keep:
+- vendor dashboard
+- event organizer features
+- admin features
+- seeded data
+
+Ensure:
+- app still runs immediately
+- demo accounts still work
+- UI remains responsive and polished
+
+After implementing, provide:
+1. Summary of changes made
+2. Any new demo data added
+3. Any new endpoints created

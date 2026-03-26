@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Central Oklahoma Food Truck Tracker API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: trucks
+    description: Food truck operations
+  - name: schedules
+    description: Schedule operations
+  - name: events
+    description: Event operations
+  - name: menuItems
+    description: Menu item operations
+  - name: admin
+    description: Admin operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,713 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/signup:
+    post:
+      operationId: signup
+      tags: [auth]
+      summary: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /trucks:
+    get:
+      operationId: listTrucks
+      tags: [trucks]
+      summary: List all approved food trucks
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: cuisine
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: openNow
+          in: query
+          schema:
+            type: ["boolean", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: eventId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of trucks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TruckSummary"
+
+    post:
+      operationId: createTruck
+      tags: [trucks]
+      summary: Create a new food truck (vendor only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTruckBody"
+      responses:
+        "201":
+          description: Truck created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TruckDetail"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /trucks/{id}:
+    get:
+      operationId: getTruck
+      tags: [trucks]
+      summary: Get a food truck by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Truck detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TruckDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateTruck
+      tags: [trucks]
+      summary: Update a food truck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTruckBody"
+      responses:
+        "200":
+          description: Updated truck
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TruckDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteTruck
+      tags: [trucks]
+      summary: Delete a food truck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /trucks/{id}/checkin:
+    post:
+      operationId: checkInTruck
+      tags: [trucks]
+      summary: Check in a truck as live at current location
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInBody"
+      responses:
+        "200":
+          description: Checked in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /trucks/{id}/checkout:
+    post:
+      operationId: checkOutTruck
+      tags: [trucks]
+      summary: Check out a truck from live status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Checked out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /trucks/{id}/menu:
+    get:
+      operationId: getTruckMenu
+      tags: [menuItems]
+      summary: Get menu items for a truck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Menu items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MenuItem"
+
+    post:
+      operationId: createMenuItem
+      tags: [menuItems]
+      summary: Add a menu item to a truck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMenuItemBody"
+      responses:
+        "201":
+          description: Menu item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+
+  /menu-items/{id}:
+    put:
+      operationId: updateMenuItem
+      tags: [menuItems]
+      summary: Update a menu item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMenuItemBody"
+      responses:
+        "200":
+          description: Updated menu item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuItem"
+
+    delete:
+      operationId: deleteMenuItem
+      tags: [menuItems]
+      summary: Delete a menu item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /schedules:
+    get:
+      operationId: listSchedules
+      tags: [schedules]
+      summary: List schedule entries
+      parameters:
+        - name: truckId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: date
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: Schedule entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduleEntry"
+
+    post:
+      operationId: createScheduleEntry
+      tags: [schedules]
+      summary: Create a schedule entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScheduleBody"
+      responses:
+        "201":
+          description: Schedule entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleEntry"
+
+  /schedules/{id}:
+    put:
+      operationId: updateScheduleEntry
+      tags: [schedules]
+      summary: Update a schedule entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateScheduleBody"
+      responses:
+        "200":
+          description: Updated schedule entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduleEntry"
+
+    delete:
+      operationId: deleteScheduleEntry
+      tags: [schedules]
+      summary: Delete a schedule entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /schedules/{id}/setlive:
+    post:
+      operationId: setScheduleLive
+      tags: [schedules]
+      summary: Set a schedule entry as live now
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Set live
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List all events
+      parameters:
+        - name: upcoming
+          in: query
+          schema:
+            type: ["boolean", "null"]
+        - name: organizerId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventSummary"
+
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Create a new event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventBody"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDetail"
+
+  /events/{id}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get an event by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateEvent
+      tags: [events]
+      summary: Update an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEventBody"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDetail"
+
+    delete:
+      operationId: deleteEvent
+      tags: [events]
+      summary: Delete an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /events/{id}/invite:
+    post:
+      operationId: inviteTruckToEvent
+      tags: [events]
+      summary: Invite a truck to an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteTruckBody"
+      responses:
+        "201":
+          description: Invited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTruck"
+
+  /events/{id}/respond:
+    post:
+      operationId: respondToEventInvite
+      tags: [events]
+      summary: Respond to event invitation (vendor)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondToEventBody"
+      responses:
+        "200":
+          description: Response recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventTruck"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all users (admin only)
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /admin/trucks:
+    get:
+      operationId: adminListTrucks
+      tags: [admin]
+      summary: List all trucks (admin only)
+      responses:
+        "200":
+          description: Trucks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminTruck"
+
+  /admin/trucks/{id}/approve:
+    post:
+      operationId: adminApproveTruck
+      tags: [admin]
+      summary: Approve or deactivate a truck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/users/{id}/status:
+    post:
+      operationId: adminUpdateUserStatus
+      tags: [admin]
+      summary: Activate or deactivate a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserStatusBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/stats:
+    get:
+      operationId: adminGetStats
+      tags: [admin]
+      summary: Get platform statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
+  /admin/seed:
+    post:
+      operationId: adminSeedData
+      tags: [admin]
+      summary: Seed or reset demo data
+      responses:
+        "200":
+          description: Seeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +751,656 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    SignupBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [customer, vendor, organizer]
+      required:
+        - name
+        - email
+        - password
+        - role
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserResponse"
+      required:
+        - token
+        - user
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - isActive
+        - createdAt
+
+    TruckSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        cuisine:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        isApproved:
+          type: boolean
+        isLive:
+          type: boolean
+        status:
+          type: string
+          enum: [open, closing_soon, opening_later, closed]
+        currentLocation:
+          type: ["string", "null"]
+        currentCity:
+          type: ["string", "null"]
+        activeSchedule:
+          $ref: "#/components/schemas/ScheduleEntry"
+          nullable: true
+        vendorUserId:
+          type: integer
+      required:
+        - id
+        - name
+        - slug
+        - cuisine
+        - isApproved
+        - isLive
+        - status
+        - vendorUserId
+
+    TruckDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        cuisine:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        isApproved:
+          type: boolean
+        isLive:
+          type: boolean
+        status:
+          type: string
+          enum: [open, closing_soon, opening_later, closed]
+        currentLocation:
+          type: ["string", "null"]
+        currentCity:
+          type: ["string", "null"]
+        vendorUserId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        menuItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuItem"
+        scheduleEntries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleEntry"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventSummary"
+        activeSchedule:
+          $ref: "#/components/schemas/ScheduleEntry"
+          nullable: true
+      required:
+        - id
+        - name
+        - slug
+        - cuisine
+        - isApproved
+        - isLive
+        - status
+        - vendorUserId
+        - createdAt
+        - menuItems
+        - scheduleEntries
+        - events
+
+    CreateTruckBody:
+      type: object
+      properties:
+        name:
+          type: string
+        cuisine:
+          type: string
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+      required:
+        - name
+        - cuisine
+
+    UpdateTruckBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        cuisine:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        imageUrl:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+
+    CheckInBody:
+      type: object
+      properties:
+        scheduleEntryId:
+          type: ["integer", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+      required: []
+
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        truckId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        category:
+          type: ["string", "null"]
+      required:
+        - id
+        - truckId
+        - name
+        - price
+
+    CreateMenuItemBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        category:
+          type: ["string", "null"]
+      required:
+        - name
+        - price
+
+    UpdateMenuItemBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        price:
+          type: ["number", "null"]
+        category:
+          type: ["string", "null"]
+
+    ScheduleEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        truckId:
+          type: integer
+        title:
+          type: ["string", "null"]
+        venueName:
+          type: string
+        address:
+          type: ["string", "null"]
+        city:
+          type: string
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        startDateTime:
+          type: string
+          format: date-time
+        endDateTime:
+          type: string
+          format: date-time
+        isLive:
+          type: boolean
+        isRecurring:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+        truckName:
+          type: ["string", "null"]
+      required:
+        - id
+        - truckId
+        - venueName
+        - city
+        - startDateTime
+        - endDateTime
+        - isLive
+        - isRecurring
+
+    CreateScheduleBody:
+      type: object
+      properties:
+        truckId:
+          type: integer
+        title:
+          type: ["string", "null"]
+        venueName:
+          type: string
+        address:
+          type: ["string", "null"]
+        city:
+          type: string
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        startDateTime:
+          type: string
+          format: date-time
+        endDateTime:
+          type: string
+          format: date-time
+        isRecurring:
+          type: boolean
+        notes:
+          type: ["string", "null"]
+      required:
+        - truckId
+        - venueName
+        - city
+        - startDateTime
+        - endDateTime
+
+    UpdateScheduleBody:
+      type: object
+      properties:
+        title:
+          type: ["string", "null"]
+        venueName:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        startDateTime:
+          type: ["string", "null"]
+        endDateTime:
+          type: ["string", "null"]
+        isRecurring:
+          type: ["boolean", "null"]
+        notes:
+          type: ["string", "null"]
+
+    EventSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: ["string", "null"]
+        venueName:
+          type: string
+        city:
+          type: string
+        startDateTime:
+          type: string
+          format: date-time
+        endDateTime:
+          type: string
+          format: date-time
+        organizerUserId:
+          type: integer
+        confirmedTruckCount:
+          type: integer
+      required:
+        - id
+        - name
+        - slug
+        - venueName
+        - city
+        - startDateTime
+        - endDateTime
+        - organizerUserId
+        - confirmedTruckCount
+
+    EventDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: ["string", "null"]
+        venueName:
+          type: string
+        address:
+          type: ["string", "null"]
+        city:
+          type: string
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        startDateTime:
+          type: string
+          format: date-time
+        endDateTime:
+          type: string
+          format: date-time
+        publicNotes:
+          type: ["string", "null"]
+        vendorNotes:
+          type: ["string", "null"]
+        organizerUserId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        trucks:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventTruck"
+      required:
+        - id
+        - name
+        - slug
+        - venueName
+        - city
+        - startDateTime
+        - endDateTime
+        - organizerUserId
+        - createdAt
+        - trucks
+
+    EventTruck:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        truckId:
+          type: integer
+        status:
+          type: string
+          enum: [invited, pending, confirmed, declined]
+        truck:
+          $ref: "#/components/schemas/TruckSummary"
+      required:
+        - id
+        - eventId
+        - truckId
+        - status
+
+    CreateEventBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        venueName:
+          type: string
+        address:
+          type: ["string", "null"]
+        city:
+          type: string
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        startDateTime:
+          type: string
+          format: date-time
+        endDateTime:
+          type: string
+          format: date-time
+        publicNotes:
+          type: ["string", "null"]
+        vendorNotes:
+          type: ["string", "null"]
+      required:
+        - name
+        - venueName
+        - city
+        - startDateTime
+        - endDateTime
+
+    UpdateEventBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        venueName:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        latitude:
+          type: ["number", "null"]
+        longitude:
+          type: ["number", "null"]
+        startDateTime:
+          type: ["string", "null"]
+        endDateTime:
+          type: ["string", "null"]
+        publicNotes:
+          type: ["string", "null"]
+        vendorNotes:
+          type: ["string", "null"]
+
+    InviteTruckBody:
+      type: object
+      properties:
+        truckId:
+          type: integer
+      required:
+        - truckId
+
+    RespondToEventBody:
+      type: object
+      properties:
+        truckId:
+          type: integer
+        status:
+          type: string
+          enum: [confirmed, declined]
+      required:
+        - truckId
+        - status
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - isActive
+        - createdAt
+
+    AdminTruck:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cuisine:
+          type: string
+        isApproved:
+          type: boolean
+        vendorUserId:
+          type: integer
+        vendorName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - cuisine
+        - isApproved
+        - vendorUserId
+        - createdAt
+
+    ApproveBody:
+      type: object
+      properties:
+        isApproved:
+          type: boolean
+      required:
+        - isApproved
+
+    UserStatusBody:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+      required:
+        - isActive
+
+    PlatformStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalTrucks:
+          type: integer
+        totalEvents:
+          type: integer
+        pendingApproval:
+          type: integer
+        activeTrucks:
+          type: integer
+      required:
+        - totalUsers
+        - totalTrucks
+        - totalEvents
+        - pendingApproval
+        - activeTrucks

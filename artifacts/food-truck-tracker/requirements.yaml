@@ -1,0 +1,22 @@
+packages:
+  "framer-motion": "Animations and page transitions"
+  "react-leaflet": "Map components for truck locations"
+  "leaflet": "Map rendering engine"
+  "@types/leaflet": "TypeScript definitions for Leaflet"
+  "date-fns": "Human-readable date formatting"
+  "react-hook-form": "Form state management and validation"
+  "@hookform/resolvers": "Zod integration for react-hook-form"
+  "clsx": "Utility for constructing className strings"
+  "tailwind-merge": "Utility to merge tailwind classes"
+
+images:
+  - path: "artifacts/food-truck-tracker/public/images/hero-bg.png"
+    description: "Warm vibrant sunset over a subtle vector silhouette of Oklahoma city, abstract, gradient mesh in oranges, ambers, and warm green tones. Highly polished, modern, smooth."
+    aspect_ratio: "16:9"
+  - path: "artifacts/food-truck-tracker/public/images/truck-placeholder.png"
+    description: "A stylized, modern, friendly 3D vector illustration of a food truck in warm colors, isolated on a clean light cream background."
+    aspect_ratio: "4:3"
+
+notes:
+  - Included Leaflet map integration for live tracking features.
+  - JWT auth assumed to be managed via localStorage and auto-injected by generated customFetch or handled explicitly.

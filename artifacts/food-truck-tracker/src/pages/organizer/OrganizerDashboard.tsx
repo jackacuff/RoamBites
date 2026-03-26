@@ -1,0 +1,143 @@
+import { useAuth } from "@/hooks/use-auth";
+import { useListEvents } from "@workspace/api-client-react";
+import { Layout } from "@/components/Layout";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import EmptyState from "@/components/EmptyState";
+import { Link, useLocation } from "wouter";
+import { format } from "date-fns";
+import { Plus, Calendar, MapPin, Users, Settings } from "lucide-react";
+
+export default function OrganizerDashboard() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { data: events, isLoading } = useListEvents({});
+
+  const myEvents = (events || []).filter((e: any) => e.organizerUserId === user?.id);
+  const now = new Date();
+  const upcomingEvents = myEvents.filter(e => new Date(e.endDateTime) >= now);
+  const pastEvents = myEvents.filter(e => new Date(e.endDateTime) < now);
+
+  return (
+    <Layout>
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Organizer Dashboard</h1>
+            <p className="text-muted-foreground mt-1">Manage your food truck events</p>
+          </div>
+          <Link href="/organizer/events/new">
+            <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90">
+              <Plus className="w-4 h-4" />
+              Create Event
+            </button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+          <div className="bg-card border border-card-border rounded-2xl p-5">
+            <p className="text-sm text-muted-foreground">Total Events</p>
+            <p className="text-3xl font-bold text-foreground">{myEvents.length}</p>
+          </div>
+          <div className="bg-card border border-card-border rounded-2xl p-5">
+            <p className="text-sm text-muted-foreground">Upcoming</p>
+            <p className="text-3xl font-bold text-primary">{upcomingEvents.length}</p>
+          </div>
+          <div className="bg-card border border-card-border rounded-2xl p-5">
+            <p className="text-sm text-muted-foreground">Past Events</p>
+            <p className="text-3xl font-bold text-foreground">{pastEvents.length}</p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : myEvents.length > 0 ? (
+          <div className="space-y-6">
+            {upcomingEvents.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-3">Upcoming Events</h2>
+                <div className="space-y-3">
+                  {upcomingEvents.sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()).map(event => (
+                    <EventRow key={event.id} event={event} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {pastEvents.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-3 text-muted-foreground">Past Events</h2>
+                <div className="space-y-3">
+                  {pastEvents.map(event => (
+                    <EventRow key={event.id} event={event} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            title="No events yet"
+            description="Create your first food truck event and start inviting vendors."
+            action={
+              <Link href="/organizer/events/new">
+                <button className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90">
+                  Create Your First Event
+                </button>
+              </Link>
+            }
+          />
+        )}
+      </div>
+    </Layout>
+  );
+}
+
+function EventRow({ event }: { event: any }) {
+  const confirmedCount = event.confirmedTruckCount || 0;
+  const now = new Date();
+  const isOngoing = new Date(event.startDateTime) <= now && new Date(event.endDateTime) >= now;
+  const isPast = new Date(event.endDateTime) < now;
+
+  return (
+    <div className="bg-card border border-card-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="font-semibold text-foreground">{event.name}</h3>
+          {isOngoing && (
+            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">Live</span>
+          )}
+          {isPast && (
+            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">Past</span>
+          )}
+          {!event.isPublished && (
+            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">Draft</span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-4 mt-1.5 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5" />
+            {format(new Date(event.startDateTime), "MMM d, yyyy · h:mm a")}
+          </span>
+          <span className="flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5" />
+            {event.venueName}
+          </span>
+          <span className="flex items-center gap-1">
+            <Users className="w-3.5 h-3.5" />
+            {confirmedCount} truck{confirmedCount !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Link href={`/events/${event.id}`}>
+          <button className="px-3 py-1.5 border border-border text-foreground rounded-lg text-sm hover:bg-accent transition-colors">View</button>
+        </Link>
+        <Link href={`/organizer/events/${event.id}/manage`}>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm hover:opacity-90">
+            <Settings className="w-3.5 h-3.5" />
+            Manage
+          </button>
+        </Link>
+      </div>
+    </div>
+  );
+}

@@ -94,3 +94,26 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+### `artifacts/food-truck-tracker` (`@workspace/food-truck-tracker`)
+
+React + Vite frontend — Central Oklahoma Food Truck Tracker.
+
+- **Auth**: JWT stored in localStorage as `"token"`. `setAuthTokenGetter` called in `main.tsx` to auto-attach `Authorization: Bearer` header.
+- **Routing**: Wouter, mounted at `BASE_URL`. All routes in `src/App.tsx`.
+- **Pages**:
+  - `/` Home, `/trucks` list, `/trucks/:id` detail
+  - `/events` list, `/events/:id` detail (with embedded Leaflet map)
+  - `/login`, `/signup`
+  - `/vendor` dashboard, `/vendor/truck`, `/vendor/menu`, `/vendor/schedule`, `/vendor/events`
+  - `/organizer` dashboard, `/organizer/events/new`, `/organizer/events/:id/manage`, `/organizer/events/:id/edit`
+  - `/admin` admin panel
+- **Maps**: `react-leaflet` + OpenStreetMap tiles. `MapView` component shows truck locations. Leaflet marker icon fix applied.
+- **Demo accounts** (all `password123`): `admin@okfoodtrucks.com`, `vendor1@okfoodtrucks.com`–`vendor4@okfoodtrucks.com`, `organizer1@okfoodtrucks.com`, `organizer2@okfoodtrucks.com`
+- **Seed data**: 8 approved trucks, 40 menu items, 20 schedule entries, 5 events with event-truck relationships
+
+## Database Schema
+
+Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`
+
+Truck status logic (open/closing_soon/opening_later/closed) computed in `artifacts/api-server/src/lib/truckStatus.ts`.
