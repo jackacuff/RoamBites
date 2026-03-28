@@ -114,9 +114,34 @@ React + Vite frontend — Central Oklahoma Food Truck Tracker.
 - **SuperAdmin**: `jracuff@gmail.com` / `RoamBites_SuperAdmin_2024!` — role `superadmin`, redirects to `/superadmin`
 - **Seed data**: 8 approved trucks, 40 menu items, 20 schedule entries, 5 events with event-truck relationships
 
+## Subscription System
+
+### Plans (`plansTable`)
+Admin-managed subscription plans. Fields: `id`, `name`, `description`, `monthlyPrice`, `trialDays` (default 90), `features` (jsonb array), `isActive`, `stripePriceId`, `stripeProductId`.
+
+### Vendor Subscriptions (`vendorSubscriptionsTable`)
+One per vendor user. Fields: `id`, `vendorUserId`, `planId`, `status` (trialing/active/past_due/canceled/free), `trialEndsAt`, `currentPeriodEnd`, `stripeCustomerId`, `stripeSubscriptionId`, `canceledAt`.
+
+- Vendors auto-get a `trialing` subscription on signup (auth.ts)
+- Trial countdown and subscribe CTA shown in vendor dashboard banner
+- Admin can grant trial extensions, cancel, or change plans
+- Stripe checkout and billing portal ready (requires `STRIPE_SECRET_KEY` + `stripePriceId` on plan)
+
+### Subscription API Routes
+- `GET /api/vendor/subscription` — get my subscription status + trial days left
+- `POST /api/vendor/subscription/subscribe` — create Stripe checkout session
+- `POST /api/vendor/subscription/portal` — get Stripe billing portal URL
+- `GET /api/admin/plans` — list all plans
+- `POST /api/admin/plans` — create plan
+- `PUT /api/admin/plans/:id` — update plan (price, trial days, active, Stripe price ID)
+- `GET /api/admin/subscriptions` — list all vendor subscriptions with vendor/plan info
+- `POST /api/admin/subscriptions/:id/grant-trial` — extend trial (adds days to trialEndsAt)
+- `POST /api/admin/subscriptions/:id/cancel` — cancel subscription
+- `POST /api/admin/subscriptions/:id/set-plan` — change vendor plan
+
 ## Database Schema
 
-Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`
+Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`, `plans`, `vendorSubscriptions`
 
 Truck fields include `logoUrl`, `coverImageUrl` (updated automatically when media is attached).
 Truck status logic (open/closing_soon/opening_later/closed) computed in `artifacts/api-server/src/lib/truckStatus.ts`.

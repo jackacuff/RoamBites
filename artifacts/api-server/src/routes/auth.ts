@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, plansTable, vendorSubscriptionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { SignupBody, LoginBody } from "@workspace/api-zod";
 import { signToken, requireAuth } from "../lib/auth";
@@ -23,6 +23,20 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const [user] = await db.insert(usersTable).values({ name, email, passwordHash, role }).returning();
+
+  if (role === "vendor") {
+    const [activePlan] = await db.select().from(plansTable).where(eq(plansTable.isActive, true));
+    if (activePlan) {
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + activePlan.trialDays);
+      await db.insert(vendorSubscriptionsTable).values({
+        vendorUserId: user.id,
+        planId: activePlan.id,
+        status: "trialing",
+        trialEndsAt,
+      });
+    }
+  }
 
   const token = signToken({ id: user.id, role: user.role });
   res.status(201).json({

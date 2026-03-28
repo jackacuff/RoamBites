@@ -4,11 +4,113 @@ import { Layout } from "@/components/Layout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox } from "lucide-react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox, CreditCard, AlertTriangle, CheckCircle, Clock, ExternalLink } from "lucide-react";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
+
+type VendorSubscription = {
+  id: number; status: string; trialEndsAt: string | null; currentPeriodEnd: string | null;
+  stripeCustomerId: string | null; stripeSubscriptionId: string | null; canceledAt: string | null;
+  planId: number; planName: string; monthlyPrice: number; trialDaysLeft: number | null; features: string[];
+};
+
+function SubscriptionBanner({ sub, onSubscribe, onPortal, isLoading }: {
+  sub: VendorSubscription | null;
+  onSubscribe: () => void;
+  onPortal: () => void;
+  isLoading: boolean;
+}) {
+  if (!sub) return null;
+
+  if (sub.status === "trialing" && sub.trialDaysLeft !== null) {
+    const isUrgent = sub.trialDaysLeft <= 14;
+    return (
+      <div className={`mb-6 p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${isUrgent ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800" : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"}`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isUrgent ? "bg-amber-100 dark:bg-amber-900/40" : "bg-blue-100 dark:bg-blue-900/40"}`}>
+            <Clock className={`w-5 h-5 ${isUrgent ? "text-amber-600" : "text-blue-600"}`} />
+          </div>
+          <div>
+            <p className={`font-semibold text-sm ${isUrgent ? "text-amber-800 dark:text-amber-300" : "text-blue-800 dark:text-blue-300"}`}>
+              {sub.trialDaysLeft === 0 ? "Your free trial ends today!" : `${sub.trialDaysLeft} days left in your free trial`}
+            </p>
+            <p className={`text-xs mt-0.5 ${isUrgent ? "text-amber-700 dark:text-amber-400" : "text-blue-700 dark:text-blue-400"}`}>
+              {sub.planName} · ${sub.monthlyPrice.toFixed(2)}/mo after trial
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onSubscribe}
+          disabled={isLoading}
+          className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 ${isUrgent ? "bg-amber-600 text-white" : "bg-blue-600 text-white"}`}
+        >
+          <CreditCard className="w-4 h-4" />
+          {isLoading ? "Loading..." : "Subscribe Now"}
+        </button>
+      </div>
+    );
+  }
+
+  if (sub.status === "active") {
+    return (
+      <div className="mb-6 p-4 rounded-2xl border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm text-green-800 dark:text-green-300">{sub.planName} — Active</p>
+            {sub.currentPeriodEnd && (
+              <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+                Renews {format(new Date(sub.currentPeriodEnd), "MMMM d, yyyy")}
+              </p>
+            )}
+          </div>
+        </div>
+        {sub.stripeSubscriptionId && (
+          <button
+            onClick={onPortal}
+            disabled={isLoading}
+            className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white dark:bg-green-900/30 border border-green-300 text-green-800 dark:text-green-300 hover:bg-green-50 transition-colors disabled:opacity-50"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {isLoading ? "Loading..." : "Manage Billing"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (sub.status === "past_due" || sub.status === "canceled") {
+    return (
+      <div className="mb-6 p-4 rounded-2xl border bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm text-red-800 dark:text-red-300">
+              {sub.status === "past_due" ? "Payment required — your listing may be hidden" : "Subscription canceled"}
+            </p>
+            <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">Subscribe to keep your truck visible to customers</p>
+          </div>
+        </div>
+        <button
+          onClick={onSubscribe}
+          disabled={isLoading}
+          className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-red-600 text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          <CreditCard className="w-4 h-4" />
+          {isLoading ? "Loading..." : "Resubscribe"}
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 const CheckInMapModal = lazy(() =>
   import("@/components/CheckInMapModal").then((m) => ({ default: m.CheckInMapModal }))
@@ -31,6 +133,55 @@ export default function VendorDashboard() {
   const [copied, setCopied] = useState<string | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
+
+  const { data: subscription } = useQuery<VendorSubscription | null>({
+    queryKey: ["/api/vendor/subscription"],
+    queryFn: () =>
+      fetch(getApiUrl("/api/vendor/subscription"), { headers: authHeaders() })
+        .then(r => r.json()),
+  });
+
+  const handleSubscribe = async () => {
+    setBillingLoading(true);
+    try {
+      const r = await fetch(getApiUrl("/api/vendor/subscription/subscribe"), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ successUrl: window.location.href + "?subscribed=1", cancelUrl: window.location.href }),
+      });
+      const data = await r.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: data.error || "Could not start checkout", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handlePortal = async () => {
+    setBillingLoading(true);
+    try {
+      const r = await fetch(getApiUrl("/api/vendor/subscription/portal"), {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await r.json();
+      if (data.url) {
+        window.open(data.url, "_blank");
+      } else {
+        toast({ title: data.error || "Could not open billing portal", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", variant: "destructive" });
+    } finally {
+      setBillingLoading(false);
+    }
+  };
 
   const { data: trucks, isLoading } = useListTrucks();
   const myTruck = trucks?.find(t => t.vendorUserId === user?.id);
@@ -122,10 +273,17 @@ export default function VendorDashboard() {
   return (
     <Layout>
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-foreground">Vendor Dashboard</h1>
           <p className="text-muted-foreground mt-1">Manage your food truck business</p>
         </div>
+
+        <SubscriptionBanner
+          sub={subscription ?? null}
+          onSubscribe={handleSubscribe}
+          onPortal={handlePortal}
+          isLoading={billingLoading}
+        />
 
         {!myTruck ? (
           <div className="bg-card border border-card-border rounded-2xl p-10 text-center">
