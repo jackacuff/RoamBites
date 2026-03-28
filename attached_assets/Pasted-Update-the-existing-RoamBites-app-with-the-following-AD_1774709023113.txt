@@ -1,0 +1,269 @@
+Update the existing RoamBites app with the following ADDITIONS only. Do NOT rebuild or duplicate existing features. Extend current functionality.
+
+-------------------------------------
+EVENT SYSTEM EXPANSION
+-------------------------------------
+
+Enhance event pages to be more customizable and feature-rich.
+
+Event organizers should be able to:
+- Add branding to event pages (images, banners, descriptions)
+- Customize layout sections (event details, featured trucks, etc.)
+- Highlight participating food trucks prominently
+
+Event pages should:
+- Showcase confirmed trucks in a visually strong way
+- Feel like a mini landing page for the event
+- Include clear sections for:
+  - event details
+  - truck lineup
+  - location/map
+  - vendor participation
+
+-------------------------------------
+EVENT MARKETPLACE (TRUCK SPOTS)
+-------------------------------------
+
+Add a vendor spot marketplace within events.
+
+Event organizers can:
+- Create vendor spots for an event
+- Set:
+  - number of available spots
+  - price per spot
+  - requirements/conditions
+  - vendor rules/notes
+
+Food trucks can:
+- Browse available events
+- Reserve a spot
+- Apply or instantly book depending on configuration
+
+-------------------------------------
+EVENT PAYMENTS + PLATFORM FEE
+-------------------------------------
+
+Add payment functionality for reserving event spots.
+
+Requirements:
+- Trucks can pay to reserve a spot
+- Store:
+  - payment status
+  - reservation status
+- Tie payment to event spot reservation
+
+Platform monetization:
+- Add a platform fee (premium) to each spot sold
+- This can be:
+  - built into price OR
+  - added as a fee at checkout
+
+-------------------------------------
+EVENT COMMUNICATION
+-------------------------------------
+
+Enable communication between:
+- event organizers
+- food trucks
+
+Add:
+- ability for organizers to contact trucks
+- ability for trucks to respond or apply
+
+-------------------------------------
+PROFILE / DASHBOARD EXPANSION
+-------------------------------------
+
+Ensure each user type has a strong, dedicated dashboard/home experience:
+
+Vendor Dashboard:
+- booking requests
+- event opportunities
+- reserved event spots
+- branding/media management
+- specials/discounts
+- location controls
+- share & promote tools
+
+Event Organizer Dashboard:
+- manage events
+- manage vendor spots
+- track reservations/payments
+- manage truck lineup
+- communicate with vendors
+
+Admin Dashboard:
+- manage events, users, trucks
+- manage reservations
+- manage payments/platform fees
+
+(Customer profile can remain mostly as-is)
+
+-------------------------------------
+VENDOR MARKETING FEATURES
+-------------------------------------
+
+Add vendor tools for growth:
+
+- Ability to post:
+  - specials
+  - discounts
+  - announcements
+
+- Future-ready push marketing structure:
+  - notify users when open
+  - notify users of specials
+
+- Provide canned marketing materials:
+  - branded graphics templates
+  - social media post templates
+  - “we’re open” content
+
+-------------------------------------
+SOCIAL SHARING + GROWTH LOOP
+-------------------------------------
+
+Add a social sharing feature to help vendors promote themselves and drive traffic back to RoamBites.
+
+Add a section in vendor dashboard:
+“Share & Promote”
+
+Primary button:
+“Share Today’s Schedule”
+
+Functionality:
+
+1. Generate a shareable link:
+   - Links to truck profile or today’s schedule
+   - Mobile optimized
+
+2. Generate branded share image:
+   Include:
+   - truck name
+   - logo
+   - today’s location
+   - hours
+   - optional cover image
+   - call-to-action: “Find us on RoamBites”
+
+3. Generate pre-written caption:
+   Example:
+   “We’re out today at [location] from [time]! Come see us 🔥  
+   Find us here: [link]”
+
+4. Share options:
+   - copy link
+   - copy caption
+   - download image
+   - native share (if supported)
+
+UX Requirements:
+- 1–2 clicks max
+- mobile-first
+- no design effort required by vendor
+
+Optional:
+- track clicks on shared links
+
+-------------------------------------
+MENU + BRANDING ENHANCEMENTS
+-------------------------------------
+
+Improve vendor presentation:
+
+- High-quality menu display with images
+- Fast loading
+- Support:
+  - structured menu items
+  - uploaded menu images/PDF
+
+-------------------------------------
+LOCATION SYSTEM ENHANCEMENTS
+-------------------------------------
+
+Enhance live location system:
+
+- Use GPS to detect vendor location
+- Allow draggable map pin (Uber-style)
+- Save adjusted location
+
+Add button:
+“Update My Location”
+
+Function:
+- one tap updates GPS location instantly
+- optional pin adjustment before saving
+
+Display to users:
+- current location
+- “last updated X minutes ago”
+
+-------------------------------------
+RESERVATION / BOOKING FEATURE (TRUCK BOOKINGS)
+-------------------------------------
+
+Allow trucks to accept private bookings:
+
+- Vendors can toggle:
+  “Open for Reservations”
+
+- Add:
+  - contact info
+  - booking notes
+
+Customers can:
+- contact vendor directly
+- submit booking request form
+
+-------------------------------------
+POS / ORDERING PREP (FUTURE)
+-------------------------------------
+
+Prepare system for future ordering:
+
+- Must integrate or “play nice” with vendor POS systems
+- Do NOT build full ordering yet
+- Allow future flexibility for:
+  - order ahead
+  - external POS linking
+
+-------------------------------------
+MARKET STRATEGY SUPPORT
+-------------------------------------
+
+System should support:
+- hyper-local markets
+- city-by-city scaling
+
+-------------------------------------
+PRICING CONSTRAINT
+-------------------------------------
+
+Ensure vendor pricing structure can stay under $300/month total.
+
+-------------------------------------
+SERVICE BUNDLING (FUTURE)
+-------------------------------------
+
+Prepare system to allow bundling with:
+- marketing services
+- financial tools
+
+-------------------------------------
+IMPORTANT
+-------------------------------------
+
+- Do NOT break existing functionality
+- Do NOT rebuild core app
+- Extend cleanly
+- Keep UI consistent and responsive
+
+-------------------------------------
+FINAL OUTPUT REQUIRED
+-------------------------------------
+
+After implementing, provide:
+1. Summary of additions
+2. New database changes
+3. New API endpoints
+4. Any new UI sections added

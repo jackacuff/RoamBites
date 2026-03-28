@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -17,6 +17,9 @@ export const eventsTable = pgTable("events", {
   endDateTime: timestamp("end_date_time", { withTimezone: true }).notNull(),
   publicNotes: text("public_notes"),
   vendorNotes: text("vendor_notes"),
+  isPublished: boolean("is_published").notNull().default(false),
+  bannerImageUrl: text("banner_image_url"),
+  websiteUrl: text("website_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -113,6 +113,9 @@ router.get("/events/:id", optionalAuth, async (req, res): Promise<void> => {
     endDateTime: event.endDateTime,
     publicNotes: event.publicNotes,
     vendorNotes: event.vendorNotes,
+    isPublished: event.isPublished,
+    bannerImageUrl: event.bannerImageUrl,
+    websiteUrl: event.websiteUrl,
     organizerUserId: event.organizerUserId,
     createdAt: event.createdAt,
     trucks,
@@ -184,6 +187,9 @@ router.put("/events/:id", requireRole("organizer", "admin"), async (req, res): P
   if (body.endDateTime !== null && body.endDateTime !== undefined) updateData.endDateTime = new Date(body.endDateTime);
   if (body.publicNotes !== undefined) updateData.publicNotes = body.publicNotes;
   if (body.vendorNotes !== undefined) updateData.vendorNotes = body.vendorNotes;
+  if (req.body.isPublished !== undefined) updateData.isPublished = Boolean(req.body.isPublished);
+  if (req.body.bannerImageUrl !== undefined) updateData.bannerImageUrl = req.body.bannerImageUrl;
+  if (req.body.websiteUrl !== undefined) updateData.websiteUrl = req.body.websiteUrl;
 
   const [updated] = await db.update(eventsTable).set(updateData).where(eq(eventsTable.id, id)).returning();
   res.json({ ...updated, trucks: [] });

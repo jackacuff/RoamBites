@@ -27,6 +27,8 @@ import OrganizerEditEvent from "./pages/organizer/OrganizerEditEvent";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import VendorSpecials from "./pages/vendor/VendorSpecials";
+import VendorEventSpots from "./pages/vendor/VendorEventSpots";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 
@@ -57,6 +59,8 @@ function Router() {
       <Route path="/vendor/schedule" component={VendorSchedule} />
       <Route path="/vendor/events" component={VendorEvents} />
       <Route path="/vendor/branding" component={VendorBranding} />
+      <Route path="/vendor/specials" component={VendorSpecials} />
+      <Route path="/vendor/event-spots" component={VendorEventSpots} />
 
       <Route path="/organizer" component={OrganizerDashboard} />
       <Route path="/organizer/events/new" component={OrganizerNewEvent} />
