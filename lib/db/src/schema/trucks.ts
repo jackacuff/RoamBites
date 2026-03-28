@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, integer, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -26,6 +26,8 @@ export const trucksTable = pgTable("trucks", {
   facebookUrl: text("facebook_url"),
   tiktokHandle: text("tiktok_handle"),
   youtubeUrl: text("youtube_url"),
+  currentLatitude: real("current_latitude"),
+  currentLongitude: real("current_longitude"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
