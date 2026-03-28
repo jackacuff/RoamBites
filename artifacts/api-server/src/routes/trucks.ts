@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable } from "@workspace/db";
+import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable, vendorSubscriptionsTable } from "@workspace/db";
 import { eq, and, ilike, or, inArray, avg, count } from "drizzle-orm";
 import { CreateTruckBody, UpdateTruckBody, CheckInTruckBody } from "@workspace/api-zod";
 import { requireAuth, requireRole, optionalAuth } from "../lib/auth";
@@ -304,6 +304,27 @@ router.post("/trucks/:id/checkin", requireRole("vendor", "admin"), async (req, r
   if (!truck) {
     res.status(404).json({ error: "Truck not found" });
     return;
+  }
+
+  const effectiveUserId = (req as any).effectiveUser?.id ?? req.user!.id;
+  const effectiveRole = (req as any).effectiveUser?.role ?? req.user!.role;
+
+  if (effectiveRole === "vendor") {
+    const [sub] = await db
+      .select({ status: vendorSubscriptionsTable.status, trialEndsAt: vendorSubscriptionsTable.trialEndsAt })
+      .from(vendorSubscriptionsTable)
+      .where(eq(vendorSubscriptionsTable.vendorUserId, effectiveUserId));
+
+    const isTrialingValid = sub?.status === "trialing" && sub.trialEndsAt && sub.trialEndsAt > new Date();
+    const isActive = sub?.status === "active";
+
+    if (!isTrialingValid && !isActive) {
+      res.status(403).json({
+        error: "An active subscription is required to go live.",
+        code: "SUBSCRIPTION_REQUIRED",
+      });
+      return;
+    }
   }
 
   const lat = parsed.success ? parsed.data.latitude ?? null : null;

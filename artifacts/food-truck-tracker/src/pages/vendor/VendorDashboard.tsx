@@ -354,15 +354,37 @@ export default function VendorDashboard() {
                       {checkOutMutation.isPending ? "Checking out..." : "Check Out"}
                     </button>
                   </>
-                ) : (
-                  <button
-                    onClick={() => setCheckInModalOpen(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-sm"
-                  >
-                    <Wifi className="w-4 h-4" />
-                    Go Live
-                  </button>
-                )}
+                ) : (() => {
+                  const subStatus = subscription?.status;
+                  const canGoLive = subStatus === "active" ||
+                    (subStatus === "trialing" && subscription?.trialDaysLeft !== null && (subscription?.trialDaysLeft ?? 0) >= 0);
+                  if (canGoLive) {
+                    return (
+                      <button
+                        onClick={() => setCheckInModalOpen(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-sm"
+                      >
+                        <Wifi className="w-4 h-4" />
+                        Go Live
+                      </button>
+                    );
+                  }
+                  return (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                      <div className="flex items-center gap-2 px-4 py-2.5 bg-muted border border-border rounded-xl text-sm text-muted-foreground">
+                        <CreditCard className="w-4 h-4 shrink-0" />
+                        <span>Subscription required to go live</span>
+                      </div>
+                      <button
+                        onClick={handleSubscribe}
+                        disabled={billingLoading}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+                      >
+                        {billingLoading ? "Loading..." : "Subscribe Now"}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
