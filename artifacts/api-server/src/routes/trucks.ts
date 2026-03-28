@@ -40,6 +40,8 @@ async function buildTruckSummary(truck: any, schedules: any[]) {
         }
       : null,
     vendorUserId: truck.vendorUserId,
+    currentLatitude: truck.currentLatitude,
+    currentLongitude: truck.currentLongitude,
   };
 }
 
@@ -160,6 +162,8 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
     facebookUrl: truck.facebookUrl,
     tiktokHandle: truck.tiktokHandle,
     youtubeUrl: truck.youtubeUrl,
+    currentLatitude: truck.currentLatitude,
+    currentLongitude: truck.currentLongitude,
     status,
     currentLocation,
     currentCity,
@@ -302,7 +306,15 @@ router.post("/trucks/:id/checkin", requireRole("vendor", "admin"), async (req, r
     return;
   }
 
-  await db.update(trucksTable).set({ isLive: true }).where(eq(trucksTable.id, id));
+  const lat = parsed.success ? parsed.data.latitude ?? null : null;
+  const lng = parsed.success ? parsed.data.longitude ?? null : null;
+
+  await db.update(trucksTable)
+    .set({
+      isLive: true,
+      ...(lat !== null && lng !== null ? { currentLatitude: lat, currentLongitude: lng } : {}),
+    })
+    .where(eq(trucksTable.id, id));
 
   if (parsed.success && parsed.data.scheduleEntryId) {
     await db
@@ -311,14 +323,16 @@ router.post("/trucks/:id/checkin", requireRole("vendor", "admin"), async (req, r
       .where(eq(scheduleEntriesTable.id, parsed.data.scheduleEntryId));
   }
 
-  res.json({ message: "Truck checked in as live" });
+  res.json({ message: "Truck checked in as live", latitude: lat, longitude: lng });
 });
 
 router.post("/trucks/:id/checkout", requireRole("vendor", "admin"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
 
-  await db.update(trucksTable).set({ isLive: false }).where(eq(trucksTable.id, id));
+  await db.update(trucksTable)
+    .set({ isLive: false, currentLatitude: null, currentLongitude: null })
+    .where(eq(trucksTable.id, id));
   await db
     .update(scheduleEntriesTable)
     .set({ isLive: false })

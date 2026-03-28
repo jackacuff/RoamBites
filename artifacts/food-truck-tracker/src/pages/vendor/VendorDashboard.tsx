@@ -6,9 +6,17 @@ import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
+
+const CheckInMapModal = lazy(() =>
+  import("@/components/CheckInMapModal").then((m) => ({ default: m.CheckInMapModal }))
+);
+
+const LiveMiniMap = lazy(() =>
+  import("@/components/LiveMiniMap").then((m) => ({ default: m.LiveMiniMap }))
+);
 
 export default function VendorDashboard() {
   const { user } = useAuth();
@@ -22,6 +30,7 @@ export default function VendorDashboard() {
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false);
 
   const { data: trucks, isLoading } = useListTrucks();
   const myTruck = trucks?.find(t => t.vendorUserId === user?.id);
@@ -52,34 +61,25 @@ export default function VendorDashboard() {
   const checkInMutation = useCheckInTruck();
   const checkOutMutation = useCheckOutTruck();
 
-  const handleCheckIn = async (withGps = false) => {
+  const handleCheckIn = async (lat?: number, lng?: number) => {
     if (!myTruck) return;
-    if (withGps) {
-      setGpsLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            await checkInMutation.mutateAsync({ id: myTruck.id, data: {} });
-            toast({ title: "You're live! GPS location updated.", description: `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}` });
-            queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
-          } catch (e: any) {
-            toast({ title: "Error", description: e.message, variant: "destructive" });
-          } finally { setGpsLoading(false); }
-        },
-        () => {
-          setGpsLoading(false);
-          toast({ title: "Location access denied", description: "Checking in without GPS.", variant: "destructive" });
-          handleCheckIn(false);
-        }
-      );
-    } else {
-      try {
-        await checkInMutation.mutateAsync({ id: myTruck.id, data: {} });
-        toast({ title: "You're live! Customers can see you now." });
-        queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
-      } catch (e: any) {
-        toast({ title: "Error", description: e.message, variant: "destructive" });
-      }
+    try {
+      await checkInMutation.mutateAsync({
+        id: myTruck.id,
+        data: lat !== undefined && lng !== undefined
+          ? { latitude: lat, longitude: lng }
+          : {},
+      });
+      toast({
+        title: "You're live! 🎉",
+        description: lat !== undefined
+          ? `Broadcasting your location to customers.`
+          : "Customers can see you're open.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+      throw e;
     }
   };
 
@@ -142,14 +142,22 @@ export default function VendorDashboard() {
         ) : (
           <>
             {/* Live Status Banner */}
-            <div className={`mb-6 p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${myTruck.isLive ? 'bg-green-50 border-green-200' : 'bg-card border-card-border'}`}>
+            <div className={`mb-2 p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${myTruck.isLive ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-card border-card-border'}`}>
               <div className="flex items-center gap-3">
                 {myTruck.isLive ? (
                   <div className="flex items-center gap-2">
-                    <Wifi className="w-6 h-6 text-green-600" />
+                    <div className="relative">
+                      <Wifi className="w-6 h-6 text-green-600" />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full animate-ping" />
+                    </div>
                     <div>
-                      <p className="font-bold text-green-800">You're Live!</p>
-                      {myTruck.currentLocation && <p className="text-sm text-green-700">At: {myTruck.currentLocation}</p>}
+                      <p className="font-bold text-green-800 dark:text-green-400">You're Live!</p>
+                      {(myTruck as any).currentLatitude
+                        ? <p className="text-xs text-green-700 dark:text-green-500 font-mono">{(myTruck as any).currentLatitude?.toFixed(5)}, {(myTruck as any).currentLongitude?.toFixed(5)}</p>
+                        : myTruck.currentLocation
+                          ? <p className="text-sm text-green-700 dark:text-green-500">At: {myTruck.currentLocation}</p>
+                          : <p className="text-sm text-green-700 dark:text-green-500">Broadcasting · no pin set yet</p>
+                      }
                     </div>
                   </div>
                 ) : (
@@ -157,7 +165,7 @@ export default function VendorDashboard() {
                     <WifiOff className="w-6 h-6 text-muted-foreground" />
                     <div>
                       <p className="font-bold text-foreground">Currently Offline</p>
-                      <p className="text-sm text-muted-foreground">Check in to broadcast your live location</p>
+                      <p className="text-sm text-muted-foreground">Go live to show customers where you are</p>
                     </div>
                   </div>
                 )}
@@ -174,6 +182,13 @@ export default function VendorDashboard() {
                       Share
                     </a>
                     <button
+                      onClick={() => setCheckInModalOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-white border border-green-300 text-green-800 rounded-xl text-sm font-semibold hover:bg-green-50"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      Update Pin
+                    </button>
+                    <button
                       onClick={handleCheckOut}
                       disabled={checkOutMutation.isPending}
                       className="px-5 py-2.5 bg-white border border-green-300 text-green-800 rounded-xl font-semibold hover:bg-green-50 disabled:opacity-50"
@@ -182,27 +197,29 @@ export default function VendorDashboard() {
                     </button>
                   </>
                 ) : (
-                  <>
-                    <button
-                      onClick={() => handleCheckIn(false)}
-                      disabled={checkInMutation.isPending}
-                      className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 shadow-sm"
-                    >
-                      {checkInMutation.isPending ? "Checking in..." : "Go Live"}
-                    </button>
-                    <button
-                      onClick={() => handleCheckIn(true)}
-                      disabled={gpsLoading || checkInMutation.isPending}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-300 text-green-800 rounded-xl font-semibold hover:bg-green-100 disabled:opacity-50"
-                      title="Go live using your device GPS"
-                    >
-                      {gpsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
-                      Use My Location
-                    </button>
-                  </>
+                  <button
+                    onClick={() => setCheckInModalOpen(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 shadow-sm"
+                  >
+                    <Wifi className="w-4 h-4" />
+                    Go Live
+                  </button>
                 )}
               </div>
             </div>
+
+            {/* Live mini-map */}
+            {myTruck.isLive && (myTruck as any).currentLatitude && (myTruck as any).currentLongitude && (
+              <div className="mb-6">
+                <Suspense fallback={<div className="h-48 rounded-2xl bg-muted animate-pulse" />}>
+                  <LiveMiniMap
+                    lat={(myTruck as any).currentLatitude}
+                    lng={(myTruck as any).currentLongitude}
+                    truckName={myTruck.name}
+                  />
+                </Suspense>
+              </div>
+            )}
 
             {!myTruck.isApproved && (
               <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
@@ -350,6 +367,17 @@ export default function VendorDashboard() {
           </>
         )}
       </div>
+
+      {/* Check-in Map Modal */}
+      {checkInModalOpen && myTruck && (
+        <Suspense fallback={null}>
+          <CheckInMapModal
+            truckName={myTruck.name}
+            onConfirm={handleCheckIn}
+            onClose={() => setCheckInModalOpen(false)}
+          />
+        </Suspense>
+      )}
     </Layout>
   );
 }
