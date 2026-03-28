@@ -108,8 +108,10 @@ React + Vite frontend — Central Oklahoma Food Truck Tracker.
   - `/vendor` dashboard, `/vendor/truck`, `/vendor/menu`, `/vendor/schedule`, `/vendor/events`, `/vendor/branding`
   - `/organizer` dashboard, `/organizer/events/new`, `/organizer/events/:id/manage`, `/organizer/events/:id/edit`
   - `/admin` admin panel
+  - `/superadmin` superadmin console (user list + impersonation)
 - **Maps**: `react-leaflet` + OpenStreetMap tiles. `MapView` component shows truck locations. Leaflet marker icon fix applied.
 - **Demo accounts** (all `password123`): `admin@okfoodtrucks.com`, `vendor1@okfoodtrucks.com`–`vendor4@okfoodtrucks.com`, `organizer1@okfoodtrucks.com`, `organizer2@okfoodtrucks.com`
+- **SuperAdmin**: `jracuff@gmail.com` / `RoamBites_SuperAdmin_2024!` — role `superadmin`, redirects to `/superadmin`
 - **Seed data**: 8 approved trucks, 40 menu items, 20 schedule entries, 5 events with event-truck relationships
 
 ## Database Schema

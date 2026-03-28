@@ -26,6 +26,7 @@ import OrganizerManageEvent from "./pages/organizer/OrganizerManageEvent";
 import OrganizerEditEvent from "./pages/organizer/OrganizerEditEvent";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/organizer/events/:id/edit" component={OrganizerEditEvent} />
 
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/superadmin" component={SuperAdminDashboard} />
       <Route path="/favorites" component={Favorites} />
       <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
