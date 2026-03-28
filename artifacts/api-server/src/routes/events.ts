@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable } from "@workspace/db";
+import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable, messagesTable } from "@workspace/db";
 import { eq, and, gt, inArray } from "drizzle-orm";
 import { CreateEventBody, UpdateEventBody, InviteTruckToEventBody, RespondToEventInviteBody } from "@workspace/api-zod";
 import { requireRole, optionalAuth } from "../lib/auth";
@@ -228,6 +228,23 @@ router.post("/events/:id/invite", requireRole("organizer", "admin"), async (req,
     .returning();
 
   const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.id, truckId));
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId));
+  const organizer = (req as any).user;
+
+  if (truck && event) {
+    const customMessage = req.body.message || null;
+    const defaultBody = `You've been invited to participate in **${event.name}** at ${event.venueName}, ${event.city} on ${new Date(event.startDateTime).toLocaleDateString()}.${customMessage ? `\n\n${customMessage}` : ""}`;
+    await db.insert(messagesTable).values({
+      fromUserId: organizer.id,
+      toUserId: truck.vendorUserId,
+      truckId: truck.id,
+      eventId: event.id,
+      subject: `Event invitation: ${event.name}`,
+      body: defaultBody,
+      type: "invitation",
+    });
+  }
+
   res.status(201).json({ ...et, truck: truck ?? null });
 });
 

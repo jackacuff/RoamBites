@@ -30,6 +30,8 @@ import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import VendorTruckEdit from "./pages/vendor/VendorTruckEdit";
 import VendorSpecials from "./pages/vendor/VendorSpecials";
 import VendorEventSpots from "./pages/vendor/VendorEventSpots";
+import VendorInbox from "./pages/vendor/VendorInbox";
+import OrganizerTruckMarketplace from "./pages/organizer/OrganizerTruckMarketplace";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 
@@ -63,6 +65,8 @@ function Router() {
       <Route path="/vendor/branding" component={VendorBranding} />
       <Route path="/vendor/specials" component={VendorSpecials} />
       <Route path="/vendor/event-spots" component={VendorEventSpots} />
+      <Route path="/vendor/inbox" component={VendorInbox} />
+      <Route path="/organizer/trucks" component={OrganizerTruckMarketplace} />
 
       <Route path="/organizer" component={OrganizerDashboard} />
       <Route path="/organizer/events/new" component={OrganizerNewEvent} />

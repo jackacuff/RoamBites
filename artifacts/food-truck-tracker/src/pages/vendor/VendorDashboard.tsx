@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2 } from "lucide-react";
+import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
@@ -18,6 +18,7 @@ export default function VendorDashboard() {
   const [resLoading, setResLoading] = useState(true);
   const [specials, setSpecials] = useState<any[]>([]);
   const [mySpotReservations, setMySpotReservations] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -40,6 +41,11 @@ export default function VendorDashboard() {
     fetch(getApiUrl("/api/vendor/spot-reservations"), { headers: authHeaders() })
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setMySpotReservations(data); })
+      .catch(() => {});
+
+    fetch(getApiUrl("/api/messages/unread-count"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(d => setUnreadCount(d.count || 0))
       .catch(() => {});
   }, []);
 
@@ -208,6 +214,13 @@ export default function VendorDashboard() {
                 title="Event Spot Marketplace"
                 description={`${approvedSpots} confirmed · Browse and apply for event vendor spots`}
                 badge={pendingSpots > 0 ? `${pendingSpots} pending` : undefined}
+              />
+              <NavCard
+                href="/vendor/inbox"
+                icon={<Inbox className="w-6 h-6" />}
+                title="Inbox"
+                description="Messages and event invitations from organizers"
+                badge={unreadCount > 0 ? `${unreadCount} new` : undefined}
               />
             </div>
 

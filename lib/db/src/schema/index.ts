@@ -12,3 +12,4 @@ export * from "./truckMedia";
 export * from "./eventSpots";
 export * from "./eventSpotReservations";
 export * from "./truckSpecials";
+export * from "./messages";

@@ -15,6 +15,7 @@ import mediaRouter from "./media";
 import superadminRouter from "./superadmin";
 import eventSpotsRouter from "./eventSpots";
 import specialsRouter from "./specials";
+import messagesRouter from "./messages";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(mediaRouter);
 router.use(superadminRouter);
 router.use(eventSpotsRouter);
 router.use(specialsRouter);
+router.use(messagesRouter);
 
 export default router;
