@@ -22,7 +22,8 @@ export function useAuth() {
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         
         // Redirect based on role
-        if (data.user.role === 'admin') setLocation('/admin');
+        if (data.user.role === 'superadmin') setLocation('/superadmin');
+        else if (data.user.role === 'admin') setLocation('/admin');
         else if (data.user.role === 'vendor') setLocation('/vendor');
         else if (data.user.role === 'organizer') setLocation('/organizer');
         else setLocation('/');

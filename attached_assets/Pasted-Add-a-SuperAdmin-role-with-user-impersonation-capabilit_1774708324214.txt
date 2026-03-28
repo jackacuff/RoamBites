@@ -1,0 +1,103 @@
+Add a SuperAdmin role with user impersonation capabilities for testing and debugging.
+
+-------------------------------------
+SUPERADMIN USER
+-------------------------------------
+
+Create a SuperAdmin user with:
+
+Email:
+jracuff@gmail.com
+
+This user should have elevated permissions beyond normal admin.
+
+-------------------------------------
+SUPERADMIN CAPABILITIES
+-------------------------------------
+
+SuperAdmin can:
+
+- View all users (customers, vendors, organizers, admins)
+- Act as / impersonate any user in the system
+- Switch between roles instantly
+- See exactly what that user would see (UI + permissions)
+
+-------------------------------------
+IMPERSONATION FEATURE
+-------------------------------------
+
+Add functionality:
+
+From SuperAdmin dashboard:
+- List all users
+- Add button:
+  “Log in as this user”
+
+When clicked:
+- System switches session to selected user
+- SuperAdmin is now acting as that user
+- UI updates to reflect that user’s role
+
+-------------------------------------
+IMPERSONATION INDICATOR (IMPORTANT)
+-------------------------------------
+
+When impersonating, show a persistent banner at top of app:
+
+Example:
+“You are currently viewing as [User Name] (Role: Vendor)”
+
+Include button:
+“Exit Impersonation”
+
+-------------------------------------
+EXIT IMPERSONATION
+-------------------------------------
+
+- Clicking “Exit Impersonation” returns SuperAdmin to original account
+- Restore original session safely
+
+-------------------------------------
+SECURITY RULES
+-------------------------------------
+
+- Only SuperAdmin can impersonate users
+- Regular admins cannot impersonate unless explicitly allowed
+- Prevent impersonation loops (do not allow impersonating another SuperAdmin)
+
+-------------------------------------
+AUDIT / LOGGING (OPTIONAL)
+-------------------------------------
+
+If simple:
+- Log impersonation events:
+  - who impersonated
+  - which user
+  - timestamp
+
+-------------------------------------
+UI LOCATION
+-------------------------------------
+
+Add this to Admin dashboard:
+- “Users” page
+- Add action button per user:
+  “Impersonate”
+
+-------------------------------------
+IMPORTANT
+-------------------------------------
+
+- Do NOT break existing authentication
+- Maintain session stability
+- Ensure impersonation does not corrupt user data
+- Keep UX clean and obvious when impersonating
+
+-------------------------------------
+FINAL OUTPUT REQUIRED
+-------------------------------------
+
+After implementing, provide:
+1. Summary of SuperAdmin functionality
+2. Any changes to auth/session system
+3. Where impersonation is accessible in UI

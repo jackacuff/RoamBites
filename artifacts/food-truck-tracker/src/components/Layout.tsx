@@ -1,8 +1,53 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { UtensilsCrossed, Menu, X, LogOut, User, Heart, ChevronDown } from "lucide-react";
+import { UtensilsCrossed, Menu, X, LogOut, User, Heart, ChevronDown, Crown, AlertTriangle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+
+function ImpersonationBanner() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const raw = localStorage.getItem("impersonated_user");
+  const impersonationActive = !!localStorage.getItem("token_original");
+  if (!impersonationActive) return null;
+
+  const info = raw ? JSON.parse(raw) : null;
+  const displayName = user?.name || info?.name || "Unknown User";
+  const displayRole = user?.role || info?.role || "unknown";
+  const superAdminName = info?.superAdminName || "SuperAdmin";
+
+  const exitImpersonation = () => {
+    const original = localStorage.getItem("token_original");
+    if (original) {
+      localStorage.setItem("token", original);
+      localStorage.removeItem("token_original");
+      localStorage.removeItem("impersonated_user");
+      queryClient.clear();
+      window.location.href = "/superadmin";
+    }
+  };
+
+  return (
+    <div className="w-full bg-purple-700 text-white px-4 py-2.5 flex items-center justify-between gap-4 z-[100] relative">
+      <div className="flex items-center gap-2.5 text-sm">
+        <AlertTriangle className="w-4 h-4 text-purple-200 shrink-0" />
+        <span className="font-medium">
+          <span className="text-purple-200">{superAdminName} is viewing as</span>{" "}
+          <span className="font-bold">{displayName}</span>{" "}
+          <span className="text-purple-200">— Role:</span>{" "}
+          <span className="font-bold capitalize">{displayRole}</span>
+        </span>
+      </div>
+      <button
+        onClick={exitImpersonation}
+        className="shrink-0 px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-semibold transition-colors border border-white/20"
+      >
+        Exit Impersonation
+      </button>
+    </div>
+  );
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
@@ -29,6 +74,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const getDashboardLink = () => {
     if (!user) return null;
+    if (user.role === "superadmin") return { href: "/superadmin", label: "SuperAdmin Console" };
     if (user.role === "vendor") return { href: "/vendor", label: "Vendor Dashboard" };
     if (user.role === "organizer") return { href: "/organizer", label: "Organizer Dashboard" };
     if (user.role === "admin") return { href: "/admin", label: "Admin Panel" };
@@ -39,6 +85,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <ImpersonationBanner />
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -83,8 +130,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       onClick={() => setProfileOpen(!profileOpen)}
                       className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-muted text-sm font-medium transition-colors"
                     >
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-4 h-4 text-primary" />
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user?.role === "superadmin" ? "bg-purple-100" : "bg-primary/10"}`}>
+                        {user?.role === "superadmin" ? (
+                          <Crown className="w-4 h-4 text-purple-600" />
+                        ) : (
+                          <User className="w-4 h-4 text-primary" />
+                        )}
                       </div>
                       <span className="text-foreground">{user?.name?.split(" ")[0]}</span>
                       <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${profileOpen ? "rotate-180" : ""}`} />
@@ -96,7 +147,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -8 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 top-full mt-2 w-52 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50"
+                          className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50"
                         >
                           <div className="px-4 py-3 border-b border-border">
                             <p className="text-sm font-semibold text-foreground truncate">{user?.name}</p>
@@ -125,9 +176,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                               <Link
                                 href={dashboardLink.href}
                                 onClick={() => setProfileOpen(false)}
-                                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                                className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${user?.role === "superadmin" ? "text-purple-700 hover:bg-purple-50" : "text-foreground hover:bg-muted"}`}
                               >
-                                <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                                {user?.role === "superadmin" ? (
+                                  <Crown className="w-4 h-4 text-purple-500" />
+                                ) : (
+                                  <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                                )}
                                 {dashboardLink.label}
                               </Link>
                             )}
@@ -214,7 +269,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <Link
                         href={dashboardLink.href}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="block px-3 py-3 rounded-xl text-base font-medium text-primary hover:bg-primary/10"
+                        className={`block px-3 py-3 rounded-xl text-base font-medium hover:bg-primary/10 ${user?.role === "superadmin" ? "text-purple-700" : "text-primary"}`}
                       >
                         {dashboardLink.label}
                       </Link>
