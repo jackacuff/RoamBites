@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
-import { Plus, Calendar, MapPin, Users, Settings } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Settings, Search } from "lucide-react";
 
 export default function OrganizerDashboard() {
   const { user } = useAuth();
@@ -25,12 +25,20 @@ export default function OrganizerDashboard() {
             <h1 className="text-3xl font-bold text-foreground">Organizer Dashboard</h1>
             <p className="text-muted-foreground mt-1">Manage your food truck events</p>
           </div>
-          <Link href="/organizer/events/new">
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90">
-              <Plus className="w-4 h-4" />
-              Create Event
-            </button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/organizer/trucks">
+              <button className="flex items-center gap-2 px-4 py-2 border border-border text-foreground rounded-lg text-sm font-medium hover:bg-muted">
+                <Search className="w-4 h-4" />
+                Find Trucks
+              </button>
+            </Link>
+            <Link href="/organizer/events/new">
+              <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90">
+                <Plus className="w-4 h-4" />
+                Create Event
+              </button>
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
