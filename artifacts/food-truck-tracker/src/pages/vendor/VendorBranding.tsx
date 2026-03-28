@@ -342,7 +342,7 @@ export default function VendorBranding() {
 
   useEffect(() => {
     if (!isAuthenticated) navigate("/login");
-    else if (user && user.role !== "vendor" && user.role !== "admin") navigate("/");
+    else if (user && user.role !== "vendor" && user.role !== "admin" && user.role !== "superadmin") navigate("/");
   }, [isAuthenticated, user]);
 
   if (truckLoading) {

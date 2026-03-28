@@ -191,6 +191,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                                 {dashboardLink.label}
                               </Link>
                             )}
+                            {user?.role === "superadmin" && (
+                              <Link
+                                href="/admin"
+                                onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                              >
+                                <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
+                                Admin Panel
+                              </Link>
+                            )}
                             <button
                               onClick={() => { logout(); setProfileOpen(false); }}
                               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5 transition-colors"
@@ -277,6 +287,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         className={`block px-3 py-3 rounded-xl text-base font-medium hover:bg-primary/10 ${user?.role === "superadmin" ? "text-purple-700" : "text-primary"}`}
                       >
                         {dashboardLink.label}
+                      </Link>
+                    )}
+                    {user?.role === "superadmin" && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-3 rounded-xl text-base font-medium text-primary hover:bg-primary/10"
+                      >
+                        Admin Panel
                       </Link>
                     )}
                     <button
