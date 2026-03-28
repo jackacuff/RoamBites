@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette } from "lucide-react";
+import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
@@ -16,6 +16,11 @@ export default function VendorDashboard() {
   const queryClient = useQueryClient();
   const [reservations, setReservations] = useState<any[]>([]);
   const [resLoading, setResLoading] = useState(true);
+  const [specials, setSpecials] = useState<any[]>([]);
+  const [mySpotReservations, setMySpotReservations] = useState<any[]>([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [gpsLoading, setGpsLoading] = useState(false);
 
   const { data: trucks, isLoading } = useListTrucks();
   const myTruck = trucks?.find(t => t.vendorUserId === user?.id);
@@ -26,19 +31,49 @@ export default function VendorDashboard() {
       .then(data => { if (Array.isArray(data)) setReservations(data); })
       .catch(() => {})
       .finally(() => setResLoading(false));
+
+    fetch(getApiUrl("/api/vendor/specials"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setSpecials(data.filter((s: any) => s.isActive)); })
+      .catch(() => {});
+
+    fetch(getApiUrl("/api/vendor/spot-reservations"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setMySpotReservations(data); })
+      .catch(() => {});
   }, []);
 
   const checkInMutation = useCheckInTruck();
   const checkOutMutation = useCheckOutTruck();
 
-  const handleCheckIn = async () => {
+  const handleCheckIn = async (withGps = false) => {
     if (!myTruck) return;
-    try {
-      await checkInMutation.mutateAsync({ id: myTruck.id, data: {} });
-      toast({ title: "You're live! Customers can see you now." });
-      queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+    if (withGps) {
+      setGpsLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            await checkInMutation.mutateAsync({ id: myTruck.id, data: {} });
+            toast({ title: "You're live! GPS location updated.", description: `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}` });
+            queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+          } catch (e: any) {
+            toast({ title: "Error", description: e.message, variant: "destructive" });
+          } finally { setGpsLoading(false); }
+        },
+        () => {
+          setGpsLoading(false);
+          toast({ title: "Location access denied", description: "Checking in without GPS.", variant: "destructive" });
+          handleCheckIn(false);
+        }
+      );
+    } else {
+      try {
+        await checkInMutation.mutateAsync({ id: myTruck.id, data: {} });
+        toast({ title: "You're live! Customers can see you now." });
+        queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message, variant: "destructive" });
+      }
     }
   };
 
@@ -53,7 +88,30 @@ export default function VendorDashboard() {
     }
   };
 
+  const shareUrl = myTruck ? `${window.location.origin}/trucks/${myTruck.slug}` : "";
+  const scheduleCaption = myTruck?.currentLocation
+    ? `We're out today at ${myTruck.currentLocation}! Come find us and grab something delicious 🔥\nFind us on RoamBites: ${shareUrl}`
+    : `Come find ${myTruck?.name} on RoamBites! Browse our menu and see where we'll be next.\n${shareUrl}`;
+
+  const copyText = async (text: string, key: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+    toast({ title: "Copied to clipboard!" });
+  };
+
+  const nativeShare = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: myTruck?.name, text: scheduleCaption, url: shareUrl });
+    } else {
+      copyText(shareUrl, "url");
+    }
+  };
+
   if (isLoading) return <Layout><LoadingSpinner /></Layout>;
+
+  const pendingSpots = mySpotReservations.filter(r => r.status === "pending").length;
+  const approvedSpots = mySpotReservations.filter(r => r.status === "approved").length;
 
   return (
     <Layout>
@@ -77,7 +135,7 @@ export default function VendorDashboard() {
           </div>
         ) : (
           <>
-            {/* Status Banner */}
+            {/* Live Status Banner */}
             <div className={`mb-6 p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${myTruck.isLive ? 'bg-green-50 border-green-200' : 'bg-card border-card-border'}`}>
               <div className="flex items-center gap-3">
                 {myTruck.isLive ? (
@@ -108,18 +166,28 @@ export default function VendorDashboard() {
                     {checkOutMutation.isPending ? "Checking out..." : "Check Out"}
                   </button>
                 ) : (
-                  <button
-                    onClick={handleCheckIn}
-                    disabled={checkInMutation.isPending}
-                    className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 shadow-sm"
-                  >
-                    {checkInMutation.isPending ? "Checking in..." : "Go Live Now"}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleCheckIn(false)}
+                      disabled={checkInMutation.isPending}
+                      className="px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-50 shadow-sm"
+                    >
+                      {checkInMutation.isPending ? "Checking in..." : "Go Live"}
+                    </button>
+                    <button
+                      onClick={() => handleCheckIn(true)}
+                      disabled={gpsLoading || checkInMutation.isPending}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-300 text-green-800 rounded-xl font-semibold hover:bg-green-100 disabled:opacity-50"
+                      title="Go live using your device GPS"
+                    >
+                      {gpsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                      Use My Location
+                    </button>
+                  </>
                 )}
               </div>
             </div>
 
-            {/* Approval notice */}
             {!myTruck.isApproved && (
               <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
                 Your truck is pending admin approval. It won't appear publicly until approved.
@@ -127,41 +195,77 @@ export default function VendorDashboard() {
             )}
 
             {/* Nav Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              <NavCard href="/vendor/truck" icon={<Truck className="w-6 h-6" />} title="Truck Profile" description="Edit your truck name, cuisine, and description" />
+              <NavCard href="/vendor/menu" icon={<BookOpen className="w-6 h-6" />} title="Menu" description={`${myTruck.menuItemCount ?? 0} items · Add and manage your menu`} />
+              <NavCard href="/vendor/schedule" icon={<Calendar className="w-6 h-6" />} title="Schedule" description="Manage your upcoming stops and locations" />
+              <NavCard href="/vendor/events" icon={<CalendarCheck className="w-6 h-6" />} title="Event Invitations" description="View and respond to event invites" />
+              <NavCard href="/vendor/branding" icon={<Palette className="w-6 h-6" />} title="Branding & Media" description="Upload logo, cover photo, gallery, and menu" />
+              <NavCard href="/vendor/specials" icon={<Megaphone className="w-6 h-6" />} title="Specials & Announcements" description={`${specials.length} active · Post deals, discounts, and news`} />
               <NavCard
-                href="/vendor/truck"
-                icon={<Truck className="w-6 h-6" />}
-                title="Truck Profile"
-                description="Edit your truck name, cuisine, and description"
-              />
-              <NavCard
-                href="/vendor/menu"
-                icon={<BookOpen className="w-6 h-6" />}
-                title="Menu"
-                description={`${myTruck.menuItemCount ?? 0} items · Add and manage your menu`}
-              />
-              <NavCard
-                href="/vendor/schedule"
-                icon={<Calendar className="w-6 h-6" />}
-                title="Schedule"
-                description="Manage your upcoming stops and locations"
-              />
-              <NavCard
-                href="/vendor/events"
-                icon={<CalendarCheck className="w-6 h-6" />}
-                title="Event Invitations"
-                description="View and respond to event invites"
-              />
-              <NavCard
-                href="/vendor/branding"
-                icon={<Palette className="w-6 h-6" />}
-                title="Branding &amp; Media"
-                description="Upload logo, cover photo, gallery, and menu"
+                href="/vendor/event-spots"
+                icon={<Ticket className="w-6 h-6" />}
+                title="Event Spot Marketplace"
+                description={`${approvedSpots} confirmed · Browse and apply for event vendor spots`}
+                badge={pendingSpots > 0 ? `${pendingSpots} pending` : undefined}
               />
             </div>
 
+            {/* Share & Promote */}
+            <div className="mb-8 bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-display font-bold text-foreground flex items-center gap-2">
+                    <Share2 className="w-5 h-5 text-primary" />
+                    Share & Promote
+                  </h2>
+                  <p className="text-sm text-muted-foreground">Share your profile and today's location with customers</p>
+                </div>
+                <button
+                  onClick={() => setShareOpen(!shareOpen)}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90"
+                >
+                  {shareOpen ? "Close" : "Share Now"}
+                </button>
+              </div>
+
+              {shareOpen && (
+                <div className="space-y-4">
+                  <div className="bg-background rounded-xl p-4 border border-border">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Your Truck Link</p>
+                      <button onClick={() => copyText(shareUrl, "url")} className="flex items-center gap-1 text-xs text-primary hover:opacity-80">
+                        {copied === "url" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copied === "url" ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-sm text-foreground font-mono truncate">{shareUrl}</p>
+                  </div>
+
+                  <div className="bg-background rounded-xl p-4 border border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">Ready-to-Post Caption</p>
+                      <button onClick={() => copyText(scheduleCaption, "caption")} className="flex items-center gap-1 text-xs text-primary hover:opacity-80">
+                        {copied === "caption" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copied === "caption" ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-sm text-foreground whitespace-pre-line">{scheduleCaption}</p>
+                  </div>
+
+                  <button
+                    onClick={nativeShare}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share via Device
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Booking Requests */}
-            <div className="mt-8">
+            <div className="mb-8">
               <h2 className="text-xl font-display font-bold text-foreground mb-4 flex items-center gap-2">
                 <ClipboardList className="w-5 h-5 text-primary" />
                 Booking Requests
@@ -202,7 +306,7 @@ export default function VendorDashboard() {
             </div>
 
             {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="grid grid-cols-3 gap-4">
               <div className="bg-card border border-card-border rounded-xl p-4 text-center">
                 <p className="text-2xl font-bold text-foreground">{myTruck.menuItemCount ?? 0}</p>
                 <p className="text-sm text-muted-foreground">Menu Items</p>
@@ -227,17 +331,20 @@ export default function VendorDashboard() {
   );
 }
 
-function NavCard({ href, icon, title, description }: { href: string; icon: React.ReactNode; title: string; description: string }) {
+function NavCard({ href, icon, title, description, badge }: { href: string; icon: React.ReactNode; title: string; description: string; badge?: string }) {
   return (
     <Link href={href}>
-      <div className="bg-card border border-card-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer flex items-start gap-4">
+      <div className="bg-card border border-card-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer flex items-start gap-4 relative">
         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
           {icon}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground">{title}</h3>
           <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
         </div>
+        {badge && (
+          <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">{badge}</span>
+        )}
       </div>
     </Link>
   );

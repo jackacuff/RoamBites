@@ -9,3 +9,6 @@ export * from "./favorites";
 export * from "./notificationPreferences";
 export * from "./reservationRequests";
 export * from "./truckMedia";
+export * from "./eventSpots";
+export * from "./eventSpotReservations";
+export * from "./truckSpecials";

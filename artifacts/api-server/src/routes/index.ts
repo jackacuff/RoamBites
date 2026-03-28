@@ -13,6 +13,8 @@ import reservationsRouter from "./reservations";
 import storageRouter from "./storage";
 import mediaRouter from "./media";
 import superadminRouter from "./superadmin";
+import eventSpotsRouter from "./eventSpots";
+import specialsRouter from "./specials";
 
 const router: IRouter = Router();
 
@@ -30,5 +32,7 @@ router.use(reservationsRouter);
 router.use(storageRouter);
 router.use(mediaRouter);
 router.use(superadminRouter);
+router.use(eventSpotsRouter);
+router.use(specialsRouter);
 
 export default router;
