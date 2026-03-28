@@ -70,7 +70,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { name: "Home", path: "/" },
     { name: "Browse Trucks", path: "/trucks" },
     { name: "Events", path: "/events" },
-    ...(user?.role === "vendor" ? [{ name: "My Truck", path: "/vendor/truck" }] : []),
+    ...(user?.role === "vendor" ? [
+      { name: "Dashboard", path: "/vendor/dashboard" },
+      { name: "My Truck", path: "/vendor/truck" },
+    ] : []),
     ...(user?.role === "organizer" ? [{ name: "My Events", path: "/organizer" }] : []),
   ];
 
