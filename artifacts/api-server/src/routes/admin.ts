@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, trucksTable, eventsTable, menuItemsTable, scheduleEntriesTable, eventTrucksTable } from "@workspace/db";
+import { db, usersTable, trucksTable, eventsTable, menuItemsTable, scheduleEntriesTable, eventTrucksTable, plansTable, vendorSubscriptionsTable } from "@workspace/db";
 import { eq, count } from "drizzle-orm";
 import { AdminApproveTruckBody, AdminUpdateUserStatusBody } from "@workspace/api-zod";
 import { requireRole } from "../lib/auth";
@@ -72,13 +72,134 @@ router.get("/admin/stats", requireRole("admin"), async (_req, res): Promise<void
   const pendingApproval = allTrucks.filter((t) => !t.isApproved).length;
   const activeTrucks = allTrucks.filter((t) => t.isApproved).length;
 
+  const allSubs = await db.select({ status: vendorSubscriptionsTable.status }).from(vendorSubscriptionsTable);
+  const trialing = allSubs.filter((s) => s.status === "trialing").length;
+  const active = allSubs.filter((s) => s.status === "active").length;
+  const pastDue = allSubs.filter((s) => s.status === "past_due").length;
+
   res.json({
     totalUsers: users.count,
     totalTrucks: trucks.count,
     totalEvents: events.count,
     pendingApproval,
     activeTrucks,
+    trialing,
+    activeSubscriptions: active,
+    pastDue,
   });
+});
+
+router.get("/admin/plans", requireRole("admin"), async (_req, res): Promise<void> => {
+  const plans = await db.select().from(plansTable).orderBy(plansTable.id);
+  res.json(plans);
+});
+
+router.post("/admin/plans", requireRole("admin"), async (req, res): Promise<void> => {
+  const { name, description, monthlyPrice, trialDays, features, isActive, stripePriceId } = req.body;
+  if (!name) { res.status(400).json({ error: "name is required" }); return; }
+  const [plan] = await db.insert(plansTable).values({
+    name,
+    description: description ?? null,
+    monthlyPrice: Number(monthlyPrice ?? 0),
+    trialDays: Number(trialDays ?? 90),
+    features: Array.isArray(features) ? features : [],
+    isActive: isActive !== false,
+    stripePriceId: stripePriceId ?? null,
+  }).returning();
+  res.status(201).json(plan);
+});
+
+router.put("/admin/plans/:id", requireRole("admin"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const { name, description, monthlyPrice, trialDays, features, isActive, stripePriceId } = req.body;
+  const update: Record<string, unknown> = {};
+  if (name !== undefined) update.name = name;
+  if (description !== undefined) update.description = description;
+  if (monthlyPrice !== undefined) update.monthlyPrice = Number(monthlyPrice);
+  if (trialDays !== undefined) update.trialDays = Number(trialDays);
+  if (features !== undefined) update.features = features;
+  if (isActive !== undefined) update.isActive = isActive;
+  if (stripePriceId !== undefined) update.stripePriceId = stripePriceId;
+  const [plan] = await db.update(plansTable).set(update).where(eq(plansTable.id, id)).returning();
+  res.json(plan);
+});
+
+router.delete("/admin/plans/:id", requireRole("admin"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  await db.update(plansTable).set({ isActive: false }).where(eq(plansTable.id, id));
+  res.json({ message: "Plan deactivated" });
+});
+
+router.get("/admin/subscriptions", requireRole("admin"), async (_req, res): Promise<void> => {
+  const subs = await db
+    .select({
+      id: vendorSubscriptionsTable.id,
+      status: vendorSubscriptionsTable.status,
+      trialEndsAt: vendorSubscriptionsTable.trialEndsAt,
+      currentPeriodEnd: vendorSubscriptionsTable.currentPeriodEnd,
+      stripeCustomerId: vendorSubscriptionsTable.stripeCustomerId,
+      stripeSubscriptionId: vendorSubscriptionsTable.stripeSubscriptionId,
+      canceledAt: vendorSubscriptionsTable.canceledAt,
+      createdAt: vendorSubscriptionsTable.createdAt,
+      vendorUserId: usersTable.id,
+      vendorName: usersTable.name,
+      vendorEmail: usersTable.email,
+      planId: plansTable.id,
+      planName: plansTable.name,
+      monthlyPrice: plansTable.monthlyPrice,
+    })
+    .from(vendorSubscriptionsTable)
+    .innerJoin(usersTable, eq(vendorSubscriptionsTable.vendorUserId, usersTable.id))
+    .innerJoin(plansTable, eq(vendorSubscriptionsTable.planId, plansTable.id))
+    .orderBy(vendorSubscriptionsTable.createdAt);
+
+  const now = new Date();
+  res.json(subs.map((s) => ({
+    ...s,
+    trialDaysLeft: s.trialEndsAt && s.status === "trialing"
+      ? Math.max(0, Math.ceil((s.trialEndsAt.getTime() - now.getTime()) / 86400000))
+      : null,
+  })));
+});
+
+router.post("/admin/subscriptions/:id/grant-trial", requireRole("admin"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const { days } = req.body as { days?: number };
+  if (!days || days < 1) { res.status(400).json({ error: "days must be a positive number" }); return; }
+
+  const [sub] = await db.select().from(vendorSubscriptionsTable).where(eq(vendorSubscriptionsTable.id, id));
+  if (!sub) { res.status(404).json({ error: "Subscription not found" }); return; }
+
+  const base = sub.trialEndsAt && sub.trialEndsAt > new Date() ? sub.trialEndsAt : new Date();
+  const newEnd = new Date(base.getTime() + days * 86400000);
+
+  const [updated] = await db
+    .update(vendorSubscriptionsTable)
+    .set({ trialEndsAt: newEnd, status: "trialing" })
+    .where(eq(vendorSubscriptionsTable.id, id))
+    .returning();
+
+  res.json(updated);
+});
+
+router.post("/admin/subscriptions/:id/set-plan", requireRole("admin"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const { planId, status } = req.body as { planId?: number; status?: string };
+  const update: Record<string, unknown> = {};
+  if (planId !== undefined) update.planId = planId;
+  if (status !== undefined) update.status = status;
+  const [updated] = await db.update(vendorSubscriptionsTable).set(update).where(eq(vendorSubscriptionsTable.id, id)).returning();
+  res.json(updated);
+});
+
+router.post("/admin/subscriptions/:id/cancel", requireRole("admin"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const [updated] = await db
+    .update(vendorSubscriptionsTable)
+    .set({ status: "canceled", canceledAt: new Date() })
+    .where(eq(vendorSubscriptionsTable.id, id))
+    .returning();
+  res.json(updated);
 });
 
 router.post("/admin/seed", requireRole("admin"), async (_req, res): Promise<void> => {

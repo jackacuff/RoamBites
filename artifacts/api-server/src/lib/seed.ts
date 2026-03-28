@@ -4,6 +4,8 @@ import {
   trucksTable,
   menuItemsTable,
   eventsTable,
+  plansTable,
+  vendorSubscriptionsTable,
 } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "./logger";
@@ -231,6 +233,45 @@ export async function seedIfEmpty() {
         isPublished: true,
       },
     ]);
+
+    const [defaultPlan] = await db.insert(plansTable).values({
+      name: "Vendor Pro",
+      description: "Full access to the RoamBites vendor platform",
+      monthlyPrice: 29.99,
+      trialDays: 90,
+      features: [
+        "Unlimited menu items",
+        "Live GPS check-in",
+        "Schedule management",
+        "Event marketplace access",
+        "Customer inbox",
+        "Specials & promotions",
+        "Social media integration",
+        "Priority listing",
+      ],
+      isActive: true,
+    }).returning();
+
+    const vendorEmails = [
+      "vendor1@okfoodtrucks.com",
+      "vendor2@okfoodtrucks.com",
+      "vendor3@okfoodtrucks.com",
+      "vendor4@okfoodtrucks.com",
+    ];
+
+    const vendorUsers = users.filter((u) => vendorEmails.includes(u.email));
+
+    const now = new Date();
+    const trialEndsAt = new Date(now.getTime() + defaultPlan.trialDays * 86400000);
+
+    await db.insert(vendorSubscriptionsTable).values(
+      vendorUsers.map((u) => ({
+        vendorUserId: u.id,
+        planId: defaultPlan.id,
+        status: "trialing" as const,
+        trialEndsAt,
+      }))
+    );
 
     logger.info("Database seeded successfully ✓");
   } catch (err) {
