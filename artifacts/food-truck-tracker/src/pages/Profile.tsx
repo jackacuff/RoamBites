@@ -102,7 +102,7 @@ export default function Profile() {
   const getDashboardLink = () => {
     if (user.role === "vendor") return { href: "/vendor", label: "Vendor Dashboard" };
     if (user.role === "organizer") return { href: "/organizer", label: "Organizer Dashboard" };
-    if (user.role === "admin") return { href: "/admin", label: "Admin Panel" };
+    if (user.role === "admin" || user.role === "superadmin") return { href: "/admin", label: "Admin Panel" };
     return null;
   };
   const dashboardLink = getDashboardLink();
