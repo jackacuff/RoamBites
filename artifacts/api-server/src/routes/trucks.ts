@@ -155,6 +155,11 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
     reservationPhone: truck.reservationPhone,
     reservationContactPreference: truck.reservationContactPreference,
     reservationNotes: truck.reservationNotes,
+    twitterHandle: truck.twitterHandle,
+    instagramHandle: truck.instagramHandle,
+    facebookUrl: truck.facebookUrl,
+    tiktokHandle: truck.tiktokHandle,
+    youtubeUrl: truck.youtubeUrl,
     status,
     currentLocation,
     currentCity,
@@ -243,6 +248,11 @@ router.put("/trucks/:id", requireRole("vendor", "admin"), async (req, res): Prom
   if (rawBody.reservationPhone !== undefined) updateData.reservationPhone = rawBody.reservationPhone || null;
   if (rawBody.reservationContactPreference !== undefined) updateData.reservationContactPreference = rawBody.reservationContactPreference || "email";
   if (rawBody.reservationNotes !== undefined) updateData.reservationNotes = rawBody.reservationNotes || null;
+  if (rawBody.twitterHandle !== undefined) updateData.twitterHandle = rawBody.twitterHandle || null;
+  if (rawBody.instagramHandle !== undefined) updateData.instagramHandle = rawBody.instagramHandle || null;
+  if (rawBody.facebookUrl !== undefined) updateData.facebookUrl = rawBody.facebookUrl || null;
+  if (rawBody.tiktokHandle !== undefined) updateData.tiktokHandle = rawBody.tiktokHandle || null;
+  if (rawBody.youtubeUrl !== undefined) updateData.youtubeUrl = rawBody.youtubeUrl || null;
 
   const [updated] = await db.update(trucksTable).set(updateData).where(eq(trucksTable.id, id)).returning();
   const schedules = await db.select().from(scheduleEntriesTable).where(eq(scheduleEntriesTable.truckId, id));

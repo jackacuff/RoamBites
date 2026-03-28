@@ -7,7 +7,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, ArrowLeft, Eye } from "lucide-react";
+import { CalendarCheck, ArrowLeft, Eye, Share2 } from "lucide-react";
 
 export default function VendorTruckEdit() {
   const { user } = useAuth();
@@ -32,6 +32,11 @@ export default function VendorTruckEdit() {
       reservationPhone: "",
       reservationContactPreference: "email",
       reservationNotes: "",
+      twitterHandle: "",
+      instagramHandle: "",
+      facebookUrl: "",
+      tiktokHandle: "",
+      youtubeUrl: "",
     }
   });
 
@@ -50,6 +55,11 @@ export default function VendorTruckEdit() {
         reservationPhone: (myTruck as any).reservationPhone ?? "",
         reservationContactPreference: (myTruck as any).reservationContactPreference ?? "email",
         reservationNotes: (myTruck as any).reservationNotes ?? "",
+        twitterHandle: (myTruck as any).twitterHandle ?? "",
+        instagramHandle: (myTruck as any).instagramHandle ?? "",
+        facebookUrl: (myTruck as any).facebookUrl ?? "",
+        tiktokHandle: (myTruck as any).tiktokHandle ?? "",
+        youtubeUrl: (myTruck as any).youtubeUrl ?? "",
       });
     }
   }, [myTruck, reset]);
@@ -98,56 +108,120 @@ export default function VendorTruckEdit() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-card border border-card-border rounded-2xl p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Truck Name *</label>
-            <input
-              {...register("name", { required: "Name is required" })}
-              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
-              placeholder="Red Dirt Tacos"
-            />
-            {errors.name && <p className="text-destructive text-sm mt-1">{errors.name.message as string}</p>}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Basic Info */}
+          <div className="bg-card border border-card-border rounded-2xl p-6 space-y-4">
+            <h2 className="font-semibold text-foreground text-sm uppercase tracking-wide text-muted-foreground">Basic Info</h2>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Truck Name *</label>
+              <input
+                {...register("name", { required: "Name is required" })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                placeholder="Red Dirt Tacos"
+              />
+              {errors.name && <p className="text-destructive text-sm mt-1">{errors.name.message as string}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Cuisine Type *</label>
+              <input
+                {...register("cuisine", { required: "Cuisine is required" })}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                placeholder="Tacos & Mexican"
+              />
+              {errors.cuisine && <p className="text-destructive text-sm mt-1">{errors.cuisine.message as string}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Description</label>
+              <textarea
+                {...register("description")}
+                rows={4}
+                className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground resize-none"
+                placeholder="Tell customers about your food truck..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
+                <input
+                  {...register("phone")}
+                  className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                  placeholder="+1 (405) 555-0100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Website</label>
+                <input
+                  {...register("website")}
+                  className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                  placeholder="https://yoursite.com"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Cuisine Type *</label>
-            <input
-              {...register("cuisine", { required: "Cuisine is required" })}
-              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
-              placeholder="Tacos & Mexican"
-            />
-            {errors.cuisine && <p className="text-destructive text-sm mt-1">{errors.cuisine.message as string}</p>}
+          {/* Social Media */}
+          <div className="bg-card border border-card-border rounded-2xl p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Share2 className="w-5 h-5 text-primary" />
+              <h2 className="font-semibold text-foreground">Social Media</h2>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-2">Connect your social accounts so customers can follow you and you can share when you go live.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">X (Twitter) handle</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                  <input
+                    {...register("twitterHandle")}
+                    className="w-full pl-7 pr-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                    placeholder="yourhandle"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Instagram handle</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                  <input
+                    {...register("instagramHandle")}
+                    className="w-full pl-7 pr-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                    placeholder="yourhandle"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">TikTok handle</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                  <input
+                    {...register("tiktokHandle")}
+                    className="w-full pl-7 pr-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                    placeholder="yourhandle"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Facebook URL</label>
+                <input
+                  {...register("facebookUrl")}
+                  className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                  placeholder="https://facebook.com/yourpage"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium text-foreground mb-1">YouTube URL</label>
+                <input
+                  {...register("youtubeUrl")}
+                  className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                  placeholder="https://youtube.com/@yourchannel"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Description</label>
-            <textarea
-              {...register("description")}
-              rows={4}
-              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground resize-none"
-              placeholder="Tell customers about your food truck..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Phone</label>
-            <input
-              {...register("phone")}
-              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
-              placeholder="+1 (405) 555-0100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Website</label>
-            <input
-              {...register("website")}
-              className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground"
-              placeholder="https://yoursite.com"
-            />
-          </div>
-
-          <div className="border-t border-border pt-4">
+          {/* Reservation Settings */}
+          <div className="bg-card border border-card-border rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-3">
               <CalendarCheck className="w-5 h-5 text-primary" />
               <h3 className="font-semibold text-foreground">Reservation Settings</h3>

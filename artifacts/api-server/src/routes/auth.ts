@@ -95,6 +95,33 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
     role: user.role,
     isActive: user.isActive,
     createdAt: user.createdAt,
+    twitterHandle: user.twitterHandle,
+    instagramHandle: user.instagramHandle,
+    facebookUrl: user.facebookUrl,
+  });
+});
+
+router.put("/auth/profile", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).user.id;
+  const { name, twitterHandle, instagramHandle, facebookUrl } = req.body;
+
+  const updateData: any = {};
+  if (name && typeof name === "string" && name.trim()) updateData.name = name.trim();
+  if (twitterHandle !== undefined) updateData.twitterHandle = twitterHandle?.replace(/^@/, "") || null;
+  if (instagramHandle !== undefined) updateData.instagramHandle = instagramHandle?.replace(/^@/, "") || null;
+  if (facebookUrl !== undefined) updateData.facebookUrl = facebookUrl || null;
+
+  const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
+  res.json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+    twitterHandle: user.twitterHandle,
+    instagramHandle: user.instagramHandle,
+    facebookUrl: user.facebookUrl,
   });
 });
 
