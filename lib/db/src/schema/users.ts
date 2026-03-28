@@ -9,6 +9,9 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("customer"),
   isActive: boolean("is_active").notNull().default(true),
+  twitterHandle: text("twitter_handle"),
+  instagramHandle: text("instagram_handle"),
+  facebookUrl: text("facebook_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

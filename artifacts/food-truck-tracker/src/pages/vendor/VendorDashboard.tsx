@@ -162,15 +162,25 @@ export default function VendorDashboard() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {myTruck.isLive ? (
-                  <button
-                    onClick={handleCheckOut}
-                    disabled={checkOutMutation.isPending}
-                    className="px-5 py-2.5 bg-white border border-green-300 text-green-800 rounded-xl font-semibold hover:bg-green-50 disabled:opacity-50"
-                  >
-                    {checkOutMutation.isPending ? "Checking out..." : "Check Out"}
-                  </button>
+                  <>
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`🚚 ${myTruck.name} is LIVE${myTruck.currentCity ? ` in ${myTruck.currentCity}` : ""}! Find us now on RoamBites.`)}&url=${encodeURIComponent(`${window.location.origin}/trucks/${myTruck.id}`)}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 bg-black text-white rounded-xl text-sm font-semibold hover:bg-zinc-800"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </a>
+                    <button
+                      onClick={handleCheckOut}
+                      disabled={checkOutMutation.isPending}
+                      className="px-5 py-2.5 bg-white border border-green-300 text-green-800 rounded-xl font-semibold hover:bg-green-50 disabled:opacity-50"
+                    >
+                      {checkOutMutation.isPending ? "Checking out..." : "Check Out"}
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button

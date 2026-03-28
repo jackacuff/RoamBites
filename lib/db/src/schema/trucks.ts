@@ -21,6 +21,11 @@ export const trucksTable = pgTable("trucks", {
   reservationPhone: text("reservation_phone"),
   reservationContactPreference: text("reservation_contact_preference").default("email"),
   reservationNotes: text("reservation_notes"),
+  twitterHandle: text("twitter_handle"),
+  instagramHandle: text("instagram_handle"),
+  facebookUrl: text("facebook_url"),
+  tiktokHandle: text("tiktok_handle"),
+  youtubeUrl: text("youtube_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
