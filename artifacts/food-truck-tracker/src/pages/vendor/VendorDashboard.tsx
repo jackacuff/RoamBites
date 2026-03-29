@@ -418,8 +418,8 @@ export default function VendorDashboard() {
               <NavCard
                 href="/vendor/event-spots"
                 icon={<Ticket className="w-6 h-6" />}
-                title="Event Spot Marketplace"
-                description={`${approvedSpots} confirmed · Browse and apply for event vendor spots`}
+                title="Spot Marketplace"
+                description={`${approvedSpots} confirmed · Browse event spots and truck park locations`}
                 badge={pendingSpots > 0 ? `${pendingSpots} pending` : undefined}
               />
               <NavCard
