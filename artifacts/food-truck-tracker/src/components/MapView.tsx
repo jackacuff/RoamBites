@@ -155,7 +155,7 @@ function ClusteredMarkers({ pins }: { pins: PinEntry[] }) {
 
   useEffect(() => {
     const mcg = (L as any).markerClusterGroup({
-      maxClusterRadius: 50,
+      maxClusterRadius: 30,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
