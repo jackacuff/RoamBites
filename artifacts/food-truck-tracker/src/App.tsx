@@ -31,6 +31,7 @@ import VendorTruckEdit from "./pages/vendor/VendorTruckEdit";
 import VendorSpecials from "./pages/vendor/VendorSpecials";
 import VendorEventSpots from "./pages/vendor/VendorEventSpots";
 import VendorInbox from "./pages/vendor/VendorInbox";
+import VendorMarketing from "./pages/vendor/VendorMarketing";
 import OrganizerTruckMarketplace from "./pages/organizer/OrganizerTruckMarketplace";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/vendor/specials" component={VendorSpecials} />
       <Route path="/vendor/event-spots" component={VendorEventSpots} />
       <Route path="/vendor/inbox" component={VendorInbox} />
+      <Route path="/vendor/marketing" component={VendorMarketing} />
       <Route path="/organizer/trucks" component={OrganizerTruckMarketplace} />
 
       <Route path="/organizer" component={OrganizerDashboard} />

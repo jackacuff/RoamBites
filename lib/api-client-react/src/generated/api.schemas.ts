@@ -408,6 +408,230 @@ export interface PlatformStats {
   activeTrucks: number;
 }
 
+export interface Plan {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  /** Price in cents */
+  monthlyPrice: number;
+  trialDays: number;
+  features: string[];
+  isActive: boolean;
+  /** @nullable */
+  stripePriceId?: string | null;
+  createdAt?: string;
+}
+
+export interface CreatePlanBody {
+  name: string;
+  description?: string;
+  monthlyPrice?: number;
+  trialDays?: number;
+  features?: string[];
+  isActive?: boolean;
+  stripePriceId?: string;
+}
+
+export interface UpdatePlanBody {
+  name?: string;
+  description?: string;
+  monthlyPrice?: number;
+  trialDays?: number;
+  features?: string[];
+  isActive?: boolean;
+  stripePriceId?: string;
+}
+
+export type VendorSubscriptionStatus =
+  (typeof VendorSubscriptionStatus)[keyof typeof VendorSubscriptionStatus];
+
+export const VendorSubscriptionStatus = {
+  trialing: "trialing",
+  active: "active",
+  past_due: "past_due",
+  canceled: "canceled",
+  free: "free",
+} as const;
+
+export interface VendorSubscription {
+  id: number;
+  vendorUserId: number;
+  planId: number;
+  status: VendorSubscriptionStatus;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+  /** @nullable */
+  stripeCustomerId?: string | null;
+  /** @nullable */
+  stripeSubscriptionId?: string | null;
+  /** @nullable */
+  canceledAt?: string | null;
+  createdAt: string;
+}
+
+export type VendorSubscriptionDetailStatus =
+  (typeof VendorSubscriptionDetailStatus)[keyof typeof VendorSubscriptionDetailStatus];
+
+export const VendorSubscriptionDetailStatus = {
+  trialing: "trialing",
+  active: "active",
+  past_due: "past_due",
+  canceled: "canceled",
+  free: "free",
+} as const;
+
+/**
+ * Vendor subscription with embedded plan info and computed trial days
+ */
+export interface VendorSubscriptionDetail {
+  id: number;
+  status: VendorSubscriptionDetailStatus;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+  /** @nullable */
+  stripeCustomerId?: string | null;
+  /** @nullable */
+  stripeSubscriptionId?: string | null;
+  /** @nullable */
+  canceledAt?: string | null;
+  createdAt: string;
+  /** @nullable */
+  trialDaysLeft?: number | null;
+  planId: number;
+  planName: string;
+  /** @nullable */
+  planDescription?: string | null;
+  monthlyPrice: number;
+  trialDays: number;
+  features: string[];
+  /** @nullable */
+  stripePriceId?: string | null;
+}
+
+export type AdminSubscriptionStatus =
+  (typeof AdminSubscriptionStatus)[keyof typeof AdminSubscriptionStatus];
+
+export const AdminSubscriptionStatus = {
+  trialing: "trialing",
+  active: "active",
+  past_due: "past_due",
+  canceled: "canceled",
+  free: "free",
+} as const;
+
+/**
+ * Subscription record with vendor user and plan info (admin view)
+ */
+export interface AdminSubscription {
+  id: number;
+  status: AdminSubscriptionStatus;
+  /** @nullable */
+  trialEndsAt?: string | null;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+  /** @nullable */
+  stripeCustomerId?: string | null;
+  /** @nullable */
+  stripeSubscriptionId?: string | null;
+  /** @nullable */
+  canceledAt?: string | null;
+  createdAt: string;
+  /** @nullable */
+  trialDaysLeft?: number | null;
+  vendorUserId: number;
+  vendorName: string;
+  vendorEmail: string;
+  planId: number;
+  planName: string;
+  monthlyPrice: number;
+}
+
+export interface GrantTrialBody {
+  /** @minimum 1 */
+  days: number;
+}
+
+export type SetPlanBodyStatus =
+  (typeof SetPlanBodyStatus)[keyof typeof SetPlanBodyStatus];
+
+export const SetPlanBodyStatus = {
+  trialing: "trialing",
+  active: "active",
+  past_due: "past_due",
+  canceled: "canceled",
+  free: "free",
+} as const;
+
+export interface SetPlanBody {
+  planId?: number;
+  status?: SetPlanBodyStatus;
+}
+
+export interface SubscribeBody {
+  successUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface CheckoutResponse {
+  url: string;
+}
+
+export interface PortalResponse {
+  url: string;
+}
+
+export interface BrandKit {
+  /** Hex color code e.g. "#FF6B35" */
+  primaryColor: string;
+  secondaryColor: string;
+  tagline: string;
+  name: string;
+  cuisine: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  instagramHandle?: string | null;
+  /** @nullable */
+  twitterHandle?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+  /** @nullable */
+  coverImageUrl?: string | null;
+}
+
+export interface BrandKitUpdateBody {
+  /** Hex color code e.g. "#FF6B35" */
+  primaryColor?: string;
+  secondaryColor?: string;
+  tagline?: string;
+}
+
+export type CopyGenerateBodyTemplateType =
+  (typeof CopyGenerateBodyTemplateType)[keyof typeof CopyGenerateBodyTemplateType];
+
+export const CopyGenerateBodyTemplateType = {
+  social: "social",
+  event: "event",
+  special: "special",
+  "open-now": "open-now",
+  general: "general",
+} as const;
+
+export interface CopyGenerateBody {
+  templateType: CopyGenerateBodyTemplateType;
+  customPrompt?: string;
+}
+
+export interface CopyGenerateResponse {
+  copy: string;
+  templateType: string;
+}
+
 export type ListTrucksParams = {
   /**
    * @nullable

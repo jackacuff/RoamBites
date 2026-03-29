@@ -17,6 +17,7 @@ import eventSpotsRouter from "./eventSpots";
 import specialsRouter from "./specials";
 import messagesRouter from "./messages";
 import subscriptionsRouter from "./subscriptions";
+import marketingRouter from "./marketing";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(eventSpotsRouter);
 router.use(specialsRouter);
 router.use(messagesRouter);
 router.use(subscriptionsRouter);
+router.use(marketingRouter);
 
 export default router;

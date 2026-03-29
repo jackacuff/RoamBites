@@ -825,3 +825,262 @@ export const AdminGetStatsResponse = zod.object({
 export const AdminSeedDataResponse = zod.object({
   message: zod.string(),
 });
+
+/**
+ * @summary List all subscription plans
+ */
+export const AdminListPlansResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  monthlyPrice: zod.number().describe("Price in cents"),
+  trialDays: zod.number(),
+  features: zod.array(zod.string()),
+  isActive: zod.boolean(),
+  stripePriceId: zod.string().nullish(),
+  createdAt: zod.date().optional(),
+});
+export const AdminListPlansResponse = zod.array(AdminListPlansResponseItem);
+
+/**
+ * @summary Create a new subscription plan
+ */
+export const AdminCreatePlanBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  monthlyPrice: zod.number().optional(),
+  trialDays: zod.number().optional(),
+  features: zod.array(zod.string()).optional(),
+  isActive: zod.boolean().optional(),
+  stripePriceId: zod.string().optional(),
+});
+
+/**
+ * @summary Update a subscription plan
+ */
+export const AdminUpdatePlanParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminUpdatePlanBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  monthlyPrice: zod.number().optional(),
+  trialDays: zod.number().optional(),
+  features: zod.array(zod.string()).optional(),
+  isActive: zod.boolean().optional(),
+  stripePriceId: zod.string().optional(),
+});
+
+export const AdminUpdatePlanResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  monthlyPrice: zod.number().describe("Price in cents"),
+  trialDays: zod.number(),
+  features: zod.array(zod.string()),
+  isActive: zod.boolean(),
+  stripePriceId: zod.string().nullish(),
+  createdAt: zod.date().optional(),
+});
+
+/**
+ * @summary Deactivate a subscription plan
+ */
+export const AdminDeactivatePlanParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminDeactivatePlanResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary List all vendor subscriptions
+ */
+export const AdminListSubscriptionsResponseItem = zod
+  .object({
+    id: zod.number(),
+    status: zod.enum(["trialing", "active", "past_due", "canceled", "free"]),
+    trialEndsAt: zod.date().nullish(),
+    currentPeriodEnd: zod.date().nullish(),
+    stripeCustomerId: zod.string().nullish(),
+    stripeSubscriptionId: zod.string().nullish(),
+    canceledAt: zod.date().nullish(),
+    createdAt: zod.date(),
+    trialDaysLeft: zod.number().nullish(),
+    vendorUserId: zod.number(),
+    vendorName: zod.string(),
+    vendorEmail: zod.string(),
+    planId: zod.number(),
+    planName: zod.string(),
+    monthlyPrice: zod.number(),
+  })
+  .describe("Subscription record with vendor user and plan info (admin view)");
+export const AdminListSubscriptionsResponse = zod.array(
+  AdminListSubscriptionsResponseItem,
+);
+
+/**
+ * @summary Extend or grant a free trial
+ */
+export const AdminGrantTrialParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminGrantTrialBody = zod.object({
+  days: zod.number().min(1),
+});
+
+export const AdminGrantTrialResponse = zod.object({
+  id: zod.number(),
+  vendorUserId: zod.number(),
+  planId: zod.number(),
+  status: zod.enum(["trialing", "active", "past_due", "canceled", "free"]),
+  trialEndsAt: zod.date().nullish(),
+  currentPeriodEnd: zod.date().nullish(),
+  stripeCustomerId: zod.string().nullish(),
+  stripeSubscriptionId: zod.string().nullish(),
+  canceledAt: zod.date().nullish(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Change a vendor's subscription plan or status
+ */
+export const AdminSetPlanParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminSetPlanBody = zod.object({
+  planId: zod.number().optional(),
+  status: zod
+    .enum(["trialing", "active", "past_due", "canceled", "free"])
+    .optional(),
+});
+
+export const AdminSetPlanResponse = zod.object({
+  id: zod.number(),
+  vendorUserId: zod.number(),
+  planId: zod.number(),
+  status: zod.enum(["trialing", "active", "past_due", "canceled", "free"]),
+  trialEndsAt: zod.date().nullish(),
+  currentPeriodEnd: zod.date().nullish(),
+  stripeCustomerId: zod.string().nullish(),
+  stripeSubscriptionId: zod.string().nullish(),
+  canceledAt: zod.date().nullish(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Cancel a vendor subscription
+ */
+export const AdminCancelSubscriptionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AdminCancelSubscriptionResponse = zod.object({
+  id: zod.number(),
+  vendorUserId: zod.number(),
+  planId: zod.number(),
+  status: zod.enum(["trialing", "active", "past_due", "canceled", "free"]),
+  trialEndsAt: zod.date().nullish(),
+  currentPeriodEnd: zod.date().nullish(),
+  stripeCustomerId: zod.string().nullish(),
+  stripeSubscriptionId: zod.string().nullish(),
+  canceledAt: zod.date().nullish(),
+  createdAt: zod.date(),
+});
+
+/**
+ * @summary Get current vendor subscription status
+ */
+export const GetVendorSubscriptionResponse = zod.union([
+  zod
+    .object({
+      id: zod.number(),
+      status: zod.enum(["trialing", "active", "past_due", "canceled", "free"]),
+      trialEndsAt: zod.date().nullish(),
+      currentPeriodEnd: zod.date().nullish(),
+      stripeCustomerId: zod.string().nullish(),
+      stripeSubscriptionId: zod.string().nullish(),
+      canceledAt: zod.date().nullish(),
+      createdAt: zod.date(),
+      trialDaysLeft: zod.number().nullish(),
+      planId: zod.number(),
+      planName: zod.string(),
+      planDescription: zod.string().nullish(),
+      monthlyPrice: zod.number(),
+      trialDays: zod.number(),
+      features: zod.array(zod.string()),
+      stripePriceId: zod.string().nullish(),
+    })
+    .describe(
+      "Vendor subscription with embedded plan info and computed trial days",
+    ),
+  zod.null(),
+]);
+
+/**
+ * @summary Create a Stripe Checkout session to subscribe
+ */
+export const CreateCheckoutSessionBody = zod.object({
+  successUrl: zod.string().optional(),
+  cancelUrl: zod.string().optional(),
+});
+
+export const CreateCheckoutSessionResponse = zod.object({
+  url: zod.string(),
+});
+
+/**
+ * @summary Get Stripe Billing Portal URL for subscription management
+ */
+export const GetBillingPortalUrlResponse = zod.object({
+  url: zod.string(),
+});
+
+/**
+ * @summary Get vendor brand kit
+ */
+export const GetMarketingBrandResponse = zod.object({
+  primaryColor: zod.string().describe('Hex color code e.g. \"#FF6B35\"'),
+  secondaryColor: zod.string(),
+  tagline: zod.string(),
+  name: zod.string(),
+  cuisine: zod.string(),
+  description: zod.string().nullish(),
+  instagramHandle: zod.string().nullish(),
+  twitterHandle: zod.string().nullish(),
+  logoUrl: zod.string().nullish(),
+  coverImageUrl: zod.string().nullish(),
+});
+
+/**
+ * @summary Update vendor brand kit (colors and tagline)
+ */
+export const UpdateMarketingBrandBody = zod.object({
+  primaryColor: zod
+    .string()
+    .optional()
+    .describe('Hex color code e.g. \"#FF6B35\"'),
+  secondaryColor: zod.string().optional(),
+  tagline: zod.string().optional(),
+});
+
+export const UpdateMarketingBrandResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Generate AI marketing copy for a template
+ */
+export const GenerateMarketingCopyBody = zod.object({
+  templateType: zod.enum(["social", "event", "special", "open-now", "general"]),
+  customPrompt: zod.string().optional(),
+});
+
+export const GenerateMarketingCopyResponse = zod.object({
+  copy: zod.string(),
+  templateType: zod.string(),
+});
