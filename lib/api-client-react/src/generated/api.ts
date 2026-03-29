@@ -648,14 +648,14 @@ export const useCreateTruck = <
 };
 
 /**
- * @summary Get a food truck by ID
+ * @summary Get a food truck by ID or slug
  */
-export const getGetTruckUrl = (id: number) => {
+export const getGetTruckUrl = (id: string) => {
   return `/api/trucks/${id}`;
 };
 
 export const getTruck = async (
-  id: number,
+  id: string,
   options?: RequestInit,
 ): Promise<TruckDetail> => {
   return customFetch<TruckDetail>(getGetTruckUrl(id), {
@@ -664,7 +664,7 @@ export const getTruck = async (
   });
 };
 
-export const getGetTruckQueryKey = (id: number) => {
+export const getGetTruckQueryKey = (id: string) => {
   return [`/api/trucks/${id}`] as const;
 };
 
@@ -672,7 +672,7 @@ export const getGetTruckQueryOptions = <
   TData = Awaited<ReturnType<typeof getTruck>>,
   TError = ErrorType<ErrorResponse>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getTruck>>,
@@ -706,14 +706,14 @@ export type GetTruckQueryResult = NonNullable<
 export type GetTruckQueryError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Get a food truck by ID
+ * @summary Get a food truck by ID or slug
  */
 
 export function useGetTruck<
   TData = Awaited<ReturnType<typeof getTruck>>,
   TError = ErrorType<ErrorResponse>,
 >(
-  id: number,
+  id: string,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getTruck>>,
