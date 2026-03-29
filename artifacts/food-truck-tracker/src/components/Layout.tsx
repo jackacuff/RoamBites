@@ -1,9 +1,35 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { UtensilsCrossed, Menu, X, LogOut, User, Heart, ChevronDown, Crown, AlertTriangle } from "lucide-react";
+import { UtensilsCrossed, Menu, X, LogOut, User, Heart, ChevronDown, Crown, AlertTriangle, Inbox } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function getApiUrl(path: string) {
+  return path;
+}
+
+function useUnreadCount(enabled: boolean) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    const fetchCount = () => {
+      fetch(getApiUrl("/api/messages/unread-count"), { headers: getAuthHeaders() })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => { if (d && typeof d.count === "number") setCount(d.count); })
+        .catch(() => {});
+    };
+    fetchCount();
+    const id = setInterval(fetchCount, 30_000);
+    return () => clearInterval(id);
+  }, [enabled]);
+  return count;
+}
 
 function ImpersonationBanner() {
   const queryClient = useQueryClient();
@@ -55,6 +81,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const unreadCount = useUnreadCount(isAuthenticated);
+  const inboxHref = "/vendor/inbox";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -134,6 +162,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <Heart className="w-5 h-5" />
                     </Link>
                   )}
+                  <Link
+                    href={inboxHref}
+                    className="relative p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+                    title="Inbox"
+                  >
+                    <Inbox className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
                   <div className="relative">
                     <button
                       onClick={() => setProfileOpen(!profileOpen)}
@@ -230,13 +270,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
               )}
             </div>
 
-            {/* Mobile Menu Toggle */}
-            <button
-              className="md:hidden p-2 text-foreground"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Mobile: Inbox + Menu Toggle */}
+            <div className="md:hidden flex items-center gap-1">
+              {isAuthenticated && (
+                <Link
+                  href={inboxHref}
+                  className="relative p-2 rounded-full hover:bg-muted text-foreground transition-colors"
+                  title="Inbox"
+                >
+                  <Inbox className="w-6 h-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+              <button
+                className="p-2 text-foreground"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
         </div>
       </header>
