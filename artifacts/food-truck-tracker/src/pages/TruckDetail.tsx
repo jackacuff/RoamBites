@@ -449,7 +449,11 @@ export default function TruckDetail() {
               <h2 className="text-2xl font-display font-bold text-foreground mb-6">Where to find us</h2>
               {truck.scheduleEntries && truck.scheduleEntries.length > 0 ? (
                 <div className="space-y-4">
-                  {truck.scheduleEntries.map((entry: any) => (
+                  {truck.scheduleEntries.map((entry: any) => {
+                    const mapsUrl = entry.latitude && entry.longitude
+                      ? `https://maps.apple.com/?daddr=${entry.latitude},${entry.longitude}&dirflg=d`
+                      : `https://maps.apple.com/?daddr=${encodeURIComponent(`${entry.address}, ${entry.city}`)}&dirflg=d`;
+                    return (
                     <div key={entry.id} className="p-5 rounded-2xl bg-card border border-border shadow-sm flex flex-col sm:flex-row gap-4 justify-between sm:items-center group hover:border-primary/50 transition-colors">
                       <div>
                         <h4 className="font-bold text-foreground text-lg mb-1">{entry.venueName}</h4>
@@ -457,18 +461,30 @@ export default function TruckDetail() {
                           <MapPin className="w-4 h-4 mr-1" /> {entry.address}, {entry.city}
                         </div>
                       </div>
-                      <div className="bg-muted/50 p-3 rounded-xl min-w-[180px]">
-                        <div className="flex items-center text-sm font-medium text-foreground mb-1">
-                          <Calendar className="w-4 h-4 mr-2 text-primary" />
-                          {format(new Date(entry.startDateTime), "EEE, MMM do")}
+                      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                        <div className="bg-muted/50 p-3 rounded-xl min-w-[180px]">
+                          <div className="flex items-center text-sm font-medium text-foreground mb-1">
+                            <Calendar className="w-4 h-4 mr-2 text-primary" />
+                            {format(new Date(entry.startDateTime), "EEE, MMM do")}
+                          </div>
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Clock className="w-4 h-4 mr-2 text-secondary" />
+                            {format(new Date(entry.startDateTime), "h:mm a")} - {format(new Date(entry.endDateTime), "h:mm a")}
+                          </div>
                         </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4 mr-2 text-secondary" />
-                          {format(new Date(entry.startDateTime), "h:mm a")} - {format(new Date(entry.endDateTime), "h:mm a")}
-                        </div>
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/20 transition-colors whitespace-nowrap"
+                        >
+                          <Send className="w-4 h-4" />
+                          Directions
+                        </a>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="p-6 bg-muted rounded-2xl border border-dashed border-border text-center">
@@ -478,12 +494,28 @@ export default function TruckDetail() {
             </section>
 
             {/* Map */}
-            {truck.activeSchedule?.latitude && truck.activeSchedule?.longitude && (
-              <section>
-                <h2 className="text-2xl font-display font-bold text-foreground mb-6">Current Location</h2>
-                <MapView trucks={[truck as any]} height="400px" center={[truck.activeSchedule.latitude, truck.activeSchedule.longitude]} zoom={14} />
-              </section>
-            )}
+            {(() => {
+              const mapLat = truck.activeSchedule?.latitude ?? (truck as any).currentLatitude;
+              const mapLng = truck.activeSchedule?.longitude ?? (truck as any).currentLongitude;
+              if (!mapLat || !mapLng) return null;
+              return (
+                <section>
+                  <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+                    <h2 className="text-2xl font-display font-bold text-foreground">Current Location</h2>
+                    <a
+                      href={`https://maps.apple.com/?daddr=${mapLat},${mapLng}&dirflg=d`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow hover:opacity-90 transition-opacity"
+                    >
+                      <Send className="w-4 h-4" />
+                      Get Directions
+                    </a>
+                  </div>
+                  <MapView trucks={[truck as any]} height="400px" center={[mapLat, mapLng]} zoom={14} />
+                </section>
+              );
+            })()}
 
             {/* Reviews */}
             <section>

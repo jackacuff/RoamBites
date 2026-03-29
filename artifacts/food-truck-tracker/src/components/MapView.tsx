@@ -136,10 +136,17 @@ function popupHtml(pin: PinEntry): string {
         ${liveBadge}
       </div>
       <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">@ ${pin.locationLabel}</div>
-      <a href="/trucks/${slug}"
-        style="display:block;width:100%;text-align:center;background:#f97316;color:white;padding:6px 0;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">
-        View Truck →
-      </a>
+      <div style="display:flex;gap:6px;">
+        <a href="/trucks/${slug}"
+          style="flex:1;text-align:center;background:#f97316;color:white;padding:6px 0;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">
+          View Truck →
+        </a>
+        <a href="https://maps.apple.com/?daddr=${pin.lat},${pin.lng}&dirflg=d" target="_blank" rel="noopener noreferrer"
+          style="flex:1;text-align:center;background:#e5e7eb;color:#374151;padding:6px 0;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:4px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Directions
+        </a>
+      </div>
     </div>`;
 }
 
