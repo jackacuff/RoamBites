@@ -254,6 +254,13 @@ export default function TruckDetail() {
                           <span className="font-normal opacity-80">({reviewTotal})</span>
                         </span>
                       )}
+                      {(truck as any).favoritesCount > 0 && (
+                        <span className="flex items-center gap-1 px-3 py-1 bg-red-500/80 text-white text-sm font-bold rounded-full">
+                          <Heart className="w-3.5 h-3.5 fill-white" />
+                          {(truck as any).favoritesCount}
+                          <span className="font-normal opacity-80">favorited</span>
+                        </span>
+                      )}
                     </div>
                     <h1 className="text-4xl md:text-6xl font-display font-extrabold text-white tracking-tight drop-shadow-md">{truck.name}</h1>
                   </div>
@@ -265,7 +272,7 @@ export default function TruckDetail() {
                   className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all shadow-lg ${isFav ? "bg-red-500 text-white hover:bg-red-600" : "bg-white/10 backdrop-blur text-white border border-white/30 hover:bg-white/20"}`}
                 >
                   <Heart className={`w-4 h-4 ${isFav ? "fill-white" : ""}`} />
-                  {isFav ? "Saved" : "Save"}
+                  {isFav ? "Favorited" : "Favorite"}
                 </button>
               )}
             </div>

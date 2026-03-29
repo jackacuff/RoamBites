@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable, vendorSubscriptionsTable } from "@workspace/db";
+import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable, vendorSubscriptionsTable, favoritesTable } from "@workspace/db";
 import { eq, and, ilike, or, inArray, avg, count, asc } from "drizzle-orm";
 import { CreateTruckBody, UpdateTruckBody, CheckInTruckBody } from "@workspace/api-zod";
 import { requireAuth, requireRole, optionalAuth } from "../lib/auth";
@@ -122,12 +122,14 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [schedules, menuItems, eventTrucks, reviewStats] = await Promise.all([
+  const [schedules, menuItems, eventTrucks, reviewStats, favStats] = await Promise.all([
     db.select().from(scheduleEntriesTable).where(eq(scheduleEntriesTable.truckId, truck.id)),
     db.select().from(menuItemsTable).where(eq(menuItemsTable.truckId, truck.id)),
     db.select().from(eventTrucksTable).where(eq(eventTrucksTable.truckId, truck.id)),
     db.select({ avgRating: avg(reviewsTable.rating), total: count(reviewsTable.id) })
       .from(reviewsTable).where(eq(reviewsTable.truckId, truck.id)),
+    db.select({ total: count(favoritesTable.id) })
+      .from(favoritesTable).where(eq(favoritesTable.truckId, truck.id)),
   ]);
 
   const eventIds = eventTrucks.map((et) => et.eventId);
@@ -151,6 +153,7 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
   const { status, activeSchedule, currentLocation, currentCity } = computeTruckStatus(schedules, truck.isLive);
   const avgRating = reviewStats[0]?.avgRating ? parseFloat(reviewStats[0].avgRating as string) : null;
   const reviewCount = Number(reviewStats[0]?.total ?? 0);
+  const favoritesCount = Number(favStats[0]?.total ?? 0);
 
   res.json({
     id: truck.id,
@@ -180,6 +183,7 @@ router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
     currentCity,
     avgRating,
     reviewCount,
+    favoritesCount,
     vendorUserId: truck.vendorUserId,
     createdAt: truck.createdAt,
     menuItems,

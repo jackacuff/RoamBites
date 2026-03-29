@@ -62,7 +62,7 @@ export default function Favorites() {
             <Heart className="w-7 h-7 text-red-500 fill-red-500" />
             My Favorites
           </h1>
-          <p className="text-muted-foreground mt-1">Food trucks you've saved for later.</p>
+          <p className="text-muted-foreground mt-1">Food trucks you've favorited.</p>
         </div>
 
         {loading ? (
