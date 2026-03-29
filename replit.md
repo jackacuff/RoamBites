@@ -140,8 +140,8 @@ One per vendor user. Fields: `id`, `vendorUserId`, `planId`, `status` (trialing/
 - `POST /api/admin/subscriptions/:id/set-plan` — change vendor plan
 
 ### Stripe Sandbox Products
-- **Vendor Base**: `prod_UEcvV8URPPdpoj`, price `price_1TG9fxQ3mgJsadzj70PuqqPw` ($14.99/mo)
-- **Vendor Pro**: `prod_UEW4NpgfdOVyUh`, price `price_1TG32hQ3mgJsadzjyJ6u0ND0` ($29.99/mo)
+- **Vendor Base**: `prod_UEcvV8URPPdpoj`, price `price_1TG9kYQ3mgJsadzj7iX1afg0` ($39.00/mo)
+- **Vendor Pro**: `prod_UEW4NpgfdOVyUh`, price `price_1TG9kZQ3mgJsadzjsfWp5n7n` ($59.00/mo)
 
 ## Marketing Studio
 

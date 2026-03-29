@@ -237,7 +237,7 @@ export async function seedIfEmpty() {
     await db.insert(plansTable).values({
       name: "Vendor Base",
       description: "Everything you need to get your food truck listed and running on RoamBites",
-      monthlyPrice: 14.99,
+      monthlyPrice: 39,
       trialDays: 30,
       features: [
         "Truck profile & listing",
@@ -254,7 +254,7 @@ export async function seedIfEmpty() {
     const [defaultPlan] = await db.insert(plansTable).values({
       name: "Vendor Pro",
       description: "Full access to RoamBites with featured placement and marketing tools",
-      monthlyPrice: 29.99,
+      monthlyPrice: 59,
       trialDays: 90,
       features: [
         "Everything in Vendor Base",

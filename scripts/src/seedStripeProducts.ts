@@ -9,8 +9,8 @@ interface PlanConfig {
 }
 
 const PLANS: PlanConfig[] = [
-  { name: "Vendor Base", description: "Essential tools for your food truck on RoamBites", price: 1499 },
-  { name: "Vendor Pro", description: "Full access to RoamBites with featured placement and marketing tools", price: 2999 },
+  { name: "Vendor Base", description: "Essential tools for your food truck on RoamBites", price: 3900 },
+  { name: "Vendor Pro", description: "Full access to RoamBites with featured placement and marketing tools", price: 5900 },
 ];
 
 async function seedStripeProducts() {
@@ -28,21 +28,27 @@ async function seedStripeProducts() {
     let priceId: string;
 
     if (existing.data.length > 0) {
-      console.log(`  Product already exists: ${existing.data[0].id}`);
-      const prices = await stripe.prices.list({ product: existing.data[0].id, active: true });
+      const productId = existing.data[0].id;
+      console.log(`  Product already exists: ${productId}`);
+      const prices = await stripe.prices.list({ product: productId, active: true });
       const monthly = prices.data.find((p) => p.recurring?.interval === "month");
-      if (!monthly) {
+
+      if (monthly && monthly.unit_amount === plan.price) {
+        priceId = monthly.id;
+        console.log(`  Using existing price: ${priceId} (already $${(plan.price / 100).toFixed(2)}/mo)`);
+      } else {
+        if (monthly) {
+          await stripe.prices.update(monthly.id, { active: false });
+          console.log(`  Archived old price: ${monthly.id} ($${((monthly.unit_amount ?? 0) / 100).toFixed(2)}/mo)`);
+        }
         const price = await stripe.prices.create({
-          product: existing.data[0].id,
+          product: productId,
           unit_amount: plan.price,
           currency: "usd",
           recurring: { interval: "month" },
         });
         priceId = price.id;
         console.log(`  Created new price: ${priceId} ($${(plan.price / 100).toFixed(2)}/mo)`);
-      } else {
-        priceId = monthly.id;
-        console.log(`  Using existing price: ${priceId}`);
       }
     } else {
       const product = await stripe.products.create({
