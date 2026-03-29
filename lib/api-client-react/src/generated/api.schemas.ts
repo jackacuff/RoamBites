@@ -101,8 +101,13 @@ export interface TruckSummary {
   currentLocation?: string | null;
   /** @nullable */
   currentCity?: string | null;
+  /** @nullable */
+  currentLatitude?: number | null;
+  /** @nullable */
+  currentLongitude?: number | null;
   activeSchedule?: ScheduleEntry | null;
   vendorUserId: number;
+  menuItemCount?: number | null;
 }
 
 export type TruckDetailStatus =
