@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox, CreditCard, AlertTriangle, CheckCircle, Clock, ExternalLink } from "lucide-react";
+import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox, CreditCard, AlertTriangle, CheckCircle, Clock, ExternalLink, Sparkles } from "lucide-react";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
@@ -428,6 +428,13 @@ export default function VendorDashboard() {
                 title="Inbox"
                 description="Messages and event invitations from organizers"
                 badge={unreadCount > 0 ? `${unreadCount} new` : undefined}
+              />
+              <NavCard
+                href="/vendor/marketing"
+                icon={<Sparkles className="w-6 h-6" />}
+                title="Marketing Studio"
+                description="Create branded materials and AI-generated copy"
+                badge="Pro"
               />
             </div>
 

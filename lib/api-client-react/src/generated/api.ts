@@ -17,19 +17,27 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminSubscription,
   AdminTruck,
   AdminUser,
   ApproveBody,
   AuthResponse,
+  BrandKit,
+  BrandKitUpdateBody,
   CheckInBody,
+  CheckoutResponse,
+  CopyGenerateBody,
+  CopyGenerateResponse,
   CreateEventBody,
   CreateMenuItemBody,
+  CreatePlanBody,
   CreateScheduleBody,
   CreateTruckBody,
   ErrorResponse,
   EventDetail,
   EventSummary,
   EventTruck,
+  GrantTrialBody,
   HealthStatus,
   InviteTruckBody,
   ListEventsParams,
@@ -37,19 +45,26 @@ import type {
   ListTrucksParams,
   LoginBody,
   MenuItem,
+  Plan,
   PlatformStats,
+  PortalResponse,
   RespondToEventBody,
   ScheduleEntry,
+  SetPlanBody,
   SignupBody,
+  SubscribeBody,
   SuccessResponse,
   TruckDetail,
   TruckSummary,
   UpdateEventBody,
   UpdateMenuItemBody,
+  UpdatePlanBody,
   UpdateScheduleBody,
   UpdateTruckBody,
   UserResponse,
   UserStatusBody,
+  VendorSubscription,
+  VendorSubscriptionDetail,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2927,4 +2942,1162 @@ export const useAdminSeedData = <
   TContext
 > => {
   return useMutation(getAdminSeedDataMutationOptions(options));
+};
+
+/**
+ * @summary List all subscription plans
+ */
+export const getAdminListPlansUrl = () => {
+  return `/api/admin/plans`;
+};
+
+export const adminListPlans = async (
+  options?: RequestInit,
+): Promise<Plan[]> => {
+  return customFetch<Plan[]>(getAdminListPlansUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListPlansQueryKey = () => {
+  return [`/api/admin/plans`] as const;
+};
+
+export const getAdminListPlansQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListPlans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListPlans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdminListPlansQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListPlans>>> = ({
+    signal,
+  }) => adminListPlans({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListPlans>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListPlansQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListPlans>>
+>;
+export type AdminListPlansQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all subscription plans
+ */
+
+export function useAdminListPlans<
+  TData = Awaited<ReturnType<typeof adminListPlans>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListPlans>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListPlansQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new subscription plan
+ */
+export const getAdminCreatePlanUrl = () => {
+  return `/api/admin/plans`;
+};
+
+export const adminCreatePlan = async (
+  createPlanBody: CreatePlanBody,
+  options?: RequestInit,
+): Promise<Plan> => {
+  return customFetch<Plan>(getAdminCreatePlanUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPlanBody),
+  });
+};
+
+export const getAdminCreatePlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreatePlan>>,
+    TError,
+    { data: BodyType<CreatePlanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCreatePlan>>,
+  TError,
+  { data: BodyType<CreatePlanBody> },
+  TContext
+> => {
+  const mutationKey = ["adminCreatePlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCreatePlan>>,
+    { data: BodyType<CreatePlanBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adminCreatePlan(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCreatePlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCreatePlan>>
+>;
+export type AdminCreatePlanMutationBody = BodyType<CreatePlanBody>;
+export type AdminCreatePlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new subscription plan
+ */
+export const useAdminCreatePlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCreatePlan>>,
+    TError,
+    { data: BodyType<CreatePlanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCreatePlan>>,
+  TError,
+  { data: BodyType<CreatePlanBody> },
+  TContext
+> => {
+  return useMutation(getAdminCreatePlanMutationOptions(options));
+};
+
+/**
+ * @summary Update a subscription plan
+ */
+export const getAdminUpdatePlanUrl = (id: number) => {
+  return `/api/admin/plans/${id}`;
+};
+
+export const adminUpdatePlan = async (
+  id: number,
+  updatePlanBody: UpdatePlanBody,
+  options?: RequestInit,
+): Promise<Plan> => {
+  return customFetch<Plan>(getAdminUpdatePlanUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updatePlanBody),
+  });
+};
+
+export const getAdminUpdatePlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdatePlan>>,
+    TError,
+    { id: number; data: BodyType<UpdatePlanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminUpdatePlan>>,
+  TError,
+  { id: number; data: BodyType<UpdatePlanBody> },
+  TContext
+> => {
+  const mutationKey = ["adminUpdatePlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminUpdatePlan>>,
+    { id: number; data: BodyType<UpdatePlanBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminUpdatePlan(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminUpdatePlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminUpdatePlan>>
+>;
+export type AdminUpdatePlanMutationBody = BodyType<UpdatePlanBody>;
+export type AdminUpdatePlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a subscription plan
+ */
+export const useAdminUpdatePlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminUpdatePlan>>,
+    TError,
+    { id: number; data: BodyType<UpdatePlanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminUpdatePlan>>,
+  TError,
+  { id: number; data: BodyType<UpdatePlanBody> },
+  TContext
+> => {
+  return useMutation(getAdminUpdatePlanMutationOptions(options));
+};
+
+/**
+ * @summary Deactivate a subscription plan
+ */
+export const getAdminDeactivatePlanUrl = (id: number) => {
+  return `/api/admin/plans/${id}`;
+};
+
+export const adminDeactivatePlan = async (
+  id: number,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getAdminDeactivatePlanUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getAdminDeactivatePlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeactivatePlan>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminDeactivatePlan>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminDeactivatePlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminDeactivatePlan>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminDeactivatePlan(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminDeactivatePlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminDeactivatePlan>>
+>;
+
+export type AdminDeactivatePlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Deactivate a subscription plan
+ */
+export const useAdminDeactivatePlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminDeactivatePlan>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminDeactivatePlan>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminDeactivatePlanMutationOptions(options));
+};
+
+/**
+ * @summary List all vendor subscriptions
+ */
+export const getAdminListSubscriptionsUrl = () => {
+  return `/api/admin/subscriptions`;
+};
+
+export const adminListSubscriptions = async (
+  options?: RequestInit,
+): Promise<AdminSubscription[]> => {
+  return customFetch<AdminSubscription[]>(getAdminListSubscriptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdminListSubscriptionsQueryKey = () => {
+  return [`/api/admin/subscriptions`] as const;
+};
+
+export const getAdminListSubscriptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof adminListSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdminListSubscriptionsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof adminListSubscriptions>>
+  > = ({ signal }) => adminListSubscriptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof adminListSubscriptions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdminListSubscriptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof adminListSubscriptions>>
+>;
+export type AdminListSubscriptionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all vendor subscriptions
+ */
+
+export function useAdminListSubscriptions<
+  TData = Awaited<ReturnType<typeof adminListSubscriptions>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof adminListSubscriptions>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminListSubscriptionsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Extend or grant a free trial
+ */
+export const getAdminGrantTrialUrl = (id: number) => {
+  return `/api/admin/subscriptions/${id}/grant-trial`;
+};
+
+export const adminGrantTrial = async (
+  id: number,
+  grantTrialBody: GrantTrialBody,
+  options?: RequestInit,
+): Promise<VendorSubscription> => {
+  return customFetch<VendorSubscription>(getAdminGrantTrialUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(grantTrialBody),
+  });
+};
+
+export const getAdminGrantTrialMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminGrantTrial>>,
+    TError,
+    { id: number; data: BodyType<GrantTrialBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminGrantTrial>>,
+  TError,
+  { id: number; data: BodyType<GrantTrialBody> },
+  TContext
+> => {
+  const mutationKey = ["adminGrantTrial"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminGrantTrial>>,
+    { id: number; data: BodyType<GrantTrialBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminGrantTrial(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminGrantTrialMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminGrantTrial>>
+>;
+export type AdminGrantTrialMutationBody = BodyType<GrantTrialBody>;
+export type AdminGrantTrialMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Extend or grant a free trial
+ */
+export const useAdminGrantTrial = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminGrantTrial>>,
+    TError,
+    { id: number; data: BodyType<GrantTrialBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminGrantTrial>>,
+  TError,
+  { id: number; data: BodyType<GrantTrialBody> },
+  TContext
+> => {
+  return useMutation(getAdminGrantTrialMutationOptions(options));
+};
+
+/**
+ * @summary Change a vendor's subscription plan or status
+ */
+export const getAdminSetPlanUrl = (id: number) => {
+  return `/api/admin/subscriptions/${id}/set-plan`;
+};
+
+export const adminSetPlan = async (
+  id: number,
+  setPlanBody: SetPlanBody,
+  options?: RequestInit,
+): Promise<VendorSubscription> => {
+  return customFetch<VendorSubscription>(getAdminSetPlanUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(setPlanBody),
+  });
+};
+
+export const getAdminSetPlanMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminSetPlan>>,
+    TError,
+    { id: number; data: BodyType<SetPlanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminSetPlan>>,
+  TError,
+  { id: number; data: BodyType<SetPlanBody> },
+  TContext
+> => {
+  const mutationKey = ["adminSetPlan"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminSetPlan>>,
+    { id: number; data: BodyType<SetPlanBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminSetPlan(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminSetPlanMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminSetPlan>>
+>;
+export type AdminSetPlanMutationBody = BodyType<SetPlanBody>;
+export type AdminSetPlanMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Change a vendor's subscription plan or status
+ */
+export const useAdminSetPlan = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminSetPlan>>,
+    TError,
+    { id: number; data: BodyType<SetPlanBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminSetPlan>>,
+  TError,
+  { id: number; data: BodyType<SetPlanBody> },
+  TContext
+> => {
+  return useMutation(getAdminSetPlanMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a vendor subscription
+ */
+export const getAdminCancelSubscriptionUrl = (id: number) => {
+  return `/api/admin/subscriptions/${id}/cancel`;
+};
+
+export const adminCancelSubscription = async (
+  id: number,
+  options?: RequestInit,
+): Promise<VendorSubscription> => {
+  return customFetch<VendorSubscription>(getAdminCancelSubscriptionUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAdminCancelSubscriptionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCancelSubscription>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminCancelSubscription>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["adminCancelSubscription"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminCancelSubscription>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return adminCancelSubscription(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminCancelSubscriptionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminCancelSubscription>>
+>;
+
+export type AdminCancelSubscriptionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a vendor subscription
+ */
+export const useAdminCancelSubscription = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminCancelSubscription>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminCancelSubscription>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAdminCancelSubscriptionMutationOptions(options));
+};
+
+/**
+ * @summary Get current vendor subscription status
+ */
+export const getGetVendorSubscriptionUrl = () => {
+  return `/api/vendor/subscription`;
+};
+
+export const getVendorSubscription = async (
+  options?: RequestInit,
+): Promise<VendorSubscriptionDetail | null> => {
+  return customFetch<VendorSubscriptionDetail | null>(
+    getGetVendorSubscriptionUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetVendorSubscriptionQueryKey = () => {
+  return [`/api/vendor/subscription`] as const;
+};
+
+export const getGetVendorSubscriptionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVendorSubscription>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVendorSubscription>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetVendorSubscriptionQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getVendorSubscription>>
+  > = ({ signal }) => getVendorSubscription({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVendorSubscription>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetVendorSubscriptionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVendorSubscription>>
+>;
+export type GetVendorSubscriptionQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current vendor subscription status
+ */
+
+export function useGetVendorSubscription<
+  TData = Awaited<ReturnType<typeof getVendorSubscription>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVendorSubscription>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVendorSubscriptionQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a Stripe Checkout session to subscribe
+ */
+export const getCreateCheckoutSessionUrl = () => {
+  return `/api/vendor/subscription/subscribe`;
+};
+
+export const createCheckoutSession = async (
+  subscribeBody?: SubscribeBody,
+  options?: RequestInit,
+): Promise<CheckoutResponse> => {
+  return customFetch<CheckoutResponse>(getCreateCheckoutSessionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(subscribeBody),
+  });
+};
+
+export const getCreateCheckoutSessionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<SubscribeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<SubscribeBody> },
+  TContext
+> => {
+  const mutationKey = ["createCheckoutSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    { data: BodyType<SubscribeBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCheckoutSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCheckoutSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCheckoutSession>>
+>;
+export type CreateCheckoutSessionMutationBody = BodyType<SubscribeBody>;
+export type CreateCheckoutSessionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a Stripe Checkout session to subscribe
+ */
+export const useCreateCheckoutSession = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCheckoutSession>>,
+    TError,
+    { data: BodyType<SubscribeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCheckoutSession>>,
+  TError,
+  { data: BodyType<SubscribeBody> },
+  TContext
+> => {
+  return useMutation(getCreateCheckoutSessionMutationOptions(options));
+};
+
+/**
+ * @summary Get Stripe Billing Portal URL for subscription management
+ */
+export const getGetBillingPortalUrlUrl = () => {
+  return `/api/vendor/subscription/portal`;
+};
+
+export const getBillingPortalUrl = async (
+  options?: RequestInit,
+): Promise<PortalResponse> => {
+  return customFetch<PortalResponse>(getGetBillingPortalUrlUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getGetBillingPortalUrlMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getBillingPortalUrl>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getBillingPortalUrl>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["getBillingPortalUrl"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getBillingPortalUrl>>,
+    void
+  > = () => {
+    return getBillingPortalUrl(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetBillingPortalUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getBillingPortalUrl>>
+>;
+
+export type GetBillingPortalUrlMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get Stripe Billing Portal URL for subscription management
+ */
+export const useGetBillingPortalUrl = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getBillingPortalUrl>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getBillingPortalUrl>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getGetBillingPortalUrlMutationOptions(options));
+};
+
+/**
+ * @summary Get vendor brand kit
+ */
+export const getGetMarketingBrandUrl = () => {
+  return `/api/vendor/marketing/brand`;
+};
+
+export const getMarketingBrand = async (
+  options?: RequestInit,
+): Promise<BrandKit> => {
+  return customFetch<BrandKit>(getGetMarketingBrandUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMarketingBrandQueryKey = () => {
+  return [`/api/vendor/marketing/brand`] as const;
+};
+
+export const getGetMarketingBrandQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMarketingBrand>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMarketingBrand>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMarketingBrandQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMarketingBrand>>
+  > = ({ signal }) => getMarketingBrand({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMarketingBrand>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMarketingBrandQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMarketingBrand>>
+>;
+export type GetMarketingBrandQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get vendor brand kit
+ */
+
+export function useGetMarketingBrand<
+  TData = Awaited<ReturnType<typeof getMarketingBrand>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMarketingBrand>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMarketingBrandQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update vendor brand kit (colors and tagline)
+ */
+export const getUpdateMarketingBrandUrl = () => {
+  return `/api/vendor/marketing/brand`;
+};
+
+export const updateMarketingBrand = async (
+  brandKitUpdateBody: BrandKitUpdateBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getUpdateMarketingBrandUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(brandKitUpdateBody),
+  });
+};
+
+export const getUpdateMarketingBrandMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMarketingBrand>>,
+    TError,
+    { data: BodyType<BrandKitUpdateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMarketingBrand>>,
+  TError,
+  { data: BodyType<BrandKitUpdateBody> },
+  TContext
+> => {
+  const mutationKey = ["updateMarketingBrand"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMarketingBrand>>,
+    { data: BodyType<BrandKitUpdateBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMarketingBrand(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMarketingBrandMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMarketingBrand>>
+>;
+export type UpdateMarketingBrandMutationBody = BodyType<BrandKitUpdateBody>;
+export type UpdateMarketingBrandMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update vendor brand kit (colors and tagline)
+ */
+export const useUpdateMarketingBrand = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMarketingBrand>>,
+    TError,
+    { data: BodyType<BrandKitUpdateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMarketingBrand>>,
+  TError,
+  { data: BodyType<BrandKitUpdateBody> },
+  TContext
+> => {
+  return useMutation(getUpdateMarketingBrandMutationOptions(options));
+};
+
+/**
+ * @summary Generate AI marketing copy for a template
+ */
+export const getGenerateMarketingCopyUrl = () => {
+  return `/api/vendor/marketing/copy`;
+};
+
+export const generateMarketingCopy = async (
+  copyGenerateBody: CopyGenerateBody,
+  options?: RequestInit,
+): Promise<CopyGenerateResponse> => {
+  return customFetch<CopyGenerateResponse>(getGenerateMarketingCopyUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(copyGenerateBody),
+  });
+};
+
+export const getGenerateMarketingCopyMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateMarketingCopy>>,
+    TError,
+    { data: BodyType<CopyGenerateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateMarketingCopy>>,
+  TError,
+  { data: BodyType<CopyGenerateBody> },
+  TContext
+> => {
+  const mutationKey = ["generateMarketingCopy"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateMarketingCopy>>,
+    { data: BodyType<CopyGenerateBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateMarketingCopy(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateMarketingCopyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateMarketingCopy>>
+>;
+export type GenerateMarketingCopyMutationBody = BodyType<CopyGenerateBody>;
+export type GenerateMarketingCopyMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate AI marketing copy for a template
+ */
+export const useGenerateMarketingCopy = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateMarketingCopy>>,
+    TError,
+    { data: BodyType<CopyGenerateBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateMarketingCopy>>,
+  TError,
+  { data: BodyType<CopyGenerateBody> },
+  TContext
+> => {
+  return useMutation(getGenerateMarketingCopyMutationOptions(options));
 };

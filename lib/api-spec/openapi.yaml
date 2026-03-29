@@ -21,6 +21,10 @@ tags:
     description: Menu item operations
   - name: admin
     description: Admin operations
+  - name: subscriptions
+    description: Vendor subscription and billing operations
+  - name: marketing
+    description: Vendor marketing studio operations
 paths:
   /healthz:
     get:
@@ -741,6 +745,264 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  # ── Subscription plans (admin) ──────────────────────────────────────────────
+  /admin/plans:
+    get:
+      operationId: adminListPlans
+      tags: [admin]
+      summary: List all subscription plans
+      responses:
+        "200":
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plan"
+    post:
+      operationId: adminCreatePlan
+      tags: [admin]
+      summary: Create a new subscription plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanBody"
+      responses:
+        "201":
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+
+  /admin/plans/{id}:
+    put:
+      operationId: adminUpdatePlan
+      tags: [admin]
+      summary: Update a subscription plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePlanBody"
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plan"
+    delete:
+      operationId: adminDeactivatePlan
+      tags: [admin]
+      summary: Deactivate a subscription plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Plan deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Subscriptions (admin) ────────────────────────────────────────────────────
+  /admin/subscriptions:
+    get:
+      operationId: adminListSubscriptions
+      tags: [admin]
+      summary: List all vendor subscriptions
+      responses:
+        "200":
+          description: List of subscriptions with vendor + plan info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminSubscription"
+
+  /admin/subscriptions/{id}/grant-trial:
+    post:
+      operationId: adminGrantTrial
+      tags: [admin]
+      summary: Extend or grant a free trial
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrantTrialBody"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorSubscription"
+
+  /admin/subscriptions/{id}/set-plan:
+    post:
+      operationId: adminSetPlan
+      tags: [admin]
+      summary: Change a vendor's subscription plan or status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPlanBody"
+      responses:
+        "200":
+          description: Updated subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorSubscription"
+
+  /admin/subscriptions/{id}/cancel:
+    post:
+      operationId: adminCancelSubscription
+      tags: [admin]
+      summary: Cancel a vendor subscription
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Canceled subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorSubscription"
+
+  # ── Vendor subscription (vendor) ─────────────────────────────────────────────
+  /vendor/subscription:
+    get:
+      operationId: getVendorSubscription
+      tags: [subscriptions]
+      summary: Get current vendor subscription status
+      responses:
+        "200":
+          description: Subscription or null
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/VendorSubscriptionDetail"
+                  - type: "null"
+
+  /vendor/subscription/subscribe:
+    post:
+      operationId: createCheckoutSession
+      tags: [subscriptions]
+      summary: Create a Stripe Checkout session to subscribe
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscribeBody"
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutResponse"
+
+  /vendor/subscription/portal:
+    post:
+      operationId: getBillingPortalUrl
+      tags: [subscriptions]
+      summary: Get Stripe Billing Portal URL for subscription management
+      responses:
+        "200":
+          description: Billing portal URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortalResponse"
+
+  # ── Marketing studio (vendor) ────────────────────────────────────────────────
+  /vendor/marketing/brand:
+    get:
+      operationId: getMarketingBrand
+      tags: [marketing]
+      summary: Get vendor brand kit
+      responses:
+        "200":
+          description: Brand kit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BrandKit"
+    post:
+      operationId: updateMarketingBrand
+      tags: [marketing]
+      summary: Update vendor brand kit (colors and tagline)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BrandKitUpdateBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /vendor/marketing/copy:
+    post:
+      operationId: generateMarketingCopy
+      tags: [marketing]
+      summary: Generate AI marketing copy for a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CopyGenerateBody"
+      responses:
+        "200":
+          description: Generated copy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyGenerateResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -1404,3 +1666,325 @@ components:
         - totalEvents
         - pendingApproval
         - activeTrucks
+
+    # ── Plans ──────────────────────────────────────────────────────────────────
+    Plan:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        monthlyPrice:
+          type: integer
+          description: Price in cents
+        trialDays:
+          type: integer
+        features:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        stripePriceId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - monthlyPrice
+        - trialDays
+        - features
+        - isActive
+
+    CreatePlanBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        monthlyPrice:
+          type: integer
+        trialDays:
+          type: integer
+        features:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        stripePriceId:
+          type: string
+      required:
+        - name
+
+    UpdatePlanBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        monthlyPrice:
+          type: integer
+        trialDays:
+          type: integer
+        features:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        stripePriceId:
+          type: string
+
+    # ── Subscriptions ──────────────────────────────────────────────────────────
+    VendorSubscription:
+      type: object
+      properties:
+        id:
+          type: integer
+        vendorUserId:
+          type: integer
+        planId:
+          type: integer
+        status:
+          type: string
+          enum: [trialing, active, past_due, canceled, free]
+        trialEndsAt:
+          type: ["string", "null"]
+          format: date-time
+        currentPeriodEnd:
+          type: ["string", "null"]
+          format: date-time
+        stripeCustomerId:
+          type: ["string", "null"]
+        stripeSubscriptionId:
+          type: ["string", "null"]
+        canceledAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - vendorUserId
+        - planId
+        - status
+        - createdAt
+
+    VendorSubscriptionDetail:
+      type: object
+      description: Vendor subscription with embedded plan info and computed trial days
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [trialing, active, past_due, canceled, free]
+        trialEndsAt:
+          type: ["string", "null"]
+          format: date-time
+        currentPeriodEnd:
+          type: ["string", "null"]
+          format: date-time
+        stripeCustomerId:
+          type: ["string", "null"]
+        stripeSubscriptionId:
+          type: ["string", "null"]
+        canceledAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        trialDaysLeft:
+          type: ["integer", "null"]
+        planId:
+          type: integer
+        planName:
+          type: string
+        planDescription:
+          type: ["string", "null"]
+        monthlyPrice:
+          type: integer
+        trialDays:
+          type: integer
+        features:
+          type: array
+          items:
+            type: string
+        stripePriceId:
+          type: ["string", "null"]
+      required:
+        - id
+        - status
+        - createdAt
+        - planId
+        - planName
+        - monthlyPrice
+        - trialDays
+        - features
+
+    AdminSubscription:
+      type: object
+      description: Subscription record with vendor user and plan info (admin view)
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [trialing, active, past_due, canceled, free]
+        trialEndsAt:
+          type: ["string", "null"]
+          format: date-time
+        currentPeriodEnd:
+          type: ["string", "null"]
+          format: date-time
+        stripeCustomerId:
+          type: ["string", "null"]
+        stripeSubscriptionId:
+          type: ["string", "null"]
+        canceledAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        trialDaysLeft:
+          type: ["integer", "null"]
+        vendorUserId:
+          type: integer
+        vendorName:
+          type: string
+        vendorEmail:
+          type: string
+        planId:
+          type: integer
+        planName:
+          type: string
+        monthlyPrice:
+          type: integer
+      required:
+        - id
+        - status
+        - createdAt
+        - vendorUserId
+        - vendorName
+        - vendorEmail
+        - planId
+        - planName
+        - monthlyPrice
+
+    GrantTrialBody:
+      type: object
+      properties:
+        days:
+          type: integer
+          minimum: 1
+      required:
+        - days
+
+    SetPlanBody:
+      type: object
+      properties:
+        planId:
+          type: integer
+        status:
+          type: string
+          enum: [trialing, active, past_due, canceled, free]
+
+    SubscribeBody:
+      type: object
+      properties:
+        successUrl:
+          type: string
+        cancelUrl:
+          type: string
+
+    CheckoutResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required:
+        - url
+
+    PortalResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required:
+        - url
+
+    # ── Marketing ──────────────────────────────────────────────────────────────
+    BrandKit:
+      type: object
+      properties:
+        primaryColor:
+          type: string
+          description: Hex color code e.g. "#FF6B35"
+        secondaryColor:
+          type: string
+        tagline:
+          type: string
+        name:
+          type: string
+        cuisine:
+          type: string
+        description:
+          type: ["string", "null"]
+        instagramHandle:
+          type: ["string", "null"]
+        twitterHandle:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        coverImageUrl:
+          type: ["string", "null"]
+      required:
+        - primaryColor
+        - secondaryColor
+        - tagline
+        - name
+        - cuisine
+
+    BrandKitUpdateBody:
+      type: object
+      properties:
+        primaryColor:
+          type: string
+          description: Hex color code e.g. "#FF6B35"
+        secondaryColor:
+          type: string
+        tagline:
+          type: string
+
+    CopyGenerateBody:
+      type: object
+      properties:
+        templateType:
+          type: string
+          enum: [social, event, special, open-now, general]
+        customPrompt:
+          type: string
+      required:
+        - templateType
+
+    CopyGenerateResponse:
+      type: object
+      properties:
+        copy:
+          type: string
+        templateType:
+          type: string
+      required:
+        - copy
+        - templateType

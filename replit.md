@@ -105,9 +105,9 @@ React + Vite frontend — Central Oklahoma Food Truck Tracker.
   - `/` Home, `/trucks` list, `/trucks/:id` detail
   - `/events` list, `/events/:id` detail (with embedded Leaflet map)
   - `/login`, `/signup`
-  - `/vendor` dashboard, `/vendor/truck`, `/vendor/menu`, `/vendor/schedule`, `/vendor/events`, `/vendor/branding`
+  - `/vendor` dashboard, `/vendor/truck`, `/vendor/menu`, `/vendor/schedule`, `/vendor/events`, `/vendor/branding`, `/vendor/specials`, `/vendor/event-spots`, `/vendor/inbox`, `/vendor/marketing`
   - `/organizer` dashboard, `/organizer/events/new`, `/organizer/events/:id/manage`, `/organizer/events/:id/edit`
-  - `/admin` admin panel
+  - `/admin` admin panel (tabs: Stats, Users, Trucks, Events, Plans, Subscriptions)
   - `/superadmin` superadmin console (user list + impersonation)
 - **Maps**: `react-leaflet` + OpenStreetMap tiles. `MapView` component shows truck locations. Leaflet marker icon fix applied.
 - **Demo accounts** (all `password123`): `admin@okfoodtrucks.com`, `vendor1@okfoodtrucks.com`–`vendor4@okfoodtrucks.com`, `organizer1@okfoodtrucks.com`, `organizer2@okfoodtrucks.com`
@@ -138,6 +138,25 @@ One per vendor user. Fields: `id`, `vendorUserId`, `planId`, `status` (trialing/
 - `POST /api/admin/subscriptions/:id/grant-trial` — extend trial (adds days to trialEndsAt)
 - `POST /api/admin/subscriptions/:id/cancel` — cancel subscription
 - `POST /api/admin/subscriptions/:id/set-plan` — change vendor plan
+
+### Stripe Sandbox Products
+- **Vendor Base**: `prod_UEcvV8URPPdpoj`, price `price_1TG9fxQ3mgJsadzj70PuqqPw` ($14.99/mo)
+- **Vendor Pro**: `prod_UEW4NpgfdOVyUh`, price `price_1TG32hQ3mgJsadzjyJ6u0ND0` ($29.99/mo)
+
+## Marketing Studio
+
+Vendor Pro feature at `/vendor/marketing`. Backed by `GET/POST /api/vendor/marketing/brand` and `POST /api/vendor/marketing/copy`.
+
+- Brand kit: primary/secondary color pickers, tagline; saved to `trucks.primaryColor`, `trucks.secondaryColor`, `trucks.tagline`
+- 4 live-preview templates with truck branding applied (Social Post, Open Now, Daily Special, Event Night)
+- AI copy generator via OpenAI `gpt-5-mini` (Replit AI integration, no user key required)
+- Copy result clipboard copy button
+- Route guard: redirects non-Pro users to upgrade
+
+### Marketing API Routes
+- `GET /api/vendor/marketing/brand` — get brand kit (colors, tagline, truck info)
+- `POST /api/vendor/marketing/brand` — save brand colors + tagline
+- `POST /api/vendor/marketing/copy` — generate AI copy (`templateType`: social/event/special/open-now/general, optional `customPrompt`)
 
 ## Database Schema
 

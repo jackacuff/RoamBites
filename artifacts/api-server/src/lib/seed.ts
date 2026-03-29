@@ -234,20 +234,37 @@ export async function seedIfEmpty() {
       },
     ]);
 
+    await db.insert(plansTable).values({
+      name: "Vendor Base",
+      description: "Everything you need to get your food truck listed and running on RoamBites",
+      monthlyPrice: 14.99,
+      trialDays: 30,
+      features: [
+        "Truck profile & listing",
+        "Menu management",
+        "Schedule management",
+        "Live GPS check-in",
+        "Customer inbox",
+        "Specials & promotions",
+        "Social media links",
+      ],
+      isActive: true,
+    });
+
     const [defaultPlan] = await db.insert(plansTable).values({
       name: "Vendor Pro",
-      description: "Full access to the RoamBites vendor platform",
+      description: "Full access to RoamBites with featured placement and marketing tools",
       monthlyPrice: 29.99,
       trialDays: 90,
       features: [
-        "Unlimited menu items",
-        "Live GPS check-in",
-        "Schedule management",
-        "Event marketplace access",
-        "Customer inbox",
-        "Specials & promotions",
-        "Social media integration",
-        "Priority listing",
+        "Everything in Vendor Base",
+        "Featured placement on events & pages",
+        "Marketing materials studio",
+        "AI-generated marketing copy",
+        "Brand kit (colors, tagline)",
+        "Event marketplace priority access",
+        "Priority listing in search",
+        "Advanced analytics",
       ],
       isActive: true,
     }).returning();
