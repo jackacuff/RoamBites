@@ -265,7 +265,7 @@ export default function Profile() {
               </div>
               <div>
                 <p className="font-semibold text-foreground group-hover:text-primary transition-colors">My Favorites</p>
-                <p className="text-sm text-muted-foreground">{favorites.length} saved truck{favorites.length !== 1 ? "s" : ""}</p>
+                <p className="text-sm text-muted-foreground">{favorites.length} favorited truck{favorites.length !== 1 ? "s" : ""}</p>
               </div>
             </Link>
           )}

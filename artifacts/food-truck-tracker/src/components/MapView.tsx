@@ -18,50 +18,67 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const heartBadge = `<div style="
-  position:absolute;top:-6px;right:-6px;
-  font-size:11px;line-height:1;
-  filter:drop-shadow(0 1px 1px rgba(0,0,0,0.3));
-  pointer-events:none;
-">❤️</div>`;
-
-function makeScheduledIcon(fav: boolean) {
+// Small dot for scheduled (non-favorite)
+function makeScheduledIcon() {
   return L.divIcon({
-    html: `<div style="position:relative;width:${fav ? 20 : 14}px;height:${fav ? 20 : 14}px;">
-      <div style="
-        width:14px;height:14px;border-radius:50%;
-        background:#f97316;border:2.5px solid white;
-        box-shadow:0 1px 5px rgba(0,0,0,0.4);
-      "></div>
-      ${fav ? heartBadge : ""}
-    </div>`,
-    iconSize: fav ? [20, 20] : [14, 14],
-    iconAnchor: fav ? [7, 7] : [7, 7],
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:#f97316;border:2.5px solid white;box-shadow:0 1px 5px rgba(0,0,0,0.4);"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -10],
+    className: "",
+  });
+}
+
+// Small pulsing dot for live (non-favorite)
+function makeLiveIcon() {
+  return L.divIcon({
+    html: `
+      <div style="position:relative;width:16px;height:16px;">
+        <div style="width:16px;height:16px;border-radius:50%;background:#22c55e;border:2.5px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4);position:relative;z-index:1;"></div>
+        <div style="position:absolute;top:-3px;left:-3px;right:-3px;bottom:-3px;border-radius:50%;border:2px solid #22c55e;animation:lp 1.5s cubic-bezier(0,0,0.2,1) infinite;opacity:0.6;"></div>
+      </div>
+      <style>@keyframes lp{75%,100%{transform:scale(2.2);opacity:0}}</style>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
     popupAnchor: [0, -12],
     className: "",
   });
 }
 
-function makeLiveIcon(fav: boolean) {
+// Heart SVG path (standard heart, tip at bottom-center)
+const heartPath = "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z";
+
+function heartSvgHtml(fill: string) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 23" width="30" height="28" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.35));display:block;">
+    <path d="${heartPath}" fill="${fill}" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// Heart pin for favorited + scheduled
+function makeFavScheduledIcon() {
   return L.divIcon({
-    html: `<div style="position:relative;width:${fav ? 22 : 16}px;height:${fav ? 22 : 16}px;">
-      <div style="
-        width:16px;height:16px;border-radius:50%;
-        background:#22c55e;border:2.5px solid white;
-        box-shadow:0 1px 6px rgba(0,0,0,0.4);
-        position:relative;z-index:1;
-      "></div>
-      <div style="
-        position:absolute;top:-3px;left:-3px;right:-3px;bottom:-3px;
-        border-radius:50%;border:2px solid #22c55e;
-        animation:lp 1.5s cubic-bezier(0,0,0.2,1) infinite;opacity:0.6;
-      "></div>
-      ${fav ? heartBadge : ""}
-    </div>
-    <style>@keyframes lp{75%,100%{transform:scale(2.2);opacity:0}}</style>`,
-    iconSize: fav ? [22, 22] : [16, 16],
-    iconAnchor: fav ? [8, 8] : [8, 8],
-    popupAnchor: [0, -14],
+    html: heartSvgHtml("#ef4444"),
+    iconSize: [30, 28],
+    iconAnchor: [15, 26],
+    popupAnchor: [0, -28],
+    className: "",
+  });
+}
+
+// Heart pin with green pulse for favorited + live
+function makeFavLiveIcon() {
+  return L.divIcon({
+    html: `
+      <div style="position:relative;width:38px;height:36px;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;top:0;left:0;right:0;bottom:0;border-radius:50%;border:2.5px solid #22c55e;animation:lp 1.5s cubic-bezier(0,0,0.2,1) infinite;opacity:0.65;"></div>
+        <div style="position:relative;z-index:1;margin-top:4px;">
+          ${heartSvgHtml("#ef4444")}
+        </div>
+      </div>
+      <style>@keyframes lp{75%,100%{transform:scale(1.9);opacity:0}}</style>`,
+    iconSize: [38, 36],
+    iconAnchor: [19, 32],
+    popupAnchor: [0, -34],
     className: "",
   });
 }
@@ -101,8 +118,8 @@ function popupHtml(pin: PinEntry): string {
   const liveIndicator = pin.isLiveGps
     ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:5px;vertical-align:middle;animation:lp2 1.5s infinite;"></span>`
     : "";
-  const heartMark = pin.isFavorite
-    ? `<span style="margin-left:4px;" title="In your favorites">❤️</span>`
+  const favIndicator = pin.isFavorite
+    ? `<span style="margin-left:4px;font-size:12px;" title="In your favorites">❤️</span>`
     : "";
   const liveBadge = pin.isLiveGps
     ? `<span style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap;">Live</span>`
@@ -111,8 +128,8 @@ function popupHtml(pin: PinEntry): string {
   return `
     <style>@keyframes lp2{0%,100%{opacity:1}50%{opacity:0.4}}</style>
     <div style="min-width:180px;padding:2px 2px 4px;font-family:system-ui,sans-serif;">
-      <div style="font-weight:700;font-size:13px;padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:4px;">
-        ${liveIndicator}${pin.truck.name}${heartMark}
+      <div style="font-weight:700;font-size:13px;padding-bottom:6px;margin-bottom:6px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:2px;flex-wrap:wrap;">
+        ${liveIndicator}${pin.truck.name}${favIndicator}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
         <span style="font-size:11px;color:#6b7280;">${pin.truck.cuisine}</span>
@@ -155,9 +172,12 @@ function ClusteredMarkers({ pins }: { pins: PinEntry[] }) {
     });
 
     for (const pin of pins) {
-      const pinIcon = pin.isLiveGps
-        ? makeLiveIcon(pin.isFavorite)
-        : makeScheduledIcon(pin.isFavorite);
+      let pinIcon: L.DivIcon | L.Icon;
+      if (pin.isFavorite) {
+        pinIcon = pin.isLiveGps ? makeFavLiveIcon() : makeFavScheduledIcon();
+      } else {
+        pinIcon = pin.isLiveGps ? makeLiveIcon() : makeScheduledIcon();
+      }
       const marker = L.marker([pin.lat, pin.lng], { icon: pinIcon });
       marker.bindPopup(popupHtml(pin), { maxWidth: 240 });
       mcg.addLayer(marker);
