@@ -1,13 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
 import { TruckCard } from "@/components/TruckCard";
 import { MapView } from "@/components/MapView";
 import { Search, Map as MapIcon, List, Filter, SlidersHorizontal } from "lucide-react";
 import { useListTrucks } from "@workspace/api-client-react";
+import { useAuth } from "@/hooks/use-auth";
+import { getApiUrl, authHeaders } from "@/lib/api";
 
 export default function Trucks() {
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
+  const { isAuthenticated } = useAuth();
   
   // Filters state
   const [city, setCity] = useState(searchParams.get('city') || "");
@@ -17,6 +20,19 @@ export default function Trucks() {
   
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [showFilters, setShowFilters] = useState(false);
+  const [favoriteTruckIds, setFavoriteTruckIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (!isAuthenticated) { setFavoriteTruckIds(new Set()); return; }
+    fetch(getApiUrl("/api/favorites"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setFavoriteTruckIds(new Set(data.map((f: any) => f.truckId as number)));
+        }
+      })
+      .catch(() => {});
+  }, [isAuthenticated]);
 
   // Debounced or direct fetch. Orval hook reacts to param changes.
   const { data: trucks, isLoading } = useListTrucks({
@@ -135,7 +151,7 @@ export default function Trucks() {
               ))}
             </div>
           ) : (
-            <MapView trucks={trucks} height="70vh" />
+            <MapView trucks={trucks} favoriteTruckIds={favoriteTruckIds} height="70vh" />
           )
         ) : (
           <div className="text-center py-24 bg-card rounded-3xl border border-dashed border-border">
