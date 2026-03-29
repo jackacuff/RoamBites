@@ -148,7 +148,7 @@ function TruckParksMap({ parks, selectedId, onSelect }: {
         if (sel?.latitude && sel?.longitude) leafletMapRef.current!.setView([sel.latitude, sel.longitude], 14);
       }
     });
-  }, [parks, selectedId]);
+  }, [parks, selectedId, mapReady]);
 
   return <div ref={mapRef} className="w-full h-full rounded-2xl overflow-hidden z-0" />;
 }
