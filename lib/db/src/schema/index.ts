@@ -15,3 +15,4 @@ export * from "./truckSpecials";
 export * from "./messages";
 export * from "./plans";
 export * from "./vendorSubscriptions";
+export * from "./parks";

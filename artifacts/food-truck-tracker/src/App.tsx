@@ -35,6 +35,9 @@ import VendorMarketing from "./pages/vendor/VendorMarketing";
 import OrganizerTruckMarketplace from "./pages/organizer/OrganizerTruckMarketplace";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
+import Parks from "./pages/Parks";
+import ParkDetail from "./pages/ParkDetail";
+import ParkHostDashboard from "./pages/park-host/ParkHostDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +77,10 @@ function Router() {
       <Route path="/organizer/events/new" component={OrganizerNewEvent} />
       <Route path="/organizer/events/:id/manage" component={OrganizerManageEvent} />
       <Route path="/organizer/events/:id/edit" component={OrganizerEditEvent} />
+
+      <Route path="/parks" component={Parks} />
+      <Route path="/parks/:id" component={ParkDetail} />
+      <Route path="/park-host" component={ParkHostDashboard} />
 
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/superadmin" component={SuperAdminDashboard} />

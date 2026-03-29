@@ -70,11 +70,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { name: "Home", path: "/" },
     { name: "Browse Trucks", path: "/trucks" },
     { name: "Events", path: "/events" },
+    { name: "Truck Parks", path: "/parks" },
     ...(user?.role === "vendor" ? [
       { name: "Dashboard", path: "/vendor/dashboard" },
       { name: "My Truck", path: "/vendor/truck" },
     ] : []),
     ...(user?.role === "organizer" ? [{ name: "My Events", path: "/organizer" }] : []),
+    ...(user?.role === "park_host" ? [{ name: "My Park", path: "/park-host" }] : []),
   ];
 
   const getDashboardLink = () => {
@@ -83,6 +85,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (user.role === "vendor") return { href: "/vendor", label: "Vendor Dashboard" };
     if (user.role === "organizer") return { href: "/organizer", label: "Organizer Dashboard" };
     if (user.role === "admin") return { href: "/admin", label: "Admin Panel" };
+    if (user.role === "park_host") return { href: "/park-host", label: "Park Dashboard" };
     return null;
   };
 
