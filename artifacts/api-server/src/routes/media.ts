@@ -13,8 +13,12 @@ const PDF_MAX_BYTES = 10 * 1024 * 1024;
 const VALID_MEDIA_TYPES = ["logo", "cover", "gallery", "menu_image", "menu_pdf"];
 
 router.get("/trucks/:id/media", optionalAuth, async (req, res): Promise<void> => {
-  const truckId = parseInt(req.params.id, 10);
-  if (isNaN(truckId)) { res.status(400).json({ error: "Invalid truck id" }); return; }
+  let truckId = parseInt(req.params.id, 10);
+  if (isNaN(truckId)) {
+    const rows = await db.select({ id: trucksTable.id }).from(trucksTable).where(eq(trucksTable.slug, req.params.id));
+    if (!rows[0]) { res.status(404).json({ error: "Truck not found" }); return; }
+    truckId = rows[0].id;
+  }
 
   const media = await db.select().from(truckMediaTable)
     .where(eq(truckMediaTable.truckId, truckId))

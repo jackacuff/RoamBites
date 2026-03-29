@@ -40,7 +40,7 @@ catalogs:
       specifier: 2.1.1
       version: 2.1.1
     drizzle-orm:
-      specifier: ^0.45.1
+      specifier: 0.45.1
       version: 0.45.1
     framer-motion:
       specifier: 12.35.1
@@ -702,6 +702,9 @@ importers:
       bcryptjs:
         specifier: ^3.0.2
         version: 3.0.3
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)(postgres@3.4.8)
       postgres:
         specifier: ^3.4.5
         version: 3.4.8

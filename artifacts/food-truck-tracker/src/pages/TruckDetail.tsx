@@ -45,9 +45,8 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 export default function TruckDetail() {
   const [, params] = useRoute("/trucks/:id");
   const id = params?.id || "0";
-  const numId = parseInt(id, 10);
 
-  const { data: truck, isLoading, error } = useGetTruck(numId);
+  const { data: truck, isLoading, error } = useGetTruck(id);
   const { user, isAuthenticated } = useAuth();
   const fallbackImg = `${import.meta.env.BASE_URL}images/truck-placeholder.png`;
 
@@ -77,17 +76,19 @@ export default function TruckDetail() {
 
   const token = localStorage.getItem("token");
 
+  const truckId = truck?.id;
+
   useEffect(() => {
-    if (!numId) return;
-    fetch(getApiUrl(`/api/trucks/${numId}/media`))
+    if (!id) return;
+    fetch(getApiUrl(`/api/trucks/${id}/media`))
       .then(r => r.ok ? r.json() : [])
       .then(data => setMedia(Array.isArray(data) ? data : []))
       .catch(() => {});
-  }, [numId]);
+  }, [id]);
 
   useEffect(() => {
-    if (!numId) return;
-    fetch(getApiUrl(`/api/trucks/${numId}/reviews`))
+    if (!id) return;
+    fetch(getApiUrl(`/api/trucks/${id}/reviews`))
       .then(r => r.json())
       .then(data => {
         setReviews(data.reviews || []);
@@ -95,39 +96,39 @@ export default function TruckDetail() {
         setReviewTotal(data.total);
       })
       .catch(() => {});
-  }, [numId]);
+  }, [id]);
 
   useEffect(() => {
-    if (!isAuthenticated || !token || !numId) return;
+    if (!isAuthenticated || !token || !truckId) return;
     fetch(getApiUrl("/api/favorites"), { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
-        if (Array.isArray(data)) setIsFav(data.some((f: any) => f.truckId === numId));
+        if (Array.isArray(data)) setIsFav(data.some((f: any) => f.truckId === truckId));
       })
       .catch(() => {});
     fetch(getApiUrl("/api/notifications"), { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) {
-          const pref = data.find((p: any) => p.truckId === numId);
+          const pref = data.find((p: any) => p.truckId === truckId);
           if (pref) { setNotifyOpen(pref.notifyWhenOpen); setNotifyNearby(pref.notifyWhenNearby); }
         }
       })
       .catch(() => {});
-  }, [isAuthenticated, token, numId]);
+  }, [isAuthenticated, token, truckId]);
 
   const toggleFavorite = async () => {
     if (!isAuthenticated || !token) return;
     setFavLoading(true);
     try {
       if (isFav) {
-        await fetch(getApiUrl(`/api/favorites/${numId}`), { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+        await fetch(getApiUrl(`/api/favorites/${truckId}`), { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
         setIsFav(false);
       } else {
         await fetch(getApiUrl("/api/favorites"), {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ truckId: numId }),
+          body: JSON.stringify({ truckId }),
         });
         setIsFav(true);
       }
@@ -145,7 +146,7 @@ export default function TruckDetail() {
       const res = await fetch(getApiUrl("/api/reviews"), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ truckId: numId, rating: reviewRating, comment: reviewComment }),
+        body: JSON.stringify({ truckId, rating: reviewRating, comment: reviewComment }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -170,7 +171,7 @@ export default function TruckDetail() {
       await fetch(getApiUrl("/api/notifications"), {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ truckId: numId, notifyWhenOpen: notifyOpen, notifyWhenNearby: notifyNearby }),
+        body: JSON.stringify({ truckId, notifyWhenOpen: notifyOpen, notifyWhenNearby: notifyNearby }),
       });
     } catch {}
     setNotifySaving(false);
@@ -184,7 +185,7 @@ export default function TruckDetail() {
       const res = await fetch(getApiUrl("/api/reservations"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...resForm, truckId: numId }),
+        body: JSON.stringify({ ...resForm, truckId }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -246,7 +247,7 @@ export default function TruckDetail() {
                     <div className="flex flex-wrap items-center gap-3 mb-3">
                       <span className="px-3 py-1 bg-primary text-primary-foreground text-sm font-bold rounded-full uppercase tracking-wider">{truck.cuisine}</span>
                       <StatusBadge status={truck.status} isLive={truck.isLive} className="shadow-lg border-none" />
-                      {avgRating !== null && (
+                      {avgRating != null && typeof avgRating === "number" && (
                         <span className="flex items-center gap-1 px-3 py-1 bg-amber-500/90 text-white text-sm font-bold rounded-full">
                           <Star className="w-3.5 h-3.5 fill-white" />
                           {avgRating.toFixed(1)}
@@ -481,7 +482,7 @@ export default function TruckDetail() {
             <section>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-display font-bold text-foreground">Reviews</h2>
-                {avgRating !== null && (
+                {avgRating != null && typeof avgRating === "number" && (
                   <div className="flex items-center gap-2">
                     <StarRating rating={avgRating} />
                     <span className="font-bold text-foreground">{avgRating.toFixed(1)}</span>

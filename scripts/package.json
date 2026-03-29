@@ -7,11 +7,14 @@
     "hello": "tsx ./src/hello.ts",
     "seed": "tsx ./src/seed.ts",
     "seed-stripe": "tsx ./src/seedStripeProducts.ts",
+    "enrich-trucks": "tsx ./src/enrichTrucks.ts",
+    "clean-test-trucks": "tsx ./src/cleanTestTrucks.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
     "bcryptjs": "^3.0.2",
+    "drizzle-orm": "catalog:",
     "postgres": "^3.4.5",
     "stripe": "^21.0.1"
   },

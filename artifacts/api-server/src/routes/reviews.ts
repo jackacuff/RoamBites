@@ -6,8 +6,12 @@ import { requireAuth, optionalAuth } from "../lib/auth";
 const router: IRouter = Router();
 
 router.get("/trucks/:id/reviews", optionalAuth, async (req, res): Promise<void> => {
-  const truckId = parseInt(req.params.id, 10);
-  if (isNaN(truckId)) { res.status(400).json({ error: "Invalid truck id" }); return; }
+  let truckId = parseInt(req.params.id, 10);
+  if (isNaN(truckId)) {
+    const rows = await db.select({ id: trucksTable.id }).from(trucksTable).where(eq(trucksTable.slug, req.params.id));
+    if (!rows[0]) { res.status(404).json({ error: "Truck not found" }); return; }
+    truckId = rows[0].id;
+  }
 
   const reviews = await db.select({
     id: reviewsTable.id,

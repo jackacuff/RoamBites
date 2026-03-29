@@ -121,10 +121,10 @@ export const CreateTruckBody = zod.object({
 });
 
 /**
- * @summary Get a food truck by ID
+ * @summary Get a food truck by ID or slug
  */
 export const GetTruckParams = zod.object({
-  id: zod.coerce.number(),
+  id: zod.coerce.string(),
 });
 
 export const GetTruckResponse = zod.object({

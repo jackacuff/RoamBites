@@ -191,13 +191,13 @@ paths:
     get:
       operationId: getTruck
       tags: [trucks]
-      summary: Get a food truck by ID
+      summary: Get a food truck by ID or slug
       parameters:
         - name: id
           in: path
           required: true
           schema:
-            type: integer
+            type: string
       responses:
         "200":
           description: Truck detail
