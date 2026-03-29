@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable, vendorSubscriptionsTable } from "@workspace/db";
-import { eq, and, ilike, or, inArray, avg, count } from "drizzle-orm";
+import { eq, and, ilike, or, inArray, avg, count, asc } from "drizzle-orm";
 import { CreateTruckBody, UpdateTruckBody, CheckInTruckBody } from "@workspace/api-zod";
 import { requireAuth, requireRole, optionalAuth } from "../lib/auth";
 import { computeTruckStatus, slugify } from "../lib/truckStatus";
@@ -46,9 +46,20 @@ async function buildTruckSummary(truck: any, schedules: any[]) {
 }
 
 router.get("/trucks", optionalAuth, async (req, res): Promise<void> => {
-  const { city, cuisine, openNow, search, eventId } = req.query as any;
+  const { city, cuisine, openNow, search, eventId, mine } = req.query as any;
 
-  let truckQuery = db.select().from(trucksTable).where(eq(trucksTable.isApproved, true));
+  // ?mine=true — return only the authenticated vendor's own trucks (skip approval filter)
+  if (mine === "true") {
+    const user = (req as any).user;
+    if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+    const myTrucks = await db.select().from(trucksTable).where(eq(trucksTable.vendorUserId, user.id)).orderBy(asc(trucksTable.id));
+    const allSchedules = await db.select().from(scheduleEntriesTable);
+    const results = await Promise.all(
+      myTrucks.map(truck => buildTruckSummary(truck, allSchedules.filter(s => s.truckId === truck.id)))
+    );
+    res.json(results);
+    return;
+  }
 
   const allTrucks = await db.select().from(trucksTable).where(eq(trucksTable.isApproved, true));
   const allSchedules = await db.select().from(scheduleEntriesTable);
