@@ -72,6 +72,13 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
  * These are served from a separate path from /public-objects and can optionally
  * be protected with authentication or ACL checks based on the use case.
  */
+// Backward-compat alias: old uploads stored URL as /api/objects/... instead of /api/storage/objects/...
+router.get("/objects/*path", async (req: Request, res: Response) => {
+  const raw = req.params.path;
+  const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
+  res.redirect(301, `/api/storage/objects/${wildcardPath}`);
+});
+
 router.get("/storage/objects/*path", async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;

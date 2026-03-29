@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Upload, Trash2, ImageIcon, Star, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Upload, Trash2, ImageIcon, Star, AlertCircle, CheckCircle2, Crown, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const API_BASE = getApiUrl("");
@@ -29,6 +29,11 @@ interface Truck {
   logoUrl?: string;
   coverImageUrl?: string;
   imageUrl?: string;
+}
+
+interface VendorSub {
+  status: string;
+  planName: string;
 }
 
 function useVendorTruck() {
@@ -70,6 +75,18 @@ function useMedia(truckId: number | null) {
   return { media, loading, reload: load };
 }
 
+function useSubscription() {
+  const [sub, setSub] = useState<VendorSub | null>(null);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    fetch(getApiUrl("/api/vendor/subscription"), { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setSub(data))
+      .catch(() => {});
+  }, []);
+  return sub;
+}
+
 type UploadType = "logo" | "cover" | "gallery" | "menu_image" | "menu_pdf";
 
 interface UploadCardProps {
@@ -80,13 +97,25 @@ interface UploadCardProps {
   truckId: number;
   existing?: TruckMedia;
   onDone: () => void;
+  currentImageUrl?: string;
+  onSetThumbnail?: (mediaId: number) => Promise<void>;
 }
 
-function UploadCard({ type, label, description, accept, truckId, existing, onDone }: UploadCardProps) {
+function UploadCard({ type, label, description, accept, truckId, existing, onDone, currentImageUrl, onSetThumbnail }: UploadCardProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [settingThumb, setSettingThumb] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isThumbnail = existing && currentImageUrl && existing.url === currentImageUrl;
+
+  const handleSetThumbnail = async () => {
+    if (!existing || !onSetThumbnail) return;
+    setSettingThumb(true);
+    await onSetThumbnail(existing.id);
+    setSettingThumb(false);
+  };
 
   const handleFile = async (file: File) => {
     setUploading(true);
@@ -108,7 +137,7 @@ function UploadCard({ type, label, description, accept, truckId, existing, onDon
       });
       if (!uploadRes.ok) throw new Error("Failed to upload file");
 
-      const fileUrl = getApiUrl(`/api${objectPath}`);
+      const fileUrl = getApiUrl(`/api/storage${objectPath}`);
 
       const mediaRes = await fetch(getApiUrl(`/api/trucks/${truckId}/media`), {
         method: "POST",
@@ -168,12 +197,22 @@ function UploadCard({ type, label, description, accept, truckId, existing, onDon
 
       {existing && !isPdf && (
         <div className="relative group">
+          {isThumbnail && (
+            <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
+              <Star className="w-3 h-3 fill-white" /> Thumbnail
+            </div>
+          )}
           <img
             src={existing.url}
             alt={existing.altText || label}
             className={`rounded-lg object-cover w-full border ${type === "logo" ? "h-28 object-contain bg-muted" : "h-48"}`}
           />
-          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center gap-2">
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition rounded-lg flex items-center justify-center gap-2 flex-wrap p-2">
+            {onSetThumbnail && !isThumbnail && (
+              <Button size="sm" className="bg-amber-500 hover:bg-amber-400 text-white border-0" onClick={handleSetThumbnail} disabled={settingThumb}>
+                {settingThumb ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Star className="w-3 h-3 mr-1" />} Set thumbnail
+              </Button>
+            )}
             <Button size="sm" variant="secondary" onClick={() => inputRef.current?.click()} disabled={uploading}>
               <Upload className="w-3 h-3 mr-1" /> Replace
             </Button>
@@ -226,20 +265,30 @@ interface GalleryManagerProps {
   truckId: number;
   galleryItems: TruckMedia[];
   onDone: () => void;
+  isPro: boolean;
+  maxPhotos: number;
+  currentImageUrl?: string;
 }
 
-function GalleryManager({ truckId, galleryItems, onDone }: GalleryManagerProps) {
+function GalleryManager({ truckId, galleryItems, onDone, isPro, maxPhotos, currentImageUrl }: GalleryManagerProps) {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [featuring, setFeaturing] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const atLimit = galleryItems.length >= maxPhotos;
 
   const handleFiles = async (files: FileList) => {
     setUploading(true);
     const token = localStorage.getItem("token");
+    if (atLimit) {
+      toast({ title: `Photo limit reached`, description: isPro ? `Max ${maxPhotos} photos reached.` : `Upgrade to Pro for more photos.`, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
     let success = 0;
     for (const file of Array.from(files)) {
+      if (galleryItems.length + success >= maxPhotos) break;
       try {
         const urlRes = await fetch(getApiUrl("/api/storage/uploads/request-url"), {
           method: "POST",
@@ -252,7 +301,7 @@ function GalleryManager({ truckId, galleryItems, onDone }: GalleryManagerProps) 
         const uploadRes = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
         if (!uploadRes.ok) continue;
 
-        const fileUrl = getApiUrl(`/api${objectPath}`);
+        const fileUrl = getApiUrl(`/api/storage${objectPath}`);
         const mediaRes = await fetch(getApiUrl(`/api/trucks/${truckId}/media`), {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -284,19 +333,24 @@ function GalleryManager({ truckId, galleryItems, onDone }: GalleryManagerProps) 
     const res = await fetch(getApiUrl(`/api/trucks/${truckId}/media/${mediaId}/set-featured`), {
       method: "POST", headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.ok) { toast({ title: "Set as featured image" }); onDone(); }
-    else toast({ title: "Failed to set featured image", variant: "destructive" });
+    if (res.ok) { toast({ title: "Set as card thumbnail!" }); onDone(); }
+    else toast({ title: "Failed to set thumbnail", variant: "destructive" });
     setFeaturing(null);
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-semibold text-sm">Photo Gallery</p>
-          <p className="text-xs text-muted-foreground">Add up to 12 photos. Click ★ to set as the card thumbnail.</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-sm">Photo Gallery</p>
+            {isPro
+              ? <span className="inline-flex items-center gap-1 text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full"><Crown className="w-3 h-3" /> Pro</span>
+              : <span className="text-xs text-muted-foreground">({galleryItems.length}/{maxPhotos} photos)</span>}
+          </div>
+          <p className="text-xs text-muted-foreground">Hover a photo and click ★ to make it the card thumbnail.</p>
         </div>
-        <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} disabled={uploading}>
+        <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} disabled={uploading || atLimit}>
           {uploading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Upload className="w-4 h-4 mr-1" />}
           Add Photos
         </Button>
@@ -313,21 +367,43 @@ function GalleryManager({ truckId, galleryItems, onDone }: GalleryManagerProps) 
       )}
       {galleryItems.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {galleryItems.map(m => (
-            <div key={m.id} className="relative group rounded-lg overflow-hidden border aspect-square bg-muted">
-              <img src={m.url} alt={m.altText || "Gallery photo"} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                <button title="Set as card thumbnail" onClick={() => handleFeature(m.id)} disabled={featuring === m.id}
-                  className="p-1.5 rounded-full bg-amber-400/90 hover:bg-amber-400 text-white transition">
-                  {featuring === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
-                </button>
-                <button title="Delete" onClick={() => handleDelete(m.id)} disabled={deleting === m.id}
-                  className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white transition">
-                  {deleting === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                </button>
+          {galleryItems.map(m => {
+            const isThumb = currentImageUrl && m.url === currentImageUrl;
+            return (
+              <div key={m.id} className={`relative group rounded-lg overflow-hidden border-2 aspect-square bg-muted ${isThumb ? "border-amber-400" : "border-transparent"}`}>
+                {isThumb && (
+                  <div className="absolute top-1.5 left-1.5 z-10 flex items-center gap-1 bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow">
+                    <Star className="w-3 h-3 fill-white" /> Thumbnail
+                  </div>
+                )}
+                <img src={m.url} alt={m.altText || "Gallery photo"} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                  {!isThumb && (
+                    <button title="Set as card thumbnail" onClick={() => handleFeature(m.id)} disabled={featuring === m.id}
+                      className="p-1.5 rounded-full bg-amber-400/90 hover:bg-amber-400 text-white transition">
+                      {featuring === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
+                    </button>
+                  )}
+                  <button title="Delete" onClick={() => handleDelete(m.id)} disabled={deleting === m.id}
+                    className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white transition">
+                    {deleting === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pro upsell when at Base limit */}
+      {atLimit && !isPro && (
+        <div className="flex items-center gap-3 border border-amber-200 bg-amber-50 rounded-lg px-4 py-3 mt-1">
+          <Crown className="w-5 h-5 text-amber-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">Unlock more photos with Pro</p>
+            <p className="text-xs text-amber-700">Pro vendors can upload up to 12 gallery photos.</p>
+          </div>
+          <a href="/vendor/subscription" className="text-xs font-bold text-amber-700 underline underline-offset-2 shrink-0">Upgrade</a>
         </div>
       )}
     </div>
@@ -337,8 +413,23 @@ function GalleryManager({ truckId, galleryItems, onDone }: GalleryManagerProps) 
 export default function VendorBranding() {
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const { truck, loading: truckLoading } = useVendorTruck();
-  const { media, loading: mediaLoading, reload } = useMedia(truck?.id ?? null);
+  const { toast } = useToast();
+  const { truck, loading: truckLoading, reload: reloadTruck } = useVendorTruck();
+  const { media, loading: mediaLoading, reload: reloadMedia } = useMedia(truck?.id ?? null);
+  const reload = () => { reloadTruck(); reloadMedia(); };
+  const sub = useSubscription();
+
+  const isPro = sub?.planName?.toLowerCase().includes("pro") ?? false;
+  const maxPhotos = isPro ? 12 : 3;
+
+  const handleSetThumbnail = async (mediaId: number): Promise<void> => {
+    const token = localStorage.getItem("token");
+    const res = await fetch(getApiUrl(`/api/trucks/${truck?.id}/media/${mediaId}/set-featured`), {
+      method: "POST", headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) { toast({ title: "Card thumbnail updated!" }); reload(); }
+    else toast({ title: "Failed to update thumbnail", variant: "destructive" });
+  };
 
   useEffect(() => {
     if (!isAuthenticated) navigate("/login");
@@ -413,6 +504,8 @@ export default function VendorBranding() {
                 truckId={truck.id}
                 existing={coverMedia}
                 onDone={reload}
+                currentImageUrl={truck.imageUrl}
+                onSetThumbnail={handleSetThumbnail}
               />
             </CardContent>
           </Card>
@@ -420,10 +513,17 @@ export default function VendorBranding() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Photo Gallery</CardTitle>
-              <CardDescription>Show off your truck, food, and vibe.</CardDescription>
+              <CardDescription>Show off your truck, food, and vibe. Photos appear on your public truck page.</CardDescription>
             </CardHeader>
             <CardContent>
-              <GalleryManager truckId={truck.id} galleryItems={galleryMedia} onDone={reload} />
+              <GalleryManager
+                truckId={truck.id}
+                galleryItems={galleryMedia}
+                onDone={reload}
+                isPro={isPro}
+                maxPhotos={maxPhotos}
+                currentImageUrl={truck.imageUrl}
+              />
             </CardContent>
           </Card>
 
