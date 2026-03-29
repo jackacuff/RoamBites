@@ -74,6 +74,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     ...(user?.role === "vendor" ? [
       { name: "Dashboard", path: "/vendor/dashboard" },
       { name: "My Truck", path: "/vendor/truck" },
+      { name: "Spot Marketplace", path: "/vendor/event-spots" },
     ] : []),
     ...(user?.role === "organizer" ? [{ name: "My Events", path: "/organizer" }] : []),
     ...(user?.role === "park_host" ? [{ name: "My Park", path: "/park-host" }] : []),
