@@ -80,6 +80,7 @@ function TruckParksMap({ parks, selectedId, onSelect }: {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     if (!mapRef.current || leafletMapRef.current) return;
@@ -89,12 +90,13 @@ function TruckParksMap({ parks, selectedId, onSelect }: {
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
       leafletMapRef.current = map;
+      setMapReady(true);
     });
     return () => { leafletMapRef.current?.remove(); leafletMapRef.current = null; };
   }, []);
 
   useEffect(() => {
-    if (!leafletMapRef.current) return;
+    if (!leafletMapRef.current || !mapReady) return;
     import("leaflet").then((L) => {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
