@@ -18,6 +18,7 @@ import specialsRouter from "./specials";
 import messagesRouter from "./messages";
 import subscriptionsRouter from "./subscriptions";
 import marketingRouter from "./marketing";
+import parksRouter from "./parks";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(specialsRouter);
 router.use(messagesRouter);
 router.use(subscriptionsRouter);
 router.use(marketingRouter);
+router.use(parksRouter);
 
 export default router;

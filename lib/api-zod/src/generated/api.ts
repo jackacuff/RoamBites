@@ -21,7 +21,7 @@ export const SignupBody = zod.object({
   name: zod.string(),
   email: zod.string(),
   password: zod.string(),
-  role: zod.enum(["customer", "vendor", "organizer"]),
+  role: zod.enum(["customer", "vendor", "organizer", "park_host"]),
 });
 
 /**
