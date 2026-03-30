@@ -5,12 +5,53 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
-import { Plus, Calendar, MapPin, Users, Settings, Search } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Settings, Search, CreditCard, CheckCircle, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { getApiUrl, authHeaders } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OrganizerDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { data: events, isLoading } = useListEvents({});
+  const { toast } = useToast();
+
+  const [connectStatus, setConnectStatus] = useState<{
+    connected: boolean;
+    onboardingComplete: boolean;
+    chargesEnabled?: boolean;
+    payoutsEnabled?: boolean;
+  } | null>(null);
+  const [connectLoading, setConnectLoading] = useState(true);
+  const [onboardLoading, setOnboardLoading] = useState(false);
+
+  useEffect(() => {
+    fetch(getApiUrl("/api/organizer/connect/status"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(setConnectStatus)
+      .catch(() => setConnectStatus({ connected: false, onboardingComplete: false }))
+      .finally(() => setConnectLoading(false));
+  }, []);
+
+  async function handleConnectStripe() {
+    setOnboardLoading(true);
+    try {
+      const res = await fetch(getApiUrl("/api/organizer/connect/onboard"), {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to start onboarding", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setOnboardLoading(false);
+    }
+  }
 
   const myEvents = (events || []).filter((e: any) => e.organizerUserId === user?.id);
   const now = new Date();
@@ -39,6 +80,61 @@ export default function OrganizerDashboard() {
               </button>
             </Link>
           </div>
+        </div>
+
+        {/* Stripe Connect Payments Card */}
+        <div className="mb-6 bg-card border border-card-border rounded-2xl p-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-foreground">Payments</h2>
+                <p className="text-sm text-muted-foreground">Collect spot fees from vendors via Stripe</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {connectLoading ? (
+                <span className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Checking…</span>
+              ) : connectStatus?.onboardingComplete ? (
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-sm font-medium">
+                    <CheckCircle className="w-4 h-4" /> Stripe connected
+                  </span>
+                  <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Dashboard <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              ) : connectStatus?.connected && !connectStatus.onboardingComplete ? (
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-medium">
+                    <AlertCircle className="w-4 h-4" /> Setup incomplete
+                  </span>
+                  <button onClick={handleConnectStripe} disabled={onboardLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-60">
+                    {onboardLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    Resume Setup
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Vendors can't pay spot fees until you connect.</span>
+                  <button onClick={handleConnectStripe} disabled={onboardLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-60">
+                    {onboardLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    Connect Stripe
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          {connectStatus?.onboardingComplete && (
+            <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">
+              When a vendor pays a spot fee, 90% goes directly to your Stripe account and 10% goes to the platform.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

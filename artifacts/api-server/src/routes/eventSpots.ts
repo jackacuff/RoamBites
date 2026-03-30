@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import { db, eventSpotsTable, eventSpotReservationsTable, eventsTable, trucksTable } from "@workspace/db";
+import { db, eventSpotsTable, eventSpotReservationsTable, eventsTable, trucksTable, usersTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireRole, requireAuth } from "../lib/auth";
+import { getUncachableStripeClient } from "../lib/stripeClient";
 
 const router: IRouter = Router();
 
@@ -172,6 +173,70 @@ router.get("/vendor/spot-reservations", requireAuth, async (req, res): Promise<v
     spot: spotMap.get(r.spotId) || null,
     event: eventMap.get(r.eventId) || null,
   })));
+});
+
+router.post("/vendor/spot-reservations/:reservationId/checkout", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as any).user;
+  const reservationId = parseInt(req.params.reservationId, 10);
+
+  const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.vendorUserId, user.id));
+  if (!truck) { res.status(403).json({ error: "No truck found for this vendor" }); return; }
+
+  const [reservation] = await db.select().from(eventSpotReservationsTable)
+    .where(and(eq(eventSpotReservationsTable.id, reservationId), eq(eventSpotReservationsTable.truckId, truck.id)));
+
+  if (!reservation) { res.status(404).json({ error: "Reservation not found" }); return; }
+  if (reservation.paymentStatus === "paid") { res.status(400).json({ error: "This reservation has already been paid" }); return; }
+
+  const [spot] = await db.select().from(eventSpotsTable).where(eq(eventSpotsTable.id, reservation.spotId));
+  if (!spot || spot.priceInCents === 0) { res.status(400).json({ error: "This spot has no payment required" }); return; }
+
+  const [event] = await db.select({ id: eventsTable.id, name: eventsTable.name, organizerUserId: eventsTable.organizerUserId })
+    .from(eventsTable).where(eq(eventsTable.id, reservation.eventId));
+  if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+
+  const [organizer] = await db.select({
+    stripeConnectAccountId: usersTable.stripeConnectAccountId,
+    stripeConnectOnboardingComplete: usersTable.stripeConnectOnboardingComplete,
+  }).from(usersTable).where(eq(usersTable.id, event.organizerUserId));
+
+  if (!organizer?.stripeConnectAccountId || !organizer.stripeConnectOnboardingComplete) {
+    res.status(402).json({ error: "The event organizer has not connected their Stripe account yet. Please contact the organizer." });
+    return;
+  }
+
+  const stripe = await getUncachableStripeClient();
+
+  const applicationFeeAmount = Math.round(spot.priceInCents * 0.10);
+  const origin = (req.headers.origin as string) || "http://localhost:5173";
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [{
+      price_data: {
+        currency: "usd",
+        unit_amount: spot.priceInCents,
+        product_data: {
+          name: `${spot.name} — ${event.name}`,
+          description: spot.description ?? undefined,
+        },
+      },
+      quantity: 1,
+    }],
+    payment_intent_data: {
+      application_fee_amount: applicationFeeAmount,
+      transfer_data: { destination: organizer.stripeConnectAccountId },
+    },
+    success_url: `${origin}/vendor/event-spots?payment=success&reservation=${reservationId}`,
+    cancel_url: `${origin}/vendor/event-spots?payment=cancelled`,
+    metadata: { reservationId: String(reservationId), type: "spot_payment" },
+  });
+
+  await db.update(eventSpotReservationsTable)
+    .set({ stripeCheckoutSessionId: session.id })
+    .where(eq(eventSpotReservationsTable.id, reservationId));
+
+  res.json({ url: session.url });
 });
 
 export default router;

@@ -13,6 +13,8 @@ export const usersTable = pgTable("users", {
   instagramHandle: text("instagram_handle"),
   facebookUrl: text("facebook_url"),
   isPrivate: boolean("is_private").notNull().default(false),
+  stripeConnectAccountId: text("stripe_connect_account_id"),
+  stripeConnectOnboardingComplete: boolean("stripe_connect_onboarding_complete").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

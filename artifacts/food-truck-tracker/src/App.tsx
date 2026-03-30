@@ -33,6 +33,7 @@ import VendorEventSpots from "./pages/vendor/VendorEventSpots";
 import VendorInbox from "./pages/vendor/VendorInbox";
 import VendorMarketing from "./pages/vendor/VendorMarketing";
 import OrganizerTruckMarketplace from "./pages/organizer/OrganizerTruckMarketplace";
+import OrganizerConnectReturn from "./pages/organizer/OrganizerConnectReturn";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import Parks from "./pages/Parks";
@@ -77,6 +78,7 @@ function Router() {
       <Route path="/organizer/events/new" component={OrganizerNewEvent} />
       <Route path="/organizer/events/:id/manage" component={OrganizerManageEvent} />
       <Route path="/organizer/events/:id/edit" component={OrganizerEditEvent} />
+      <Route path="/organizer/connect/return" component={OrganizerConnectReturn} />
 
       <Route path="/parks" component={Parks} />
       <Route path="/parks/:id" component={ParkDetail} />

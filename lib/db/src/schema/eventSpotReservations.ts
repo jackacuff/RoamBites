@@ -10,6 +10,8 @@ export const eventSpotReservationsTable = pgTable("event_spot_reservations", {
   paymentAmountInCents: integer("payment_amount_in_cents").notNull().default(0),
   notes: text("notes"),
   organizerMessage: text("organizer_message"),
+  stripeCheckoutSessionId: text("stripe_checkout_session_id"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
