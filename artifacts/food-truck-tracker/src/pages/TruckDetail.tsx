@@ -283,10 +283,7 @@ export default function TruckDetail() {
       })()}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-12">
+        <div className="space-y-12">
 
             {/* About */}
             <section>
@@ -380,6 +377,24 @@ export default function TruckDetail() {
                 </section>
               );
             })()}
+
+            {/* Menu */}
+            {truck.menuItems && truck.menuItems.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-display font-bold text-foreground mb-6">Menu</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {truck.menuItems.map((item: any) => (
+                    <div key={item.id} className="flex justify-between items-start p-4 rounded-2xl bg-card border border-border hover:border-primary/40 transition-colors group">
+                      <div className="flex-1 pr-3 min-w-0">
+                        <h4 className="font-bold text-foreground group-hover:text-primary transition-colors leading-snug">{item.name}</h4>
+                        {item.description && <p className="text-sm text-muted-foreground leading-snug mt-1 line-clamp-2">{item.description}</p>}
+                      </div>
+                      <span className="font-semibold text-primary whitespace-nowrap shrink-0">${item.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Notifications (logged in only) */}
             {isAuthenticated && (
@@ -512,7 +527,7 @@ export default function TruckDetail() {
                       Get Directions
                     </a>
                   </div>
-                  <MapView trucks={[truck as any]} height="400px" center={[mapLat, mapLng]} zoom={14} />
+                  <MapView trucks={[truck as any]} height="260px" center={[mapLat, mapLng]} zoom={14} />
                 </section>
               );
             })()}
@@ -588,29 +603,6 @@ export default function TruckDetail() {
                 </div>
               )}
             </section>
-          </div>
-
-          {/* Sidebar: Menu */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-28 bg-card border border-border rounded-3xl p-6 shadow-xl shadow-black/5">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-6 pb-4 border-b border-border">Menu</h2>
-              {truck.menuItems && truck.menuItems.length > 0 ? (
-                <div className="space-y-6">
-                  {truck.menuItems.map((item: any) => (
-                    <div key={item.id} className="group">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-bold text-foreground group-hover:text-primary transition-colors pr-4">{item.name}</h4>
-                        <span className="font-semibold text-primary whitespace-nowrap">${item.price.toFixed(2)}</span>
-                      </div>
-                      {item.description && <p className="text-sm text-muted-foreground leading-snug">{item.description}</p>}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">Menu not available online.</p>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </Layout>
