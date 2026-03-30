@@ -5,8 +5,32 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { format } from "date-fns";
-import { Calendar, MapPin, Users, Clock, FileText, Globe, ExternalLink, Tag, Megaphone } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, FileText, Globe, ExternalLink, Tag, Megaphone, Share2, Check, Copy } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+
+function useShareEvent() {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  const share = async (name: string, description: string | null | undefined, eventId: number) => {
+    const url = `${window.location.origin}/events/${eventId}`;
+    const shareData = {
+      title: name,
+      text: description ? `${description} — RoamBites` : `Check out this food truck event on RoamBites`,
+      url,
+    };
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try { await navigator.share(shareData); return; } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    toast({ title: "Link copied!", description: "Event link copied to clipboard." });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return { share, copied };
+}
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +38,7 @@ export default function EventDetail() {
     query: { enabled: !!id }
   });
   const [specials, setSpecials] = useState<Record<number, any[]>>({});
+  const { share, copied } = useShareEvent();
 
   useEffect(() => {
     if (!event?.trucks) return;
@@ -68,18 +93,27 @@ export default function EventDetail() {
             <Link href="/events" className="text-white/70 hover:text-white text-sm">← All Events</Link>
           </div>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {isOngoing && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  Happening Now
-                </span>
-              )}
-              {isUpcoming && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-sm">
-                  Upcoming
-                </span>
-              )}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {isOngoing && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    Happening Now
+                  </span>
+                )}
+                {isUpcoming && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-sm">
+                    Upcoming
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => share(event.name, event.description, event.id)}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold transition-colors"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                {copied ? "Copied!" : "Share"}
+              </button>
             </div>
             <h1 className="text-4xl sm:text-5xl font-display font-bold text-white leading-tight">{event.name}</h1>
             <div className="flex flex-wrap items-center gap-4 text-white/80">
