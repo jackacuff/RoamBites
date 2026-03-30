@@ -9,7 +9,6 @@ import {
   MapPin, Star, Calendar, Zap, Loader2, Download, RefreshCw, Save, Lock,
 } from "lucide-react";
 
-const API_BASE = getApiUrl("");
 
 interface BrandData {
   primaryColor: string;
@@ -207,7 +206,7 @@ export default function VendorMarketing() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    fetch(`${API_BASE}api/vendor/marketing/brand`, {
+    fetch(getApiUrl(`/api/vendor/marketing/brand`), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
@@ -228,7 +227,7 @@ export default function VendorMarketing() {
     setSaving(true);
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${API_BASE}api/vendor/marketing/brand`, {
+      const res = await fetch(getApiUrl(`/api/vendor/marketing/brand`), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ primaryColor: localColors.primary, secondaryColor: localColors.secondary, tagline: localTagline }),
@@ -248,7 +247,7 @@ export default function VendorMarketing() {
     setGeneratedCopy("");
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(`${API_BASE}api/vendor/marketing/copy`, {
+      const res = await fetch(getApiUrl(`/api/vendor/marketing/copy`), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ templateType: selectedTemplate }),
