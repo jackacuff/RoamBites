@@ -51,6 +51,7 @@ export default function OrganizerManageEvent() {
   const [reservations, setReservations] = useState<any[]>([]);
   const [showSpotForm, setShowSpotForm] = useState(false);
   const [savingSpot, setSavingSpot] = useState(false);
+  const [featureLoading, setFeatureLoading] = useState(false);
   const [spotForm, setSpotForm] = useState({
     name: "Vendor Spot",
     description: "",
@@ -170,7 +171,6 @@ export default function OrganizerManageEvent() {
   const pendingReservations = reservations.filter(r => r.status === "pending");
   const isFeatured = !!(event as any).isFeatured;
 
-  const [featureLoading, setFeatureLoading] = useState(false);
   const handleFeatureCheckout = async () => {
     setFeatureLoading(true);
     try {
