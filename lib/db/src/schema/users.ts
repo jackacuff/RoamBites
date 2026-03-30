@@ -12,6 +12,7 @@ export const usersTable = pgTable("users", {
   twitterHandle: text("twitter_handle"),
   instagramHandle: text("instagram_handle"),
   facebookUrl: text("facebook_url"),
+  isPrivate: boolean("is_private").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

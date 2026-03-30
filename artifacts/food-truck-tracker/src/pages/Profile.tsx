@@ -1,6 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
-import { User, Mail, Shield, Heart, Star, Bell, LogOut, Loader2, Save, Edit2, X, Check } from "lucide-react";
+import { User, Mail, Shield, Heart, Star, Bell, LogOut, Loader2, Save, Edit2, X, Check, Lock, Unlock, MapPin, BellOff, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
@@ -21,6 +21,136 @@ const SocialIcon = ({ type }: { type: string }) => {
   return null;
 };
 
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer select-none">
+      <div className="relative shrink-0">
+        <input type="checkbox" className="sr-only" checked={checked} onChange={e => onChange(e.target.checked)} />
+        <div className={`block w-10 h-6 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted border border-border"}`} />
+        <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
+      </div>
+      <span className="text-sm font-medium text-foreground">{label}</span>
+    </label>
+  );
+}
+
+function NotificationDialog({ notif, onClose, onUpdate, onRemove }: {
+  notif: any;
+  onClose: () => void;
+  onUpdate: (id: number, truckId: number, open: boolean, nearby: boolean) => void;
+  onRemove: (truckId: number) => void;
+}) {
+  const [open, setOpen] = useState(notif.notifyWhenOpen);
+  const [nearby, setNearby] = useState(notif.notifyWhenNearby);
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const { toast } = useToast();
+  const fallback = `${import.meta.env.BASE_URL}images/truck-placeholder.png`;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await fetch(getApiUrl("/api/notifications"), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ truckId: notif.truckId, notifyWhenOpen: open, notifyWhenNearby: nearby }),
+      });
+      onUpdate(notif.id, notif.truckId, open, nearby);
+      toast({ title: "Notification preferences saved" });
+      onClose();
+    } catch {
+      toast({ title: "Failed to save", variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await fetch(getApiUrl(`/api/notifications/${notif.truckId}`), {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      onRemove(notif.truckId);
+      toast({ title: "Stopped tracking truck" });
+      onClose();
+    } catch {
+      toast({ title: "Failed to remove", variant: "destructive" });
+    } finally { setRemoving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-10">
+          <X className="w-4 h-4" />
+        </button>
+
+        {/* Truck image header */}
+        <div className="relative h-36 bg-muted overflow-hidden">
+          <img
+            src={notif.truckImageUrl || fallback}
+            alt={notif.truckName}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          {notif.truckIsLive && (
+            <span className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              LIVE NOW
+            </span>
+          )}
+        </div>
+
+        <div className="p-5">
+          <h3 className="text-lg font-display font-bold text-foreground mb-0.5">{notif.truckName || `Truck #${notif.truckId}`}</h3>
+          <div className="flex items-center gap-3 mb-4 text-sm text-muted-foreground">
+            {notif.truckCuisine && <span className="px-2 py-0.5 rounded-full bg-secondary/20 text-secondary-foreground text-xs font-medium">{notif.truckCuisine}</span>}
+            {notif.truckCity && (
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-primary" />
+                {notif.truckCity}
+              </span>
+            )}
+          </div>
+
+          <div className="space-y-4 mb-5 p-4 bg-muted/40 rounded-2xl border border-border">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notify me when…</p>
+            <Toggle checked={open} onChange={setOpen} label="This truck opens for service" />
+            <Toggle checked={nearby} onChange={setNearby} label="This truck is nearby my location" />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              Save
+            </button>
+            <Link
+              href={`/trucks/${notif.truckSlug || notif.truckId}`}
+              className="px-3 py-2.5 border border-border rounded-xl text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+              title="View truck"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Link>
+            <button
+              onClick={handleRemove}
+              disabled={removing}
+              className="px-3 py-2.5 border border-destructive/30 rounded-xl text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
+              title="Stop tracking"
+            >
+              {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : <BellOff className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { toast } = useToast();
@@ -30,7 +160,8 @@ export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", twitterHandle: "", instagramHandle: "", facebookUrl: "" });
+  const [form, setForm] = useState({ name: "", twitterHandle: "", instagramHandle: "", facebookUrl: "", isPrivate: false });
+  const [selectedNotif, setSelectedNotif] = useState<any>(null);
 
   useEffect(() => {
     if (!isAuthenticated) { setDataLoading(false); return; }
@@ -52,6 +183,7 @@ export default function Profile() {
       twitterHandle: profile?.twitterHandle || "",
       instagramHandle: profile?.instagramHandle || "",
       facebookUrl: profile?.facebookUrl || "",
+      isPrivate: profile?.isPrivate ?? false,
     });
     setEditing(true);
   };
@@ -72,6 +204,16 @@ export default function Profile() {
     } catch {
       toast({ title: "Error saving profile", variant: "destructive" });
     } finally { setSaving(false); }
+  };
+
+  const handleNotifUpdate = (id: number, truckId: number, open: boolean, nearby: boolean) => {
+    setNotifications(prev => prev.map(n =>
+      n.truckId === truckId ? { ...n, notifyWhenOpen: open, notifyWhenNearby: nearby } : n
+    ));
+  };
+
+  const handleNotifRemove = (truckId: number) => {
+    setNotifications(prev => prev.filter(n => n.truckId !== truckId));
   };
 
   if (isLoading) {
@@ -106,6 +248,7 @@ export default function Profile() {
     return null;
   };
   const dashboardLink = getDashboardLink();
+  const isPrivate = profile?.isPrivate ?? false;
 
   const socialLinks = [
     profile?.twitterHandle && { type: "twitter", label: `@${profile.twitterHandle}`, url: `https://twitter.com/${profile.twitterHandle}` },
@@ -123,7 +266,14 @@ export default function Profile() {
             {(profile?.name || user.name)?.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-display font-bold text-foreground">{profile?.name || user.name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-display font-bold text-foreground">{profile?.name || user.name}</h1>
+              {isPrivate && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted border border-border text-xs text-muted-foreground font-medium">
+                  <Lock className="w-3 h-3" /> Private
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 mt-1">
               <Mail className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground text-sm">{user.email}</span>
@@ -181,6 +331,27 @@ export default function Profile() {
                   placeholder="Your name"
                 />
               </div>
+
+              {/* Privacy Toggle */}
+              <div className="border border-border rounded-xl p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      {form.isPrivate ? <Lock className="w-4 h-4 text-muted-foreground" /> : <Unlock className="w-4 h-4 text-muted-foreground" />}
+                      Private Profile
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      When enabled, your profile is hidden from public view and your reviews appear as <strong>Anonymous</strong>.
+                    </p>
+                  </div>
+                  <label className="relative shrink-0 cursor-pointer mt-0.5">
+                    <input type="checkbox" className="sr-only" checked={form.isPrivate} onChange={e => setForm(f => ({ ...f, isPrivate: e.target.checked }))} />
+                    <div className={`block w-10 h-6 rounded-full transition-colors ${form.isPrivate ? "bg-primary" : "bg-muted border border-border"}`} />
+                    <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transition-transform ${form.isPrivate ? "translate-x-4" : ""}`} />
+                  </label>
+                </div>
+              </div>
+
               <div className="border-t border-border pt-4">
                 <p className="text-sm font-semibold text-foreground mb-3">Social Media Links</p>
                 <div className="space-y-3">
@@ -291,25 +462,62 @@ export default function Profile() {
           </Link>
         </div>
 
-        {/* Notification Prefs */}
-        {activeNotifications.length > 0 && (
+        {/* Notification Prefs — clickable truck cards */}
+        {notifications.length > 0 && (
           <div>
-            <h2 className="text-lg font-display font-bold text-foreground mb-4">Notification Preferences</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-display font-bold text-foreground">Tracked Trucks</h2>
+              <span className="text-xs text-muted-foreground">Tap a truck to manage alerts</span>
+            </div>
             <div className="space-y-2">
-              {activeNotifications.map(n => (
-                <div key={n.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border text-sm">
-                  <Bell className="w-4 h-4 text-primary flex-shrink-0" />
-                  <span className="text-foreground">Truck #{n.truckId}</span>
-                  <div className="flex gap-2 ml-auto">
-                    {n.notifyWhenOpen && <span className="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400 text-xs font-medium">When Open</span>}
-                    {n.notifyWhenNearby && <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 text-xs font-medium">Nearby</span>}
+              {notifications.map(n => (
+                <button
+                  key={n.id}
+                  onClick={() => setSelectedNotif(n)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border hover:border-primary/40 hover:bg-primary/5 transition-all text-left group"
+                >
+                  {/* Truck thumbnail */}
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/50">
+                    <img
+                      src={n.truckImageUrl || `${import.meta.env.BASE_URL}images/truck-placeholder.png`}
+                      alt={n.truckName}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                      {n.truckName || `Truck #${n.truckId}`}
+                    </p>
+                    {n.truckCuisine && <p className="text-xs text-muted-foreground truncate">{n.truckCuisine}</p>}
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    {n.notifyWhenOpen && (
+                      <span className="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400 text-xs font-medium">
+                        Open
+                      </span>
+                    )}
+                    {n.notifyWhenNearby && (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 text-xs font-medium">
+                        Nearby
+                      </span>
+                    )}
+                  </div>
+                </button>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* Notification Dialog */}
+      {selectedNotif && (
+        <NotificationDialog
+          notif={selectedNotif}
+          onClose={() => setSelectedNotif(null)}
+          onUpdate={handleNotifUpdate}
+          onRemove={handleNotifRemove}
+        />
+      )}
     </Layout>
   );
 }
