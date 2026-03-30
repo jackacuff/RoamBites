@@ -108,6 +108,7 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
     email: user.email,
     role: user.role,
     isActive: user.isActive,
+    isPrivate: user.isPrivate,
     createdAt: user.createdAt,
     twitterHandle: user.twitterHandle,
     instagramHandle: user.instagramHandle,
@@ -117,13 +118,14 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
 
 router.put("/auth/profile", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).user.id;
-  const { name, twitterHandle, instagramHandle, facebookUrl } = req.body;
+  const { name, twitterHandle, instagramHandle, facebookUrl, isPrivate } = req.body;
 
   const updateData: any = {};
   if (name && typeof name === "string" && name.trim()) updateData.name = name.trim();
   if (twitterHandle !== undefined) updateData.twitterHandle = twitterHandle?.replace(/^@/, "") || null;
   if (instagramHandle !== undefined) updateData.instagramHandle = instagramHandle?.replace(/^@/, "") || null;
   if (facebookUrl !== undefined) updateData.facebookUrl = facebookUrl || null;
+  if (typeof isPrivate === "boolean") updateData.isPrivate = isPrivate;
 
   const [user] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, userId)).returning();
   res.json({
@@ -132,6 +134,7 @@ router.put("/auth/profile", requireAuth, async (req, res): Promise<void> => {
     email: user.email,
     role: user.role,
     isActive: user.isActive,
+    isPrivate: user.isPrivate,
     createdAt: user.createdAt,
     twitterHandle: user.twitterHandle,
     instagramHandle: user.instagramHandle,

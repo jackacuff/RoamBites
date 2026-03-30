@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, notificationPreferencesTable } from "@workspace/db";
+import { db, notificationPreferencesTable, trucksTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 
@@ -7,9 +7,26 @@ const router: IRouter = Router();
 
 router.get("/notifications", requireAuth, async (req, res): Promise<void> => {
   const user = (req as any).user;
-  const prefs = await db.select().from(notificationPreferencesTable)
+  const rows = await db
+    .select({
+      id: notificationPreferencesTable.id,
+      userId: notificationPreferencesTable.userId,
+      truckId: notificationPreferencesTable.truckId,
+      notifyWhenOpen: notificationPreferencesTable.notifyWhenOpen,
+      notifyWhenNearby: notificationPreferencesTable.notifyWhenNearby,
+      updatedAt: notificationPreferencesTable.updatedAt,
+      truckName: trucksTable.name,
+      truckCuisine: trucksTable.cuisine,
+      truckSlug: trucksTable.slug,
+      truckCity: trucksTable.currentCity,
+      truckImageUrl: trucksTable.imageUrl,
+      truckIsLive: trucksTable.isLive,
+    })
+    .from(notificationPreferencesTable)
+    .leftJoin(trucksTable, eq(notificationPreferencesTable.truckId, trucksTable.id))
     .where(eq(notificationPreferencesTable.userId, user.id));
-  res.json(prefs.map(p => ({ ...p, updatedAt: p.updatedAt.toISOString() })));
+
+  res.json(rows.map(p => ({ ...p, updatedAt: p.updatedAt.toISOString() })));
 });
 
 router.post("/notifications", requireAuth, async (req, res): Promise<void> => {
@@ -46,6 +63,20 @@ router.post("/notifications", requireAuth, async (req, res): Promise<void> => {
   }
 
   res.json({ ...result, updatedAt: result.updatedAt.toISOString() });
+});
+
+router.delete("/notifications/:truckId", requireAuth, async (req, res): Promise<void> => {
+  const user = (req as any).user;
+  const truckId = parseInt(req.params.truckId, 10);
+  if (isNaN(truckId)) { res.status(400).json({ error: "Invalid truckId" }); return; }
+
+  await db.delete(notificationPreferencesTable).where(
+    and(
+      eq(notificationPreferencesTable.userId, user.id),
+      eq(notificationPreferencesTable.truckId, truckId),
+    )
+  );
+  res.sendStatus(204);
 });
 
 export default router;

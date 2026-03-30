@@ -13,7 +13,7 @@ router.get("/trucks/:id/reviews", optionalAuth, async (req, res): Promise<void> 
     truckId = rows[0].id;
   }
 
-  const reviews = await db.select({
+  const rows = await db.select({
     id: reviewsTable.id,
     userId: reviewsTable.userId,
     truckId: reviewsTable.truckId,
@@ -21,11 +21,18 @@ router.get("/trucks/:id/reviews", optionalAuth, async (req, res): Promise<void> 
     comment: reviewsTable.comment,
     createdAt: reviewsTable.createdAt,
     userName: usersTable.name,
+    userIsPrivate: usersTable.isPrivate,
   })
     .from(reviewsTable)
     .leftJoin(usersTable, eq(reviewsTable.userId, usersTable.id))
     .where(eq(reviewsTable.truckId, truckId))
     .orderBy(reviewsTable.createdAt);
+
+  const reviews = rows.map(r => ({
+    ...r,
+    userName: r.userIsPrivate ? null : r.userName,
+    userIsPrivate: undefined,
+  }));
 
   const stats = await db.select({
     avgRating: avg(reviewsTable.rating),

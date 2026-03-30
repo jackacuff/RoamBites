@@ -1,4 +1,4 @@
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { MapView } from "@/components/MapView";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -529,6 +529,21 @@ export default function TruckDetail() {
                   </div>
                 )}
               </div>
+
+              {!isAuthenticated && (
+                <div className="mb-8 p-5 rounded-2xl bg-muted/50 border border-dashed border-border flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Star className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground text-sm">Want to leave a review?</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">You need an account to write reviews and share your experience.</p>
+                  </div>
+                  <Link href="/login" className="shrink-0 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+                    Sign in
+                  </Link>
+                </div>
+              )}
 
               {isAuthenticated && !hasReviewed && (
                 <form onSubmit={submitReview} className="mb-8 p-5 rounded-2xl bg-card border border-border shadow-sm space-y-4">
