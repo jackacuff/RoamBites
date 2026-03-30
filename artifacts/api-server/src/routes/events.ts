@@ -2,8 +2,9 @@ import { Router, type IRouter } from "express";
 import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable, messagesTable } from "@workspace/db";
 import { eq, and, gt, inArray } from "drizzle-orm";
 import { CreateEventBody, UpdateEventBody, InviteTruckToEventBody, RespondToEventInviteBody } from "@workspace/api-zod";
-import { requireRole, optionalAuth } from "../lib/auth";
+import { requireRole, requireAuth, optionalAuth } from "../lib/auth";
 import { slugify, computeTruckStatus } from "../lib/truckStatus";
+import { getUncachableStripeClient } from "../lib/stripeClient";
 
 const router: IRouter = Router();
 
@@ -12,17 +13,28 @@ async function buildEventSummary(event: any) {
     .select()
     .from(eventTrucksTable)
     .where(and(eq(eventTrucksTable.eventId, event.id), eq(eventTrucksTable.status, "confirmed")));
+  const now = new Date();
+  const isActiveFeatured = event.isFeatured && event.featuredUntil && event.featuredUntil > now;
   return {
     id: event.id,
     name: event.name,
     slug: event.slug,
     description: event.description,
     venueName: event.venueName,
+    address: event.address,
     city: event.city,
+    latitude: event.latitude,
+    longitude: event.longitude,
     startDateTime: event.startDateTime,
     endDateTime: event.endDateTime,
     organizerUserId: event.organizerUserId,
     confirmedTruckCount: eventTrucks.length,
+    isPublished: event.isPublished,
+    bannerImageUrl: event.bannerImageUrl,
+    websiteUrl: event.websiteUrl,
+    isFeatured: isActiveFeatured,
+    featuredUntil: event.featuredUntil,
+    publicNotes: event.publicNotes,
   };
 }
 
@@ -38,7 +50,15 @@ router.get("/events", optionalAuth, async (req, res): Promise<void> => {
     events = events.filter((e) => e.organizerUserId === parseInt(organizerId));
   }
 
-  events.sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+  // Sort: active featured first, then by date
+  const now = new Date();
+  events.sort((a, b) => {
+    const aFeatured = a.isFeatured && a.featuredUntil && a.featuredUntil > now ? 1 : 0;
+    const bFeatured = b.isFeatured && b.featuredUntil && b.featuredUntil > now ? 1 : 0;
+    if (bFeatured !== aFeatured) return bFeatured - aFeatured;
+    return a.startDateTime.getTime() - b.startDateTime.getTime();
+  });
+
   const summaries = await Promise.all(events.map(buildEventSummary));
   res.json(summaries);
 });
@@ -270,6 +290,85 @@ router.post("/events/:id/respond", requireRole("vendor", "admin"), async (req, r
   }
 
   res.json(et);
+});
+
+// Admin: toggle featured status on an event
+router.post("/admin/events/:id/feature", requireRole("admin", "superadmin"), async (req, res): Promise<void> => {
+  const eventId = parseInt(req.params.id, 10);
+  const { isFeatured, durationDays = 30 } = req.body as { isFeatured: boolean; durationDays?: number };
+  const [rows] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId));
+  if (!rows) { res.status(404).json({ error: "Event not found" }); return; }
+
+  const featuredUntil = isFeatured ? new Date(Date.now() + durationDays * 86400000) : null;
+  const [updated] = await db
+    .update(eventsTable)
+    .set({ isFeatured, featuredUntil })
+    .where(eq(eventsTable.id, eventId))
+    .returning();
+
+  res.json({ isFeatured: updated.isFeatured, featuredUntil: updated.featuredUntil });
+});
+
+// Organizer: create Stripe checkout session to purchase featured placement ($29 / 30 days)
+router.post("/organizer/events/:id/feature-checkout", requireRole("organizer", "admin"), async (req, res): Promise<void> => {
+  const eventId = parseInt(req.params.id, 10);
+  const user = (req as any).user;
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId));
+  if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+  if (user.role !== "admin" && event.organizerUserId !== user.id) {
+    res.status(403).json({ error: "Forbidden" }); return;
+  }
+
+  try {
+    const stripe = await getUncachableStripeClient();
+    const origin = (req.headers.origin as string) ?? "https://roambites.com";
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{
+        price_data: {
+          currency: "usd",
+          unit_amount: 2900,
+          product_data: {
+            name: "Featured Event — 30 Days",
+            description: `Boost "${event.name}" to the top of the events listing for 30 days.`,
+          },
+        },
+        quantity: 1,
+      }],
+      metadata: { type: "featured_event", eventId: event.id.toString() },
+      success_url: `${origin}/events?featured_success=${event.id}`,
+      cancel_url: `${origin}/organizer/events/${event.id}`,
+    });
+    res.json({ url: session.url });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Stripe error" });
+  }
+});
+
+// Organizer: verify payment success and activate featured status
+router.post("/organizer/events/:id/feature-activate", requireRole("organizer", "admin"), async (req, res): Promise<void> => {
+  const eventId = parseInt(req.params.id, 10);
+  const user = (req as any).user;
+  const { sessionId } = req.body as { sessionId: string };
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId));
+  if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+  if (user.role !== "admin" && event.organizerUserId !== user.id) {
+    res.status(403).json({ error: "Forbidden" }); return;
+  }
+  if (!sessionId) { res.status(400).json({ error: "sessionId required" }); return; }
+
+  try {
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.payment_status !== "paid" || session.metadata?.eventId !== eventId.toString()) {
+      res.status(400).json({ error: "Payment not confirmed" }); return;
+    }
+    const featuredUntil = new Date(Date.now() + 30 * 86400000);
+    await db.update(eventsTable).set({ isFeatured: true, featuredUntil }).where(eq(eventsTable.id, eventId));
+    res.json({ success: true, featuredUntil });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Verification failed" });
+  }
 });
 
 export default router;

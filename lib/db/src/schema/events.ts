@@ -20,6 +20,8 @@ export const eventsTable = pgTable("events", {
   isPublished: boolean("is_published").notNull().default(false),
   bannerImageUrl: text("banner_image_url"),
   websiteUrl: text("website_url"),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  featuredUntil: timestamp("featured_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

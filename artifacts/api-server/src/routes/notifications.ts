@@ -18,7 +18,6 @@ router.get("/notifications", requireAuth, async (req, res): Promise<void> => {
       truckName: trucksTable.name,
       truckCuisine: trucksTable.cuisine,
       truckSlug: trucksTable.slug,
-      truckCity: trucksTable.currentCity,
       truckImageUrl: trucksTable.imageUrl,
       truckIsLive: trucksTable.isLive,
     })
