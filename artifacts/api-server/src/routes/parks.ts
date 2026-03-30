@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, truckParksTable, parkVacanciesTable, usersTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, isNull, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
 
 const router = Router();
@@ -25,7 +25,12 @@ router.get("/parks", async (req, res) => {
         createdAt: truckParksTable.createdAt,
       })
       .from(truckParksTable)
-      .where(eq(truckParksTable.isActive, true))
+      .where(
+        and(
+          eq(truckParksTable.isActive, true),
+          or(isNull(truckParksTable.maxTrucks), gte(truckParksTable.maxTrucks, 2))
+        )
+      )
       .orderBy(desc(truckParksTable.createdAt));
 
     // Attach active vacancy count for each park
