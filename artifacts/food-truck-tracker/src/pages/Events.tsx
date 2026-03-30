@@ -159,8 +159,8 @@ function FeaturedEventBanner({ event }: { event: any }) {
 
   return (
     <Link href={`/events/${event.id}`}>
-      <div className="group relative rounded-3xl overflow-hidden border border-primary/30 shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer">
-        <div className={`relative h-44 sm:h-52 bg-gradient-to-r ${gradient}`}>
+      <div className="group relative rounded-3xl border border-primary/30 shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer">
+        <div className={`relative h-44 sm:h-52 bg-gradient-to-r ${gradient} rounded-t-3xl overflow-hidden`}>
           {event.bannerImageUrl && (
             <img src={event.bannerImageUrl} alt={event.name} className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-50" />
           )}
@@ -223,7 +223,7 @@ function FeaturedEventBanner({ event }: { event: any }) {
 
         {/* Description strip if present */}
         {event.description && (
-          <div className="px-5 sm:px-6 py-3 bg-card text-sm text-muted-foreground line-clamp-1">
+          <div className="px-5 sm:px-6 pt-3 pb-4 bg-card rounded-b-3xl text-sm text-muted-foreground line-clamp-2">
             {event.description}
           </div>
         )}
