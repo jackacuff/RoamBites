@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Upload, Trash2, ImageIcon, Star, AlertCircle, CheckCircle2, Crown, Lock } from "lucide-react";
+import { Loader2, Upload, Trash2, ImageIcon, Star, AlertCircle, CheckCircle2, Crown, Lock, X, ChevronLeft, ChevronRight, Expand } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
 const API_BASE = getApiUrl("");
@@ -261,6 +262,84 @@ function UploadCard({ type, label, description, accept, truckId, existing, onDon
   );
 }
 
+function Lightbox({ items, index, onClose, onPrev, onNext }: {
+  items: TruckMedia[];
+  index: number;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  const touchStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") onPrev();
+      if (e.key === "ArrowRight") onNext();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, onPrev, onNext]);
+
+  const item = items[index];
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"
+        onClick={onClose}
+        onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchStartX.current === null) return;
+          const diff = e.changedTouches[0].clientX - touchStartX.current;
+          if (Math.abs(diff) > 50) diff < 0 ? onNext() : onPrev();
+          touchStartX.current = null;
+        }}
+      >
+        <button onClick={(e) => { e.stopPropagation(); onClose(); }}
+          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/25 text-white transition">
+          <X className="w-6 h-6" />
+        </button>
+        {items.length > 1 && (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); onPrev(); }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/10 hover:bg-white/25 text-white transition disabled:opacity-30"
+              disabled={index === 0}>
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); onNext(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/10 hover:bg-white/25 text-white transition disabled:opacity-30"
+              disabled={index === items.length - 1}>
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </>
+        )}
+        <motion.img
+          key={item.id}
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          src={item.url}
+          alt={item.altText || "Gallery photo"}
+          className="max-h-[88vh] max-w-[92vw] rounded-xl object-contain shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        />
+        {items.length > 1 && (
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+            {items.map((_, i) => (
+              <div key={i} className={`rounded-full transition-all ${i === index ? "w-5 h-2 bg-white" : "w-2 h-2 bg-white/40"}`} />
+            ))}
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 interface GalleryManagerProps {
   truckId: number;
   galleryItems: TruckMedia[];
@@ -275,6 +354,7 @@ function GalleryManager({ truckId, galleryItems, onDone, isPro, maxPhotos, curre
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [featuring, setFeaturing] = useState<number | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const atLimit = galleryItems.length >= maxPhotos;
 
@@ -367,7 +447,7 @@ function GalleryManager({ truckId, galleryItems, onDone, isPro, maxPhotos, curre
       )}
       {galleryItems.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {galleryItems.map(m => {
+          {galleryItems.map((m, idx) => {
             const isThumb = currentImageUrl && m.url === currentImageUrl;
             return (
               <div key={m.id} className={`relative group rounded-lg overflow-hidden border-2 aspect-square bg-muted ${isThumb ? "border-amber-400" : "border-transparent"}`}>
@@ -376,15 +456,24 @@ function GalleryManager({ truckId, galleryItems, onDone, isPro, maxPhotos, curre
                     <Star className="w-3 h-3 fill-white" /> Thumbnail
                   </div>
                 )}
-                <img src={m.url} alt={m.altText || "Gallery photo"} className="w-full h-full object-cover" />
+                <img
+                  src={m.url}
+                  alt={m.altText || "Gallery photo"}
+                  className="w-full h-full object-cover cursor-zoom-in"
+                  onClick={() => setLightboxIndex(idx)}
+                />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+                  <button title="View full size" onClick={() => setLightboxIndex(idx)}
+                    className="p-1.5 rounded-full bg-white/20 hover:bg-white/40 text-white transition">
+                    <Expand className="w-4 h-4" />
+                  </button>
                   {!isThumb && (
-                    <button title="Set as card thumbnail" onClick={() => handleFeature(m.id)} disabled={featuring === m.id}
+                    <button title="Set as card thumbnail" onClick={(e) => { e.stopPropagation(); handleFeature(m.id); }} disabled={featuring === m.id}
                       className="p-1.5 rounded-full bg-amber-400/90 hover:bg-amber-400 text-white transition">
                       {featuring === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
                     </button>
                   )}
-                  <button title="Delete" onClick={() => handleDelete(m.id)} disabled={deleting === m.id}
+                  <button title="Delete" onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }} disabled={deleting === m.id}
                     className="p-1.5 rounded-full bg-destructive/90 hover:bg-destructive text-white transition">
                     {deleting === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                   </button>
@@ -393,6 +482,15 @@ function GalleryManager({ truckId, galleryItems, onDone, isPro, maxPhotos, curre
             );
           })}
         </div>
+      )}
+      {lightboxIndex !== null && (
+        <Lightbox
+          items={galleryItems}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onPrev={() => setLightboxIndex(i => Math.max(0, (i ?? 0) - 1))}
+          onNext={() => setLightboxIndex(i => Math.min(galleryItems.length - 1, (i ?? 0) + 1))}
+        />
       )}
 
       {/* Pro upsell when at Base limit */}
