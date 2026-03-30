@@ -103,6 +103,85 @@ router.get("/trucks", optionalAuth, async (req, res): Promise<void> => {
   res.json(results);
 });
 
+// Haversine distance in km
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Featured trucks for home page: location-aware, subscription-prioritized
+router.get("/trucks/featured", optionalAuth, async (req, res): Promise<void> => {
+  const { lat, lng } = req.query as any;
+  const userLat = lat ? parseFloat(lat) : null;
+  const userLng = lng ? parseFloat(lng) : null;
+  const hasLocation = userLat !== null && !isNaN(userLat) && userLng !== null && !isNaN(userLng);
+
+  const allTrucks = await db
+    .select({ truck: trucksTable, subStatus: vendorSubscriptionsTable.status, planId: vendorSubscriptionsTable.planId })
+    .from(trucksTable)
+    .leftJoin(vendorSubscriptionsTable, eq(vendorSubscriptionsTable.vendorUserId, trucksTable.vendorUserId))
+    .where(eq(trucksTable.isApproved, true));
+
+  const allSchedules = await db.select().from(scheduleEntriesTable);
+
+  const favCounts = await db.select({ truckId: favoritesTable.truckId, cnt: count() }).from(favoritesTable).groupBy(favoritesTable.truckId);
+  const favMap = new Map(favCounts.map((f) => [f.truckId, Number(f.cnt)]));
+
+  const ratings = await db.select({ truckId: reviewsTable.truckId, avgRating: avg(reviewsTable.rating) }).from(reviewsTable).groupBy(reviewsTable.truckId);
+  const ratingMap = new Map(ratings.map((r) => [r.truckId, r.avgRating ? parseFloat(r.avgRating) : null]));
+
+  const enriched = await Promise.all(allTrucks.map(async ({ truck, subStatus, planId }) => {
+    const schedules = allSchedules.filter((s) => s.truckId === truck.id);
+    const summary = await buildTruckSummary(truck, schedules);
+
+    // Pro plan = id 1; active paid beats trialing beats free
+    const isPro = planId === 1;
+    let subScore = 0;
+    if (subStatus === "active" && isPro) subScore = 4;
+    else if (subStatus === "active") subScore = 3;
+    else if (subStatus === "trialing" && isPro) subScore = 2;
+    else if (subStatus === "trialing") subScore = 1;
+
+    const distKm = (hasLocation && truck.currentLatitude && truck.currentLongitude)
+      ? haversineKm(userLat!, userLng!, truck.currentLatitude, truck.currentLongitude)
+      : null;
+
+    return { ...summary, subScore, distanceKm: distKm, favoritesCount: favMap.get(truck.id) ?? 0, avgRating: ratingMap.get(truck.id) ?? null };
+  }));
+
+  const NEARBY_KM = 80;
+  const liveTrucks = enriched.filter((t) => t.isLive);
+
+  let mode: "nearby" | "live" | "top";
+  let featured: typeof enriched;
+
+  if (hasLocation) {
+    const nearby = liveTrucks
+      .filter((t) => t.distanceKm !== null && t.distanceKm <= NEARBY_KM)
+      .sort((a, b) => b.subScore - a.subScore || (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+    if (nearby.length > 0) {
+      featured = nearby;
+      mode = "nearby";
+    } else {
+      // No live trucks nearby — fall back to top-rated within area or globally
+      featured = enriched.sort((a, b) => b.subScore - a.subScore || b.favoritesCount - a.favoritesCount);
+      mode = "top";
+    }
+  } else if (liveTrucks.length > 0) {
+    featured = liveTrucks.sort((a, b) => b.subScore - a.subScore || b.favoritesCount - a.favoritesCount);
+    mode = "live";
+  } else {
+    featured = enriched.sort((a, b) => b.subScore - a.subScore || (b.avgRating ?? 0) * 10 + b.favoritesCount - ((a.avgRating ?? 0) * 10 + a.favoritesCount));
+    mode = "top";
+  }
+
+  const trucks = featured.slice(0, 8).map(({ subScore, ...t }) => t);
+  res.json({ trucks, mode });
+});
+
 router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   

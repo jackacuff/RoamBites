@@ -1,18 +1,73 @@
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
 import { TruckCard } from "@/components/TruckCard";
-import { MapPin, Search, Calendar, ChevronRight } from "lucide-react";
+import { MapPin, Search, Calendar, ChevronRight, Navigation, Star, Wifi } from "lucide-react";
 import { motion } from "framer-motion";
-import { useListTrucks, useListEvents } from "@workspace/api-client-react";
-import { useState } from "react";
+import { useListEvents } from "@workspace/api-client-react";
+import { useState, useEffect } from "react";
+import { getApiUrl } from "@/lib/api";
+
+type FeaturedMode = "nearby" | "live" | "top";
+
+interface FeaturedResponse {
+  trucks: any[];
+  mode: FeaturedMode;
+}
 
 export default function Home() {
-  const { data: trucks, isLoading: loadingTrucks } = useListTrucks({ openNow: true });
   const { data: events, isLoading: loadingEvents } = useListEvents({ upcoming: true });
   const [, navigate] = useLocation();
   const [heroSearch, setHeroSearch] = useState("");
+  const [featured, setFeatured] = useState<FeaturedResponse | null>(null);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
   const heroBg = `${import.meta.env.BASE_URL}images/hero-bg.png`;
+
+  useEffect(() => {
+    function fetchFeatured(lat?: number, lng?: number) {
+      const url = (lat !== undefined && lng !== undefined)
+        ? getApiUrl(`/api/trucks/featured?lat=${lat}&lng=${lng}`)
+        : getApiUrl(`/api/trucks/featured`);
+      return fetch(url)
+        .then((r) => r.json())
+        .then((data: FeaturedResponse) => setFeatured(data))
+        .catch(() => {});
+    }
+
+    // Fetch immediately without location so cards appear right away
+    fetchFeatured().finally(() => setFeaturedLoading(false));
+
+    // Silently refetch with real location if permission is already granted
+    if (navigator?.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocationLabel("Near you");
+          fetchFeatured(pos.coords.latitude, pos.coords.longitude);
+        },
+        () => {},
+        { timeout: 4000, maximumAge: 120000 }
+      );
+    }
+  }, []);
+
+  const modeConfig: Record<FeaturedMode, { heading: string; sub: string }> = {
+    nearby: {
+      heading: "Open Near You",
+      sub: "Food trucks currently serving in your area.",
+    },
+    live: {
+      heading: "Live & Open Now",
+      sub: "These trucks are currently serving across Central Oklahoma.",
+    },
+    top: {
+      heading: "Top Picks",
+      sub: "Our highest-rated trucks on the platform right now.",
+    },
+  };
+
+  const mode = featured?.mode ?? "live";
+  const { heading, sub } = modeConfig[mode];
 
   function handleHeroSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -86,39 +141,57 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Live Now Section */}
+      {/* Featured Trucks Section */}
       <section className="py-10 sm:py-20 bg-card border-y border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-6 sm:mb-10">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-display font-bold text-foreground mb-1 sm:mb-2">Live & Open Now</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">Grab a bite right away from these spots.</p>
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-2xl sm:text-3xl font-display font-bold text-foreground">{heading}</h2>
+                {mode === "nearby" && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold border border-green-500/20">
+                    <Navigation className="w-3 h-3" /> Near you
+                  </span>
+                )}
+                {mode === "live" && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+                    <Wifi className="w-3 h-3" /> Live
+                  </span>
+                )}
+                {mode === "top" && (
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold border border-amber-500/20">
+                    <Star className="w-3 h-3" /> Top rated
+                  </span>
+                )}
+              </div>
+              <p className="text-sm sm:text-base text-muted-foreground">{sub}</p>
             </div>
-            <Link href="/trucks?openNow=true" className="hidden sm:flex items-center text-primary font-semibold hover:text-primary/80 transition-colors">
-              See map <ChevronRight className="w-4 h-4 ml-1" />
+            <Link href="/trucks" className="hidden sm:flex items-center text-primary font-semibold hover:text-primary/80 transition-colors">
+              See all <ChevronRight className="w-4 h-4 ml-1" />
             </Link>
           </div>
 
-          {loadingTrucks ? (
+          {featuredLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {[...Array(4)].map((_, i) => (
                 <div key={i} className="h-80 rounded-3xl bg-muted animate-pulse border border-border" />
               ))}
             </div>
-          ) : trucks && trucks.length > 0 ? (
+          ) : featured && featured.trucks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {trucks.slice(0, 4).map(truck => (
+              {featured.trucks.slice(0, 4).map((truck) => (
                 <TruckCard key={truck.id} truck={truck} />
               ))}
             </div>
           ) : (
             <div className="text-center py-20 bg-muted/30 rounded-3xl border border-dashed border-border">
-              <p className="text-muted-foreground">No trucks are currently open. Check back later!</p>
+              <p className="text-muted-foreground font-medium mb-1">No trucks found nearby.</p>
+              <p className="text-sm text-muted-foreground">Try browsing all trucks or check back when more vendors go live.</p>
             </div>
           )}
           
-          <Link href="/trucks?openNow=true" className="sm:hidden mt-8 w-full flex items-center justify-center py-3 rounded-xl bg-muted text-foreground font-medium">
-            View all open trucks
+          <Link href="/trucks" className="sm:hidden mt-8 w-full flex items-center justify-center py-3 rounded-xl bg-muted text-foreground font-medium">
+            Browse all trucks
           </Link>
         </div>
       </section>
@@ -149,7 +222,6 @@ export default function Home() {
   );
 }
 
-// Temporary internal component export for icon
 function ArrowRight(props: any) {
   return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
 }
