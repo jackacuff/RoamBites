@@ -55,86 +55,96 @@ export default function Trucks() {
     return Array.from(set).sort();
   }, [trucks]);
 
+  const activeFilterCount = [city, cuisine, openNow].filter(Boolean).length;
+
   return (
     <Layout>
-      <div className="bg-card border-b border-border/50 pt-8 pb-4 sticky top-20 z-40">
+      <div className="bg-card border-b border-border/50 pt-6 pb-4 sticky top-20 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-            <h1 className="text-3xl font-display font-bold text-foreground">Browse Trucks</h1>
-            
+          {/* Top row: title + view toggle */}
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h1 className="text-2xl font-display font-bold text-foreground">Browse Trucks</h1>
             <div className="flex items-center gap-2">
               <div className="bg-muted p-1 rounded-xl flex">
                 <button 
                   onClick={() => setViewMode('list')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all ${viewMode === 'list' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center transition-all ${viewMode === 'list' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                 >
-                  <List className="w-4 h-4 mr-2" /> List
+                  <List className="w-4 h-4 mr-1.5" /> List
                 </button>
                 <button 
                   onClick={() => setViewMode('map')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all ${viewMode === 'map' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center transition-all ${viewMode === 'map' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                 >
-                  <MapIcon className="w-4 h-4 mr-2" /> Map
+                  <MapIcon className="w-4 h-4 mr-1.5" /> Map
                 </button>
               </div>
-              <button 
-                onClick={() => setShowFilters(!showFilters)}
-                className="md:hidden p-2.5 bg-card border border-border rounded-xl text-foreground"
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-              </button>
             </div>
           </div>
 
-          {/* Search & Filters */}
-          <div className={`${showFilters ? 'block' : 'hidden'} md:block mt-4`}>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="relative col-span-1 md:col-span-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input 
-                  type="text"
-                  placeholder="Search by name..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-              </div>
-              
+          {/* Always-visible search bar */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search by name, cuisine, or city…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-lg leading-none"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all whitespace-nowrap ${showFilters || activeFilterCount > 0 ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-background text-foreground hover:border-primary/50'}`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Collapsible filters: city, cuisine, open now */}
+          {showFilters && (
+            <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <select 
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none text-sm"
               >
                 <option value="">All Cities</option>
                 {uniqueCities.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-              
               <select 
                 value={cuisine}
                 onChange={(e) => setCuisine(e.target.value)}
-                className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none text-sm"
               >
                 <option value="">All Cuisines</option>
                 {uniqueCuisines.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-            </div>
-            
-            <div className="mt-4 flex items-center">
-              <label className="flex items-center cursor-pointer select-none">
-                <div className="relative">
-                  <input 
-                    type="checkbox" 
-                    className="sr-only" 
-                    checked={openNow}
-                    onChange={(e) => setOpenNow(e.target.checked)}
-                  />
-                  <div className={`block w-14 h-8 rounded-full transition-colors ${openNow ? 'bg-primary' : 'bg-muted border border-border'}`}></div>
-                  <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${openNow ? 'transform translate-x-6' : ''}`}></div>
+              <label className="flex items-center gap-3 px-4 py-2.5 bg-background border border-border rounded-xl cursor-pointer select-none">
+                <div className="relative shrink-0">
+                  <input type="checkbox" className="sr-only" checked={openNow} onChange={(e) => setOpenNow(e.target.checked)} />
+                  <div className={`block w-10 h-6 rounded-full transition-colors ${openNow ? 'bg-primary' : 'bg-muted border border-border'}`} />
+                  <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform shadow ${openNow ? 'translate-x-4' : ''}`} />
                 </div>
-                <span className="ml-3 font-medium text-sm text-foreground">Show only open now</span>
+                <span className="text-sm font-medium text-foreground">Open now only</span>
               </label>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
