@@ -93,6 +93,7 @@ function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | n
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     if (!mapRef.current || leafletMapRef.current) return;
@@ -106,15 +107,17 @@ function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | n
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
       leafletMapRef.current = map;
+      setMapReady(true);
     });
     return () => {
       leafletMapRef.current?.remove();
       leafletMapRef.current = null;
+      setMapReady(false);
     };
   }, []);
 
   useEffect(() => {
-    if (!leafletMapRef.current) return;
+    if (!mapReady || !leafletMapRef.current) return;
     import("leaflet").then((L) => {
       markersRef.current.forEach((m) => m.remove());
       markersRef.current = [];
@@ -162,7 +165,7 @@ function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | n
         }
       }
     });
-  }, [parks, selectedId]);
+  }, [parks, selectedId, mapReady]);
 
   return <div ref={mapRef} className="w-full h-full rounded-2xl overflow-hidden z-0" />;
 }
