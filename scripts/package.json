@@ -9,6 +9,7 @@
     "seed-stripe": "tsx ./src/seedStripeProducts.ts",
     "enrich-trucks": "tsx ./src/enrichTrucks.ts",
     "clean-test-trucks": "tsx ./src/cleanTestTrucks.ts",
+    "seed-foodie": "tsx ./src/seedFoodie.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
