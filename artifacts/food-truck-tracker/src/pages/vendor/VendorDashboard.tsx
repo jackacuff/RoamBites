@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox, CreditCard, AlertTriangle, CheckCircle, Clock, ExternalLink, Sparkles } from "lucide-react";
+import { Truck, BookOpen, Calendar, CalendarCheck, Wifi, WifiOff, Plus, ClipboardList, Mail, Phone, MapPin, Palette, Megaphone, Ticket, Share2, Copy, Check, Navigation, Loader2, Inbox, CreditCard, AlertTriangle, CheckCircle, Clock, ExternalLink, Sparkles, BarChart2 } from "lucide-react";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
@@ -435,6 +435,12 @@ export default function VendorDashboard() {
                 title="Marketing Studio"
                 description="Create branded materials and AI-generated copy"
                 badge="Pro"
+              />
+              <NavCard
+                href="/vendor/analytics"
+                icon={<BarChart2 className="w-6 h-6" />}
+                title="Analytics"
+                description="Profile views, favorites, ratings, and booking trends"
               />
             </div>
 

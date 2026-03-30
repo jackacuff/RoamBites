@@ -20,6 +20,7 @@ import subscriptionsRouter from "./subscriptions";
 import marketingRouter from "./marketing";
 import parksRouter from "./parks";
 import organizerConnectRouter from "./organizerConnect";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(subscriptionsRouter);
 router.use(marketingRouter);
 router.use(parksRouter);
 router.use(organizerConnectRouter);
+router.use(analyticsRouter);
 
 export default router;
