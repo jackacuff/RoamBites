@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { CalendarCheck, MapPin, DollarSign, Loader2, ArrowLeft, CheckCircle, Clock, XCircle, Ticket, Map, List, Wifi, Zap, Droplets, Users, Phone, Globe, ChevronRight, Layers } from "lucide-react";
+import { CalendarCheck, MapPin, DollarSign, Loader2, ArrowLeft, CheckCircle, Clock, XCircle, Ticket, Map, List, Wifi, Zap, Droplets, Users, Phone, Globe, ChevronRight, Layers, CreditCard } from "lucide-react";
 import { Link } from "wouter";
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -313,6 +313,7 @@ export default function SpotMarketplace() {
   const [spots, setSpots] = useState<EventSpot[]>([]);
   const [spotsLoading, setSpotsLoading] = useState(false);
   const [applying, setApplying] = useState<number | null>(null);
+  const [payLoading, setPayLoading] = useState<number | null>(null);
   const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
 
   useEffect(() => {
@@ -321,7 +322,36 @@ export default function SpotMarketplace() {
       .then((d) => { if (Array.isArray(d)) setEvents(d.filter((e) => new Date(e.endDateTime) > new Date())); })
       .catch(() => {});
     loadMyReservations();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      toast({ title: "Payment successful!", description: "Your spot has been paid. The organizer has been notified." });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("payment") === "cancelled") {
+      toast({ title: "Payment cancelled", description: "Your spot reservation is still pending payment.", variant: "destructive" });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, [user]);
+
+  async function handlePayNow(reservationId: number) {
+    setPayLoading(reservationId);
+    try {
+      const res = await fetch(getApiUrl(`/api/vendor/spot-reservations/${reservationId}/checkout`), {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Payment unavailable", description: data.error || "Could not start checkout", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+    } finally {
+      setPayLoading(null);
+    }
+  }
 
   const loadMyReservations = () => {
     fetch(getApiUrl("/api/vendor/spot-reservations"), { headers: authHeaders() })
@@ -539,8 +569,26 @@ export default function SpotMarketplace() {
                           <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{r.event.city}</span>
                           <span className="flex items-center gap-1"><CalendarCheck className="w-3 h-3" />{format(new Date(r.event.startDateTime), "MMM d, yyyy")}</span>
                           {r.paymentAmountInCents > 0 && (
-                            <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />${(r.paymentAmountInCents / 100).toFixed(2)} — {r.paymentStatus}</span>
+                            <span className={`flex items-center gap-1 font-medium ${r.paymentStatus === "paid" ? "text-green-600" : "text-amber-600"}`}>
+                              <DollarSign className="w-3 h-3" />
+                              ${(r.paymentAmountInCents / 100).toFixed(2)} — {r.paymentStatus === "paid" ? "Paid" : "Payment due"}
+                            </span>
                           )}
+                        </div>
+                      )}
+                      {r.status === "approved" && r.paymentAmountInCents > 0 && r.paymentStatus !== "paid" && (
+                        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+                          <p className="text-sm text-muted-foreground">
+                            Payment of <span className="font-semibold text-foreground">${(r.paymentAmountInCents / 100).toFixed(2)}</span> required to confirm your spot.
+                          </p>
+                          <button
+                            onClick={() => handlePayNow(r.id)}
+                            disabled={payLoading === r.id}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 shrink-0"
+                          >
+                            {payLoading === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                            Pay Now
+                          </button>
                         </div>
                       )}
                       {r.organizerMessage && (

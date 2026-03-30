@@ -19,6 +19,7 @@ import messagesRouter from "./messages";
 import subscriptionsRouter from "./subscriptions";
 import marketingRouter from "./marketing";
 import parksRouter from "./parks";
+import organizerConnectRouter from "./organizerConnect";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(messagesRouter);
 router.use(subscriptionsRouter);
 router.use(marketingRouter);
 router.use(parksRouter);
+router.use(organizerConnectRouter);
 
 export default router;
