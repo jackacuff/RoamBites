@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Trash2, Users, Calendar, MapPin, Globe, Lock, Ticket, DollarSign, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
+import { Plus, Trash2, Users, Calendar, MapPin, Globe, Lock, Ticket, DollarSign, CheckCircle, XCircle, Clock, Loader2, Zap } from "lucide-react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 
 interface EventSpot {
@@ -168,6 +168,22 @@ export default function OrganizerManageEvent() {
   const invitedTruckIds = new Set(event.trucks.map(et => et.truckId));
   const availableTrucks = (trucks || []).filter(t => !invitedTruckIds.has(t.id));
   const pendingReservations = reservations.filter(r => r.status === "pending");
+  const isFeatured = !!(event as any).isFeatured;
+
+  const [featureLoading, setFeatureLoading] = useState(false);
+  const handleFeatureCheckout = async () => {
+    setFeatureLoading(true);
+    try {
+      const r = await fetch(getApiUrl(`/api/organizer/events/${eventId}/feature-checkout`), {
+        method: "POST", headers: authHeaders(),
+      });
+      const data = await r.json();
+      if (data.url) window.location.href = data.url;
+      else toast({ title: data.error ?? "Could not start checkout", variant: "destructive" });
+    } catch {
+      toast({ title: "Error starting checkout", variant: "destructive" });
+    } finally { setFeatureLoading(false); }
+  };
 
   return (
     <Layout>
@@ -228,6 +244,35 @@ export default function OrganizerManageEvent() {
             </div>
           ))}
         </div>
+
+        {/* Feature event CTA */}
+        {isFeatured ? (
+          <div className="mb-6 flex items-center gap-3 p-4 rounded-2xl bg-primary/10 border border-primary/30">
+            <Zap className="w-5 h-5 text-primary fill-primary shrink-0" />
+            <div>
+              <p className="font-semibold text-foreground text-sm">This event is Featured</p>
+              <p className="text-xs text-muted-foreground">Showing at the top of the events listing until {(event as any).featuredUntil ? new Date((event as any).featuredUntil).toLocaleDateString() : "—"}.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20">
+            <div className="flex items-start gap-3">
+              <Zap className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+              <div>
+                <p className="font-bold text-foreground text-sm">Boost your event to the top</p>
+                <p className="text-xs text-muted-foreground max-w-xs">Feature this event and reach thousands of food lovers across Central Oklahoma for 30 days.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleFeatureCheckout}
+              disabled={featureLoading}
+              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
+            >
+              {featureLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-current" />}
+              Feature Event — $29
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">

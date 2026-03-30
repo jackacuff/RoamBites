@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, trucksTable, eventsTable, menuItemsTable, scheduleEntriesTable, eventTrucksTable, plansTable, vendorSubscriptionsTable } from "@workspace/db";
-import { eq, count } from "drizzle-orm";
+import { eq, count, desc } from "drizzle-orm";
 import { AdminApproveTruckBody, AdminUpdateUserStatusBody } from "@workspace/api-zod";
 import { requireRole } from "../lib/auth";
 import bcrypt from "bcryptjs";
@@ -199,6 +199,37 @@ router.post("/admin/subscriptions/:id/cancel", requireRole("admin"), async (req,
     .set({ status: "canceled", canceledAt: new Date() })
     .where(eq(vendorSubscriptionsTable.id, id))
     .returning();
+  res.json(updated);
+});
+
+router.get("/admin/events", requireRole("admin"), async (_req, res): Promise<void> => {
+  const rows = await db
+    .select({
+      id: eventsTable.id,
+      name: eventsTable.name,
+      city: eventsTable.city,
+      startDateTime: eventsTable.startDateTime,
+      isPublished: eventsTable.isPublished,
+      isFeatured: eventsTable.isFeatured,
+      featuredUntil: eventsTable.featuredUntil,
+      organizerUserId: eventsTable.organizerUserId,
+      organizerName: usersTable.name,
+      truckCount: count(eventTrucksTable.truckId),
+    })
+    .from(eventsTable)
+    .leftJoin(usersTable, eq(eventsTable.organizerUserId, usersTable.id))
+    .leftJoin(eventTrucksTable, eq(eventsTable.id, eventTrucksTable.eventId))
+    .groupBy(eventsTable.id, usersTable.name)
+    .orderBy(desc(eventsTable.startDateTime));
+  res.json(rows);
+});
+
+router.post("/admin/events/:id/feature", requireRole("admin"), async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const { isFeatured, featuredUntil } = req.body as { isFeatured: boolean; featuredUntil?: string | null };
+  const update: Record<string, unknown> = { isFeatured: !!isFeatured };
+  if (featuredUntil !== undefined) update.featuredUntil = featuredUntil ? new Date(featuredUntil) : null;
+  const [updated] = await db.update(eventsTable).set(update as any).where(eq(eventsTable.id, id)).returning();
   res.json(updated);
 });
 

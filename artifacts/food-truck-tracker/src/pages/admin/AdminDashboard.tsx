@@ -9,7 +9,7 @@ import {
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Users, Truck, Activity, CheckCircle, Package,
-  CreditCard, Plus, Edit2, Gift, Ban, TrendingUp, Clock, AlertCircle,
+  CreditCard, Plus, Edit2, Gift, Ban, TrendingUp, Clock, AlertCircle, Calendar, Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
@@ -74,7 +74,7 @@ const BLANK_PLAN = { name: "", description: "", monthlyPrice: "29.99", trialDays
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"stats" | "trucks" | "users" | "plans" | "subscriptions">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "trucks" | "users" | "plans" | "subscriptions" | "events">("stats");
 
   const { data: stats } = useAdminGetStats();
   const { data: trucks } = useAdminListTrucks();
@@ -89,6 +89,31 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/subscriptions"],
     queryFn: () => fetch(getApiUrl("/api/admin/subscriptions"), { headers: authHeaders() }).then(r => r.json()),
   });
+
+  type AdminEvent = {
+    id: number; name: string; city: string; startDateTime: string;
+    isPublished: boolean; isFeatured: boolean; featuredUntil: string | null;
+    organizerName: string; truckCount: number;
+  };
+  const { data: adminEvents, refetch: refetchEvents } = useQuery<AdminEvent[]>({
+    queryKey: ["/api/admin/events"],
+    queryFn: () => fetch(getApiUrl("/api/admin/events"), { headers: authHeaders() }).then(r => r.json()),
+    enabled: activeTab === "events",
+  });
+
+  async function toggleEventFeatured(event: AdminEvent) {
+    const body = event.isFeatured
+      ? { isFeatured: false, featuredUntil: null }
+      : { isFeatured: true, featuredUntil: new Date(Date.now() + 30 * 86400000).toISOString() };
+    const r = await fetch(getApiUrl(`/api/admin/events/${event.id}/feature`), {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) { toast({ title: "Failed to update feature status", variant: "destructive" }); return; }
+    toast({ title: event.isFeatured ? "Event unfeatured" : "Event featured for 30 days!" });
+    refetchEvents();
+  }
 
   const approveMutation = useAdminApproveTruck({
     mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin"] }) },
@@ -188,6 +213,7 @@ export default function AdminDashboard() {
     { id: "stats", label: "Overview", icon: Activity },
     { id: "trucks", label: "Trucks", icon: Truck },
     { id: "users", label: "Users", icon: Users },
+    { id: "events", label: "Events", icon: Calendar },
     { id: "plans", label: "Plans", icon: Package },
     { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
   ] as const;
@@ -318,6 +344,68 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ── Events ── */}
+        {activeTab === "events" && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold">Events</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Manage featured events and organizer listings</p>
+            </div>
+            <div className="bg-card rounded-2xl border border-border overflow-x-auto shadow-sm">
+              <table className="w-full text-left border-collapse min-w-[650px]">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Event</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Organizer</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Date</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Status</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground text-right">Featured</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {adminEvents?.map(ev => (
+                    <tr key={ev.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="p-4">
+                        <p className="font-medium">{ev.name}</p>
+                        <p className="text-xs text-muted-foreground">{ev.city} · {ev.truckCount} truck{ev.truckCount !== 1 ? "s" : ""}</p>
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">{ev.organizerName}</td>
+                      <td className="p-4 text-sm text-muted-foreground">{format(new Date(ev.startDateTime), "MMM d, yyyy")}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${ev.isPublished ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
+                          {ev.isPublished ? "Published" : "Draft"}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <button
+                            onClick={() => toggleEventFeatured(ev)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${ev.isFeatured ? "bg-primary/10 text-primary hover:bg-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                          >
+                            <Zap className={`w-3 h-3 ${ev.isFeatured ? "fill-primary" : ""}`} />
+                            {ev.isFeatured ? "Featured" : "Feature"}
+                          </button>
+                          {ev.isFeatured && ev.featuredUntil && (
+                            <span className="text-xs text-muted-foreground">until {format(new Date(ev.featuredUntil), "MMM d")}</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {(!adminEvents || adminEvents.length === 0) && (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        No events found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
