@@ -1,15 +1,24 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
 import { TruckCard } from "@/components/TruckCard";
 import { MapPin, Search, Calendar, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useListTrucks, useListEvents } from "@workspace/api-client-react";
+import { useState } from "react";
 
 export default function Home() {
   const { data: trucks, isLoading: loadingTrucks } = useListTrucks({ openNow: true });
   const { data: events, isLoading: loadingEvents } = useListEvents({ upcoming: true });
+  const [, navigate] = useLocation();
+  const [heroSearch, setHeroSearch] = useState("");
 
   const heroBg = `${import.meta.env.BASE_URL}images/hero-bg.png`;
+
+  function handleHeroSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = heroSearch.trim();
+    navigate(q ? `/trucks?search=${encodeURIComponent(q)}` : "/trucks");
+  }
 
   return (
     <Layout>
@@ -39,9 +48,29 @@ export default function Home() {
               Find your flavor in <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Central Oklahoma</span>
             </h1>
             
-            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
               Track your favorite food trucks, discover new cuisines, and find live street food events happening near you right now.
             </p>
+
+            {/* Hero Search Bar */}
+            <form onSubmit={handleHeroSearch} className="flex items-center max-w-xl mx-auto mb-8 shadow-xl rounded-full overflow-hidden border border-border bg-background">
+              <div className="flex items-center flex-1 pl-5 gap-3">
+                <Search className="w-5 h-5 text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  value={heroSearch}
+                  onChange={(e) => setHeroSearch(e.target.value)}
+                  placeholder="Search tacos, BBQ, pizza…"
+                  className="flex-1 py-4 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="m-1.5 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity shrink-0"
+              >
+                Search
+              </button>
+            </form>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/trucks" className="w-full sm:w-auto px-8 py-4 rounded-full bg-primary text-primary-foreground font-bold text-lg shadow-xl shadow-primary/30 hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center group">
