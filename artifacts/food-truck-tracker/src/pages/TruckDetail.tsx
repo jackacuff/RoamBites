@@ -88,6 +88,28 @@ export default function TruckDetail() {
 
   useEffect(() => {
     if (!id) return;
+    try {
+      const sessionKey = "roambites_session_id";
+      let sessionId = sessionStorage.getItem(sessionKey);
+      if (!sessionId) {
+        sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        sessionStorage.setItem(sessionKey, sessionId);
+      }
+      const viewedKey = `viewed_truck_${id}`;
+      if (!sessionStorage.getItem(viewedKey)) {
+        sessionStorage.setItem(viewedKey, "1");
+        fetch(getApiUrl(`/api/trucks/${id}/view`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        }).catch(() => {});
+      }
+    } catch {
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
     fetch(getApiUrl(`/api/trucks/${id}/reviews`))
       .then(r => r.json())
       .then(data => {

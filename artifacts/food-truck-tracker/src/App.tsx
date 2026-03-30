@@ -32,6 +32,7 @@ import VendorSpecials from "./pages/vendor/VendorSpecials";
 import VendorEventSpots from "./pages/vendor/VendorEventSpots";
 import VendorInbox from "./pages/vendor/VendorInbox";
 import VendorMarketing from "./pages/vendor/VendorMarketing";
+import VendorAnalytics from "./pages/vendor/VendorAnalytics";
 import OrganizerTruckMarketplace from "./pages/organizer/OrganizerTruckMarketplace";
 import OrganizerConnectReturn from "./pages/organizer/OrganizerConnectReturn";
 import Favorites from "./pages/Favorites";
@@ -72,6 +73,7 @@ function Router() {
       <Route path="/vendor/event-spots" component={VendorEventSpots} />
       <Route path="/vendor/inbox" component={VendorInbox} />
       <Route path="/vendor/marketing" component={VendorMarketing} />
+      <Route path="/vendor/analytics" component={VendorAnalytics} />
       <Route path="/organizer/trucks" component={OrganizerTruckMarketplace} />
 
       <Route path="/organizer" component={OrganizerDashboard} />
