@@ -4,7 +4,7 @@ import { useListEvents } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import EventCard from "@/components/EventCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Calendar, Zap, MapPin, Users, ChevronRight, ExternalLink } from "lucide-react";
+import { Calendar, Zap, MapPin, Users, ChevronRight, Share2, Check } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Events() {
@@ -133,6 +133,20 @@ function FeaturedEventBanner({ event }: { event: any }) {
   const end   = new Date(event.endDateTime);
   const now   = new Date();
   const isOngoing = start <= now && end >= now;
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/events/${event.id}`;
+    const shareData = { title: event.name, text: `Check out ${event.name} on RoamBites`, url };
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try { await navigator.share(shareData); return; } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
 
   const GRADIENTS: Record<string, string> = {
     "Oklahoma City": "from-orange-500 to-amber-400",
@@ -189,9 +203,19 @@ function FeaturedEventBanner({ event }: { event: any }) {
                   )}
                 </div>
               </div>
-              <div className="shrink-0 hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-full bg-white text-foreground text-sm font-bold shadow group-hover:bg-primary group-hover:text-primary-foreground transition-colors whitespace-nowrap">
-                View details
-                <ChevronRight className="w-4 h-4" />
+              <div className="shrink-0 hidden sm:flex items-center gap-3">
+                <button
+                  onClick={handleShare}
+                  title="Share event"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold transition-colors ${shareCopied ? "bg-green-500 text-white" : "bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"}`}
+                >
+                  {shareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                  {shareCopied ? "Copied!" : "Share"}
+                </button>
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-white text-foreground text-sm font-bold shadow group-hover:bg-primary group-hover:text-primary-foreground transition-colors whitespace-nowrap">
+                  View details
+                  <ChevronRight className="w-4 h-4" />
+                </div>
               </div>
             </div>
           </div>

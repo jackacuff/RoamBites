@@ -1,6 +1,23 @@
 import { Link } from "wouter";
-import { MapPin, Users, ExternalLink, Zap } from "lucide-react";
+import { MapPin, Users, Zap, Share2, Check } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+
+function useShareCard() {
+  const [copied, setCopied] = useState(false);
+  const share = async (e: React.MouseEvent, name: string, eventId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/events/${eventId}`;
+    if (navigator.share && navigator.canShare?.({ title: name, url })) {
+      try { await navigator.share({ title: name, text: `Check out ${name} on RoamBites`, url }); return; } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return { share, copied };
+}
 
 interface EventCardProps {
   event: {
@@ -43,6 +60,7 @@ export default function EventCard({ event, featured }: EventCardProps) {
   const isPast    = end < now;
   const isFeatured = event.isFeatured || featured;
   const gradient = getGradient(event.city, event.name);
+  const { share, copied } = useShareCard();
 
   return (
     <Link href={`/events/${event.id}`}>
@@ -115,9 +133,16 @@ export default function EventCard({ event, featured }: EventCardProps) {
                     : "Trucks TBA"}
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground font-medium">
-                {format(start, "h:mm a")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">{format(start, "h:mm a")}</span>
+                <button
+                  onClick={(e) => share(e, event.name, event.id)}
+                  title="Share event"
+                  className={`p-1.5 rounded-lg transition-colors ${copied ? "text-green-600 bg-green-50" : "text-muted-foreground hover:text-primary hover:bg-primary/10"}`}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
