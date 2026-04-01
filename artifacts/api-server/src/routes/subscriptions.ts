@@ -4,6 +4,18 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { getUncachableStripeClient } from "../lib/stripeClient";
 
+// ── Public: list active plans ─────────────────────────────────────────────
+const publicRouter = Router();
+publicRouter.get("/plans", async (_req, res): Promise<void> => {
+  try {
+    const plans = await db.select().from(plansTable).where(eq(plansTable.isActive, true));
+    res.json(plans);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch plans" });
+  }
+});
+export { publicRouter as publicPlansRouter };
+
 const router: IRouter = Router();
 
 router.get("/vendor/subscription", requireAuth, async (req, res): Promise<void> => {

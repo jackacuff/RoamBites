@@ -2,24 +2,18 @@ import { useParams, Link } from "wouter";
 import { useGetEvent } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
-import { Calendar, MapPin, Users, Clock, FileText, Globe, ExternalLink, Tag, Megaphone, Share2, Check, Copy } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, FileText, Globe, ExternalLink, Share2, Check, ChevronRight, X, ChevronLeft, ImageIcon } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 function useShareEvent() {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-
   const share = async (name: string, description: string | null | undefined, eventId: number) => {
     const url = `${window.location.origin}/events/${eventId}`;
-    const shareData = {
-      title: name,
-      text: description ? `${description} — RoamBites` : `Check out this food truck event on RoamBites`,
-      url,
-    };
+    const shareData = { title: name, text: description ? `${description} — RoamBites` : `Check out this food truck event on RoamBites`, url };
     if (navigator.share && navigator.canShare?.(shareData)) {
       try { await navigator.share(shareData); return; } catch {}
     }
@@ -28,8 +22,144 @@ function useShareEvent() {
     toast({ title: "Link copied!", description: "Event link copied to clipboard." });
     setTimeout(() => setCopied(false), 2000);
   };
-
   return { share, copied };
+}
+
+function useUserLocation() {
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const requested = sessionStorage.getItem("roambites_location_requested");
+    if (requested === "denied") return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        sessionStorage.setItem("roambites_location_requested", "granted");
+      },
+      () => { sessionStorage.setItem("roambites_location_requested", "denied"); },
+      { timeout: 5000, maximumAge: 60000 }
+    );
+  }, []);
+  return location;
+}
+
+interface EventTruck {
+  id: number;
+  status: string;
+  truck?: {
+    id: number;
+    name: string;
+    cuisine: string | null;
+    description: string | null;
+    logoUrl: string | null;
+    imageUrl: string | null;
+    isLive?: boolean;
+  } | null;
+}
+
+function EventMapLeaflet({
+  lat, lng, venueName, trucks, selectedTruckId, onTruckSelect, userLocation,
+}: {
+  lat: number; lng: number; venueName: string;
+  trucks: EventTruck[]; selectedTruckId: number | null;
+  onTruckSelect: (id: number | null) => void;
+  userLocation: { lat: number; lng: number } | null;
+}) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const leafletMapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+  const userMarkerRef = useRef<any>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    if (!mapRef.current || leafletMapRef.current) return;
+    import("leaflet").then((L) => {
+      const map = L.default.map(mapRef.current!, { center: [lat, lng], zoom: 15, zoomControl: true });
+      L.default.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(map);
+      const venueIcon = L.default.divIcon({
+        className: "",
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:#f97316;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+          <span style="color:white;font-size:12px;">📍</span></div>`,
+        iconSize: [28, 28], iconAnchor: [14, 14],
+      });
+      L.default.marker([lat, lng], { icon: venueIcon })
+        .addTo(map)
+        .bindPopup(`<strong style="font-size:13px">${venueName}</strong><br/><span style="color:#888;font-size:11px">Event Venue</span>`);
+      leafletMapRef.current = map;
+      setMapReady(true);
+    });
+    return () => {
+      leafletMapRef.current?.remove();
+      leafletMapRef.current = null;
+      setMapReady(false);
+    };
+  }, [lat, lng, venueName]);
+
+  useEffect(() => {
+    if (!mapReady || !leafletMapRef.current) return;
+    import("leaflet").then((L) => {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      const confirmedTrucks = trucks.filter((et) => et.status === "confirmed" && et.truck);
+      confirmedTrucks.forEach((et, i) => {
+        const truck = et.truck!;
+        const count = confirmedTrucks.length;
+        const angle = count > 1 ? (i / count) * 2 * Math.PI : 0;
+        const radius = count > 1 ? 0.0006 : 0;
+        const tLat = lat + radius * Math.cos(angle);
+        const tLng = lng + radius * Math.sin(angle);
+        const isSelected = truck.id === selectedTruckId;
+        const icon = L.default.divIcon({
+          className: "",
+          html: `<div style="
+            width:${isSelected ? 26 : 20}px;height:${isSelected ? 26 : 20}px;
+            border-radius:50%;
+            background:${isSelected ? "#16a34a" : "#f97316"};
+            border:${isSelected ? "3px" : "2px"} solid white;
+            box-shadow:0 2px 6px rgba(0,0,0,0.3);
+            display:flex;align-items:center;justify-content:center;
+            cursor:pointer;transition:all 0.2s;
+          "><span style="color:white;font-size:${isSelected ? 11 : 9}px;">🚛</span></div>`,
+          iconSize: [isSelected ? 26 : 20, isSelected ? 26 : 20],
+          iconAnchor: [isSelected ? 13 : 10, isSelected ? 13 : 10],
+        });
+        const marker = L.default.marker([tLat, tLng], { icon })
+          .addTo(leafletMapRef.current!)
+          .bindPopup(`
+            <div style="font-family:sans-serif;min-width:150px">
+              <strong style="font-size:13px">${truck.name}</strong>
+              ${truck.cuisine ? `<div style="color:#888;font-size:11px;margin-top:2px">${truck.cuisine}</div>` : ""}
+              <a href="/trucks/${truck.id}" style="display:block;margin-top:8px;font-size:11px;color:#f97316;font-weight:600">View Truck →</a>
+            </div>
+          `);
+        marker.on("click", () => onTruckSelect(isSelected ? null : truck.id));
+        if (isSelected) marker.openPopup();
+        markersRef.current.push(marker);
+      });
+    });
+  }, [trucks, selectedTruckId, mapReady, lat, lng, onTruckSelect]);
+
+  useEffect(() => {
+    if (!mapReady || !leafletMapRef.current || !userLocation) return;
+    import("leaflet").then((L) => {
+      if (userMarkerRef.current) { userMarkerRef.current.remove(); userMarkerRef.current = null; }
+      const icon = L.default.divIcon({
+        className: "",
+        html: `<div style="position:relative;width:16px;height:16px">
+          <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.3;animation:ping 1.5s ease-in-out infinite"></div>
+          <div style="position:absolute;inset:3px;border-radius:50%;background:#3b82f6;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>
+        </div>`,
+        iconSize: [16, 16], iconAnchor: [8, 8],
+      });
+      userMarkerRef.current = L.default.marker([userLocation.lat, userLocation.lng], { icon })
+        .addTo(leafletMapRef.current!)
+        .bindPopup("You are here");
+    });
+  }, [userLocation, mapReady]);
+
+  return <div ref={mapRef} className="w-full h-full" />;
 }
 
 export default function EventDetail() {
@@ -37,27 +167,21 @@ export default function EventDetail() {
   const { data: event, isLoading } = useGetEvent(Number(id) || 0, {
     query: { enabled: !!id }
   });
-  const [specials, setSpecials] = useState<Record<number, any[]>>({});
+  const [selectedTruckId, setSelectedTruckId] = useState<number | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const { share, copied } = useShareEvent();
+  const userLocation = useUserLocation();
+  const lineupRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!event?.trucks) return;
-    const confirmedIds = event.trucks.filter(t => t.status === "confirmed" && t.truck).map(t => t.truck!.id);
-    confirmedIds.forEach(async (truckId) => {
-      try {
-        const res = await fetch(getApiUrl(`/api/trucks/${truckId}/specials`));
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setSpecials(prev => ({ ...prev, [truckId]: data }));
-          }
-        }
-      } catch {}
-    });
-  }, [event?.trucks]);
+  const scrollToTruck = (truckId: number) => {
+    setSelectedTruckId(truckId);
+    setTimeout(() => {
+      const el = document.getElementById(`truck-card-${truckId}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 50);
+  };
 
   if (isLoading) return <Layout><LoadingSpinner /></Layout>;
-
   if (!event) {
     return (
       <Layout>
@@ -69,20 +193,28 @@ export default function EventDetail() {
     );
   }
 
-  const confirmedTrucks = event.trucks.filter(t => t.status === "confirmed");
+  const confirmedTrucks = event.trucks.filter((t: EventTruck) => t.status === "confirmed");
   const now = new Date();
   const isOngoing = new Date(event.startDateTime) <= now && new Date(event.endDateTime) >= now;
   const isUpcoming = new Date(event.startDateTime) > now;
 
+  const photoGallery: string[] = (() => {
+    const raw = (event as any).photoUrls;
+    if (!raw) return [];
+    try { return JSON.parse(raw); } catch {}
+    return raw.split(",").map((s: string) => s.trim()).filter(Boolean);
+  })();
+
+  const lightboxUrl = lightboxIndex !== null ? photoGallery[lightboxIndex] : null;
+
   return (
     <Layout>
+      <style>{`@keyframes ping { 0%,100%{transform:scale(1);opacity:0.3} 50%{transform:scale(1.8);opacity:0.1} }`}</style>
+
       {/* Hero Banner */}
       <div className="relative overflow-hidden">
         {(event as any).bannerImageUrl ? (
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${(event as any).bannerImageUrl})` }}
-          >
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${(event as any).bannerImageUrl})` }}>
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
           </div>
         ) : (
@@ -97,14 +229,11 @@ export default function EventDetail() {
               <div className="flex flex-wrap items-center gap-2">
                 {isOngoing && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500 text-white text-xs font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                    Happening Now
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />Happening Now
                   </span>
                 )}
                 {isUpcoming && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-sm">
-                    Upcoming
-                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-sm">Upcoming</span>
                 )}
               </div>
               <button
@@ -117,34 +246,52 @@ export default function EventDetail() {
             </div>
             <h1 className="text-4xl sm:text-5xl font-display font-bold text-white leading-tight">{event.name}</h1>
             <div className="flex flex-wrap items-center gap-4 text-white/80">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4" />
-                {event.venueName}, {event.city}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                {format(new Date(event.startDateTime), "EEEE, MMMM d, yyyy")}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Users className="w-4 h-4" />
-                {confirmedTrucks.length} truck{confirmedTrucks.length !== 1 ? 's' : ''} confirmed
-              </span>
+              <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{event.venueName}, {event.city}</span>
+              <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />{format(new Date(event.startDateTime), "EEEE, MMMM d, yyyy")}</span>
+              <span className="flex items-center gap-1.5"><Users className="w-4 h-4" />{confirmedTrucks.length} truck{confirmedTrucks.length !== 1 ? "s" : ""} confirmed</span>
             </div>
             {(event as any).websiteUrl && (
               <a href={(event as any).websiteUrl} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-white/80 hover:text-white text-sm">
-                <Globe className="w-4 h-4" />
-                Event Website
-                <ExternalLink className="w-3 h-3" />
+                <Globe className="w-4 h-4" />Event Website<ExternalLink className="w-3 h-3" />
               </a>
             )}
           </div>
         </div>
       </div>
 
+      {/* Photo Gallery Strip */}
+      {photoGallery.length > 0 && (
+        <div className="bg-card border-b border-border">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
+            <div className="flex items-center gap-2 mb-3">
+              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground">Event Photos</h2>
+              <span className="text-xs text-muted-foreground">({photoGallery.length})</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+              {photoGallery.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => setLightboxIndex(i)}
+                  className="shrink-0 snap-start w-40 h-28 rounded-xl overflow-hidden border border-border hover:border-primary/60 hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  <img
+                    src={url}
+                    alt={`Event photo ${i + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Details */}
+          {/* Left: Details + Map */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
               <h2 className="font-semibold text-foreground mb-4">Event Details</h2>
@@ -183,10 +330,10 @@ export default function EventDetail() {
                     </div>
                   </div>
                 )}
-                {event.publicNotes && (
+                {(event as any).publicNotes && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <p className="text-xs font-semibold text-amber-700 mb-1">Notes</p>
-                    <p className="text-sm text-amber-800">{event.publicNotes}</p>
+                    <p className="text-sm text-amber-800">{(event as any).publicNotes}</p>
                   </div>
                 )}
               </div>
@@ -194,87 +341,101 @@ export default function EventDetail() {
 
             {event.latitude && event.longitude && (
               <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                <div className="px-5 py-4 border-b border-border">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                   <h2 className="font-semibold text-foreground flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-primary" /> Location
+                    <MapPin className="w-4 h-4 text-primary" /> Location & Trucks
                   </h2>
+                  {confirmedTrucks.length > 0 && (
+                    <span className="text-xs text-muted-foreground">{confirmedTrucks.length} truck pin{confirmedTrucks.length !== 1 ? "s" : ""}</span>
+                  )}
                 </div>
-                <EventMap lat={event.latitude} lng={event.longitude} venueName={event.venueName} />
+                <div className="h-64">
+                  <EventMapLeaflet
+                    lat={event.latitude}
+                    lng={event.longitude}
+                    venueName={event.venueName}
+                    trucks={event.trucks as EventTruck[]}
+                    selectedTruckId={selectedTruckId}
+                    onTruckSelect={scrollToTruck}
+                    userLocation={userLocation}
+                  />
+                </div>
+                {confirmedTrucks.length > 0 && (
+                  <div className="px-4 py-2 border-t border-border bg-muted/30">
+                    <p className="text-xs text-muted-foreground">🟠 Truck pins &nbsp;•&nbsp; 📍 Venue &nbsp;{userLocation ? <>•&nbsp; 🔵 You</> : ""}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Right: Truck Lineup */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" ref={lineupRef}>
             <div className="mb-6">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-1">
-                Food Truck Lineup
-              </h2>
+              <h2 className="text-2xl font-display font-bold text-foreground mb-1">Food Truck Lineup</h2>
               {confirmedTrucks.length > 0 ? (
-                <p className="text-muted-foreground text-sm">{confirmedTrucks.length} truck{confirmedTrucks.length !== 1 ? 's' : ''} confirmed for this event</p>
+                <p className="text-muted-foreground text-sm">{confirmedTrucks.length} truck{confirmedTrucks.length !== 1 ? "s" : ""} confirmed{event.latitude ? " · Click a card to highlight on map" : ""}</p>
               ) : (
                 <p className="text-muted-foreground text-sm">Trucks being finalized — check back soon!</p>
               )}
             </div>
 
             {confirmedTrucks.length > 0 ? (
-              <div className="space-y-4">
-                {confirmedTrucks.map((et) => {
+              <div className="grid sm:grid-cols-2 gap-4">
+                {confirmedTrucks.map((et: EventTruck) => {
                   const truck = et.truck;
                   if (!truck) return null;
-                  const truckSpecials = specials[truck.id] || [];
+                  const isSelected = truck.id === selectedTruckId;
                   return (
-                    <Link key={et.id} href={`/trucks/${truck.id}`}>
-                      <div className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all cursor-pointer">
-                        <div className="flex items-start gap-4 p-5">
-                          {truck.logoUrl || truck.imageUrl ? (
-                            <img
-                              src={truck.logoUrl || truck.imageUrl}
-                              alt={truck.name}
-                              className="w-16 h-16 rounded-xl object-cover shrink-0 border border-border"
-                            />
-                          ) : (
-                            <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl shrink-0">
-                              {truck.name.charAt(0)}
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">{truck.name}</h3>
-                                <p className="text-sm text-muted-foreground">{truck.cuisine}</p>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {truck.isLive && (
-                                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    Live
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {truck.description && (
-                              <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{truck.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        {truckSpecials.length > 0 && (
-                          <div className="px-5 pb-4">
-                            {truckSpecials.slice(0, 2).map((s: any) => (
-                              <div key={s.id} className="flex items-center gap-2 text-sm mt-2">
-                                {s.type === "special" || s.type === "discount" ? (
-                                  <Tag className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                                ) : (
-                                  <Megaphone className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                                )}
-                                <span className="text-foreground font-medium">{s.title}</span>
-                                {s.body && <span className="text-muted-foreground truncate">— {s.body}</span>}
-                              </div>
-                            ))}
+                    <div
+                      key={et.id}
+                      id={`truck-card-${truck.id}`}
+                      onClick={() => setSelectedTruckId(isSelected ? null : truck.id)}
+                      className={`group bg-card border rounded-2xl overflow-hidden cursor-pointer transition-all ${
+                        isSelected
+                          ? "border-green-500 shadow-md ring-2 ring-green-500/20"
+                          : "border-border hover:border-primary/40 hover:shadow-md"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 p-4">
+                        {truck.logoUrl || truck.imageUrl ? (
+                          <img
+                            src={truck.logoUrl || truck.imageUrl || ""}
+                            alt={truck.name}
+                            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
+                            {truck.name.charAt(0)}
                           </div>
                         )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className={`font-bold text-base truncate transition-colors ${isSelected ? "text-green-700" : "text-foreground group-hover:text-primary"}`}>
+                              {truck.name}
+                            </h3>
+                            {truck.isLive && (
+                              <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live
+                              </span>
+                            )}
+                          </div>
+                          {truck.cuisine && <p className="text-sm text-muted-foreground mt-0.5">{truck.cuisine}</p>}
+                          {truck.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{truck.description}</p>
+                          )}
+                        </div>
                       </div>
-                    </Link>
+                      <div className="px-4 pb-3 flex justify-end">
+                        <Link
+                          href={`/trucks/${truck.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+                        >
+                          View Truck <ChevronRight className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -288,25 +449,71 @@ export default function EventDetail() {
           </div>
         </div>
       </div>
-    </Layout>
-  );
-}
 
-function EventMap({ lat, lng, venueName }: { lat: number; lng: number; venueName: string }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted) return <div className="h-52 bg-muted animate-pulse" />;
-  return (
-    <div className="h-52">
-      <MapContainer center={[lat, lng]} zoom={15} scrollWheelZoom={false} className="w-full h-full">
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={[lat, lng]}>
-          <Popup>{venueName}</Popup>
-        </Marker>
-      </MapContainer>
-    </div>
+      {/* Lightbox */}
+      {lightboxUrl !== null && lightboxIndex !== null && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setLightboxIndex(null)}
+        >
+          {/* Close */}
+          <button
+            onClick={() => setLightboxIndex(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Prev */}
+          {lightboxIndex > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex - 1); }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Next */}
+          {lightboxIndex < photoGallery.length - 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Image */}
+          <div className="px-16 py-10 max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={lightboxUrl}
+              alt={`Event photo ${lightboxIndex + 1}`}
+              className="w-full max-h-[80vh] object-contain rounded-xl"
+            />
+            <p className="text-center text-white/50 text-xs mt-3">
+              {lightboxIndex + 1} / {photoGallery.length}
+            </p>
+          </div>
+
+          {/* Thumbnail strip at bottom */}
+          {photoGallery.length > 1 && (
+            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2 overflow-x-auto max-w-lg px-4">
+              {photoGallery.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
+                  className={`shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                    i === lightboxIndex ? "border-white opacity-100" : "border-transparent opacity-50 hover:opacity-80"
+                  }`}
+                >
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </Layout>
   );
 }

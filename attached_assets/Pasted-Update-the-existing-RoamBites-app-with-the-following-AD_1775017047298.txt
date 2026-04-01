@@ -1,0 +1,350 @@
+Update the existing RoamBites app with the following ADDITIONS and CHANGES only. Do NOT rebuild the full app and do NOT duplicate existing core functionality. Extend and refine the current app.
+
+REPLIT NOTES
+
+1. Vendor dropdown menu cleanup
+- In the vendor user dropdown menu, remove the generic “Dashboard” option.
+- Keep only “Vendor Dashboard”.
+- Reason: “Dashboard” is redundant and does the same thing as “Vendor Dashboard”.
+
+2. Vendor dropdown menu layout
+- Move “My Truck” in the vendor dropdown menu so it appears directly under the vendor’s profile name.
+- Goal: make “My Truck” feel like a primary identity-level action and easier to access.
+
+3. Replace Marketing Studio with Social Media Hub
+- Adapt the existing Marketing Studio into a true Social Media Hub.
+- Vendors should be able to connect major social media platforms.
+- At minimum, structure for:
+  - Instagram
+  - Facebook
+  - TikTok
+  - X
+- Vendors should be able to select which platform(s) to post to.
+- Add quick post actions for:
+  - Post Today’s Schedule
+  - Post Special/Discount
+  - Post Event Appearance
+- Each action should auto-generate:
+  - branded image
+  - caption
+  - link back to RoamBites
+- Allow quick editing before posting.
+- Support direct publishing where APIs allow.
+- If direct posting is limited, provide fallback:
+  - copy caption
+  - download image
+  - deep link/open target platform
+- Must be mobile-friendly and fast for busy truck operators.
+- Store social auth tokens securely.
+- The goal is to make RoamBites the hub for social posting and drive customers back into the app.
+
+4. Membership plans visibility and placement
+- Membership plans for vendors and event organizers are too hidden.
+- Make plans much easier to find and more naturally tied to user workflows.
+- Add a membership/plan card near the top of vendor and organizer dashboards that shows:
+  - current plan
+  - key benefits
+  - CTA to upgrade
+- Add a clear navigation item such as:
+  - Plans & Billing
+  - Subscription
+- Add contextual upgrade prompts when users try to access premium features.
+- Examples:
+  - feature a truck
+  - access premium analytics
+  - feature an event
+- Add a dedicated pricing/plans page accessible from navigation and dashboards.
+- Plans should feel like growth tools, not a random paywall.
+- Use value-driven messaging such as:
+  - Get more bookings
+  - Get featured
+  - Fill your event faster
+
+5. Admin plan management improvements
+- Admins need an easy Plan Management system in the Admin Dashboard.
+- Admins should be able to manage and edit membership plans without code changes.
+- Admin capabilities should include:
+  - edit plan name
+  - edit pricing
+  - edit descriptions
+  - edit feature list
+  - enable/disable plan features
+  - show/hide plans
+  - mark plans as recommended or most popular
+- Organize by:
+  - Vendor Plans
+  - Organizer Plans
+- Changes should reflect consistently across:
+  - pricing page
+  - dashboard cards
+  - upgrade prompts
+- Changes should not break existing subscriptions.
+- Apply changes to new users and/or new billing cycles as appropriate.
+
+6. Event map with truck lineup
+- On the event detail page, add a map using the existing map system.
+- Show:
+  - event location
+  - all participating trucks as pins
+- Each pin should be clickable and show:
+  - truck name
+  - cuisine/type
+  - quick link to truck details
+- Add a synchronized truck list/grid next to or below the map.
+- Clicking a truck in the list should highlight it on the map.
+- Clicking a pin should highlight the truck in the list.
+- Keep this MVP simple:
+  - use general truck pins first
+  - do not require precise organizer-controlled layout initially
+- Advanced future-ready structure:
+  - optional “Event Layout Mode” where organizers can assign precise truck positions with draggable pins
+- The feature must remain clean, not cluttered, and mobile-friendly.
+- Add a map/list toggle if helpful.
+
+7. Show user location on map if permission is granted
+- If a user grants location permission, show a small dot on the map for their current location.
+- This should apply to:
+  - main map views
+  - event map views
+  - any map that shows truck locations
+- Dot must be visually distinct from truck pins.
+- Optional subtle accuracy radius circle.
+- Do not store user location long-term.
+- Only use for current session / live map context.
+- No repeated spammy permission prompts.
+
+8. Improve signup flow by role
+- Sign up should adapt based on the role selected:
+  - Customer
+  - Vendor
+  - Event Organizer
+- Customer signup flow:
+  - simple and fast
+  - no subscription workflow
+  - no billing prompts
+- Vendor signup flow:
+  - guided onboarding
+  - create account
+  - basic truck setup
+  - subscription plan selection
+  - land in vendor dashboard
+- Event organizer signup flow:
+  - guided onboarding
+  - create account
+  - organizer setup
+  - subscription step if applicable
+  - land in organizer dashboard
+- Do not use one generic signup flow for all users.
+- Tailor copy, steps, and CTAs by role.
+
+9. Premium vendor employee access
+- Add team/employee access for higher-tier vendor subscription plans.
+- Vendors on qualifying plans should be able to invite employees/team members by email.
+- Invited team members can log in with their own accounts and access the assigned truck.
+- MVP permission levels:
+  - Owner/Vendor: full control
+  - Employee: limited access, no billing or ownership changes
+- Employee access may include:
+  - update location
+  - manage schedule
+  - post specials/discounts
+  - use social sharing tools
+  - view bookings/events
+- Vendor should be able to:
+  - view team members
+  - remove access
+  - resend invites
+- This feature should be tied to higher-tier plans only.
+
+10. Event organizer questionnaire during event creation / truck invitations
+- Add a structured questionnaire when an event organizer creates an event or opens it to food trucks / invites food trucks.
+- The questionnaire should include at minimum:
+
+Contact Person
+- First Name (required)
+- Last Name (required)
+- Email Address (required)
+- Cell Phone Number (required)
+
+Communication Preferences
+- Food trucks can email me directly
+- Food trucks can call/text me directly
+
+Source Tracking
+- How did you hear about us? (required)
+
+Event Details
+- Event Name (required)
+- Venue or Location (required)
+- City (required dropdown)
+- Begins (required)
+- Ends (required)
+- Serving Time(s) (required or strongly encouraged)
+
+Event Type
+- Public
+- Private
+
+Available Hookups
+- Water & Electric
+- Only Water
+- Only Electric
+- No Hookups Available
+- Unknown
+
+Vendor Fee Structure
+- No Fee
+- Flat Fee
+- Percentage of Sales
+
+How will food trucks get paid?
+- Attendees pay themselves
+- Event organizer pays on behalf of attendees
+
+Expected Attendance
+- estimate / rough estimate
+
+More Info Link
+- website or social page
+
+Food / Drink Preference
+- open text field
+
+Additional Information
+- open text field
+
+Notification Method
+- List
+- Application
+
+- This form should be part of event creation flow and editable later.
+- Use a clean multi-step or sectioned form, not a giant overwhelming wall of fields.
+
+11. Make questionnaire answers feed into live/published event experience
+- Once an event is published/live, questionnaire answers should populate relevant areas of the app.
+- Questionnaire answers should feed into:
+
+A. Spot Marketplace listing
+- event type
+- expected attendance
+- serving times
+- available hookups
+- vendor fee structure
+- how vendors get paid
+- food/drink preferences
+- more info link
+- additional notes/requirements
+
+B. Event detail page
+- show relevant event info in a clean readable layout
+
+C. Vendor event views
+- vendors browsing events should see the important answers clearly
+
+D. Organizer-to-truck communication context
+- invitations
+- applications
+- reservation flows should carry event context
+
+- Do not dump raw questionnaire data. Organize into sections such as:
+  - Event Summary
+  - Vendor Requirements
+  - Setup / Payment Info
+  - Preferences / Notes
+- Allow some fields to be private/internal if needed.
+
+12. Product principle: easy-to-use ecosystem
+- RoamBites should function as an easy-to-use ecosystem for:
+  - food truck vendors
+  - event organizers/hosts
+  - customers
+- Vendor side should be easy for:
+  - managing schedules
+  - marketing
+  - booking events
+  - updating info
+- Organizer side should be easy for:
+  - creating events
+  - defining requirements
+  - filling spots
+  - communicating with trucks
+  - managing logistics
+- Customer side should get the benefit of this in the form of:
+  - easy-to-read truck data
+  - easy-to-read event data
+  - simple discovery and map experience
+- Use this as a guiding product/UX principle for implementation.
+- If a feature makes workflows too cumbersome, simplify it.
+
+13. Customer to event organizer transition path
+- A customer account should be able to transition into also having event organizer capabilities without needing a second separate account.
+- Add a clear CTA in appropriate places such as:
+  - Events page
+  - customer profile/dashboard
+  - navbar if appropriate
+- CTA examples:
+  - Add Event
+  - Host an Event
+  - Find Food Trucks for My Event
+- Clicking this should guide the customer through event organizer onboarding and collect any missing organizer details.
+- The account should remain unified:
+  - customer features stay
+  - organizer features are added
+
+14. Guardrails to prevent customer event loophole
+- Do not allow customers to bypass organizer pricing indefinitely.
+- Allow limited customer event usage for small personal needs.
+- Suggested configurable limits:
+  - 1 event per 6 or 12 months
+  - and/or max 1 to 2 trucks per event
+- These limits should be configurable in admin settings.
+- Track:
+  - number of events created by the user
+  - trucks added per event
+  - rolling time window
+- If the user exceeds limits, prompt them to upgrade/activate Event Organizer role.
+- Example prompt:
+  “Looks like you’re hosting multiple or larger events. Upgrade to an Event Organizer account to unlock full event management features.”
+- Keep this fair, low-friction, and monetization-protective.
+
+15. Event photo uploads and thumbnail selection
+- Allow event organizers to upload multiple photos for each event.
+- Let organizers choose one image as the event thumbnail/cover image.
+- This image should appear on:
+  - event cards
+  - events page
+  - featured event sections
+- When a user clicks into the event:
+  - show the selected primary image prominently
+  - allow browsing/flipping through the rest of the images
+- Use a clean responsive gallery or carousel.
+- Keep upload and selection simple.
+
+16. Clean up food truck lineup on event detail pages
+- On event detail pages, improve the lineup section so it is easier to read.
+- Currently specials and cuisine/type are making the layout jumbled.
+- Improve the lineup cards by prioritizing:
+  - truck name
+  - logo or photo
+  - cuisine/type
+  - quick view action
+- De-emphasize specials in this context:
+  - remove them from default lineup cards
+  - or move them into expandable / secondary detail
+- Improve spacing, hierarchy, and readability on mobile and desktop.
+- Keep the lineup easy to scan.
+
+FINAL IMPLEMENTATION REQUIREMENTS
+- Do not rebuild the entire app.
+- Extend the existing app cleanly.
+- Preserve existing functionality unless a change above explicitly replaces it.
+- Keep design/UI consistent with current RoamBites branding.
+- Keep everything responsive and mobile-friendly.
+- Prioritize clarity, ease of use, and practical workflows.
+
+AFTER IMPLEMENTING, PROVIDE
+1. Summary of all additions and changes made
+2. Any database/schema changes
+3. Any new API endpoints
+4. Any new admin controls
+5. Any assumptions or implementation notes
