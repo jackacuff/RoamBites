@@ -58,20 +58,15 @@ function ParkCard({ park }: { park: Park }) {
                 {park.city}
               </p>
             </div>
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-              {park.liveTrucksCount > 0 && (
+            <div className="shrink-0">
+              {park.liveTrucksCount > 0 ? (
                 <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  {park.liveTrucksCount} live
-                </span>
-              )}
-              {park.openSpots > 0 ? (
-                <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                  {park.openSpots} open
+                  {park.liveTrucksCount} live now
                 </span>
               ) : (
                 <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-                  Full
+                  No trucks now
                 </span>
               )}
             </div>
@@ -86,10 +81,7 @@ function ParkCard({ park }: { park: Park }) {
               ))}
             </div>
           )}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-            <span className="text-xs text-muted-foreground">
-              {park.maxTrucks ? `Up to ${park.maxTrucks} trucks` : "Open capacity"}
-            </span>
+          <div className="flex items-center justify-end mt-3 pt-3 border-t border-border">
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </div>
@@ -137,18 +129,21 @@ function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | n
       const bounds: [number, number][] = [];
       withCoords.forEach((park) => {
         const isSelected = park.id === selectedId;
+        const isLive = park.liveTrucksCount > 0;
+        const color = isSelected ? "#16a34a" : isLive ? "#16a34a" : "#f97316";
+        const size = isSelected ? 22 : 16;
         const icon = L.default.divIcon({
           className: "",
           html: `<div style="
-            width:${isSelected ? 22 : 16}px;
-            height:${isSelected ? 22 : 16}px;
+            width:${size}px;
+            height:${size}px;
             border-radius:50%;
-            background:${isSelected ? "#16a34a" : "#f97316"};
+            background:${color};
             border:2px solid white;
             box-shadow:0 2px 6px rgba(0,0,0,0.3);
           "></div>`,
-          iconSize: [isSelected ? 22 : 16, isSelected ? 22 : 16],
-          iconAnchor: [isSelected ? 11 : 8, isSelected ? 11 : 8],
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size / 2],
         });
         const marker = L.default.marker([park.latitude!, park.longitude!], { icon })
           .addTo(leafletMapRef.current!)
@@ -156,8 +151,10 @@ function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | n
             <div style="font-family:sans-serif;min-width:160px">
               <strong style="font-size:13px">${park.name}</strong>
               <div style="color:#666;font-size:11px;margin-top:2px">${park.city}</div>
-              ${park.liveTrucksCount > 0 ? `<div style="color:#16a34a;font-size:11px;margin-top:4px;font-weight:600">🟢 ${park.liveTrucksCount} truck${park.liveTrucksCount !== 1 ? "s" : ""} here now</div>` : ""}
-              ${park.openSpots > 0 ? `<div style="color:#f97316;font-size:11px;margin-top:2px;font-weight:600">${park.openSpots} spot${park.openSpots !== 1 ? "s" : ""} open</div>` : ""}
+              ${park.liveTrucksCount > 0
+                ? `<div style="color:#16a34a;font-size:11px;margin-top:4px;font-weight:600">🟢 ${park.liveTrucksCount} truck${park.liveTrucksCount !== 1 ? "s" : ""} here now</div>`
+                : `<div style="color:#999;font-size:11px;margin-top:4px">No trucks right now</div>`
+              }
               <a href="/parks/${park.id}" style="display:block;margin-top:8px;font-size:11px;color:#f97316;font-weight:600">View Park →</a>
             </div>
           `);
@@ -218,13 +215,7 @@ export default function Parks() {
           <div className="max-w-2xl">
             <h1 className="text-4xl font-display font-bold text-foreground">Truck Parks</h1>
             <p className="mt-3 text-lg text-muted-foreground">
-              Permanent spots welcoming food trucks. Browse open vacancies and find your next home base.
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Are you a lot owner?{" "}
-              <Link href="/signup" className="text-primary font-semibold hover:underline">
-                Register as a Truck Park Host →
-              </Link>
+              Discover dedicated food truck destinations near you — with live updates when trucks are serving.
             </p>
           </div>
         </div>
@@ -280,16 +271,9 @@ export default function Parks() {
             <h3 className="text-lg font-semibold text-foreground">No parks found</h3>
             <p className="text-muted-foreground mt-1">
               {parks.length === 0
-                ? "No truck parks have been listed yet. Be the first!"
+                ? "No truck parks have been listed yet."
                 : "Try adjusting your search or filters."}
             </p>
-            {parks.length === 0 && (
-              <Link href="/signup">
-                <button className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
-                  Register Your Park
-                </button>
-              </Link>
-            )}
           </div>
         ) : view === "list" ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -312,16 +296,15 @@ export default function Parks() {
                       <p className="font-semibold text-sm text-foreground">{park.name}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{park.city}</p>
                     </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      {park.liveTrucksCount > 0 && (
+                    <div className="shrink-0">
+                      {park.liveTrucksCount > 0 ? (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                           {park.liveTrucksCount} live
                         </span>
-                      )}
-                      {park.openSpots > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                          {park.openSpots} open
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs">
+                          No trucks now
                         </span>
                       )}
                     </div>
