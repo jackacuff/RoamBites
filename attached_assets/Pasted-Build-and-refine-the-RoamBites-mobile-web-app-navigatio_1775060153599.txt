@@ -1,0 +1,173 @@
+Build and refine the RoamBites mobile web app navigation so that each user role has a clearly different, role-specific slide-out menu. The current menus are too generic and feel like simple navigation. I want them to feel like role-based operating systems with the highest-value actions surfaced first.
+
+Overall goals:
+- Remove generic “Home” from all slide-out menus unless there is a very strong reason to keep it.
+- Group menu items by purpose with section headers.
+- Add icons for each menu item.
+- Prioritize actions that help each role accomplish their main objective quickly.
+- Add a small “Today” or “Now” summary block near the top of the menu when relevant.
+- Make the app feel more dynamic with badges, counts, and status indicators where possible.
+- Preserve a clean modern mobile-first design consistent with the current RoamBites look and feel.
+- Keep the UI lightweight and uncluttered.
+- Make sure each role feels like a different app experience, not just the same menu with one or two renamed items.
+- Keep role switching and impersonation support intact.
+- Make the menu component modular and role-driven so future role changes are easy to manage from a single config object.
+
+Global menu improvement requirements:
+- Create a reusable slide-out menu component that renders based on the current user role.
+- Use a shared structure but role-specific content.
+- Add visual grouping with section titles such as Today, Operations, Growth, Explore, Performance, Account, etc. Only use the sections that make sense for each role.
+- Add support for badges like “2 new”, “3 pending”, “6 open”, etc.
+- Add support for a featured primary action near the top for roles where that makes sense.
+- Make sure the selected menu item is visually clear.
+- Improve spacing and scannability.
+- Keep the user identity block, but make it richer where appropriate with secondary metadata like rating, city, event count, park capacity, truck name, or other relevant details.
+- Maintain responsive behavior and make sure the menu looks polished on iPhone Safari.
+- Do not overcomplicate the design. Clean and premium is the goal.
+
+Role-specific requirements:
+
+1. Customer menu
+Customer mindset:
+- They open the app to find food right now.
+- This role should feel like a discovery app.
+
+Customer menu priorities:
+- Find Food Near Me
+- Events Today or Events Near Me
+- Food Truck Parks
+- Favorites or Saved Trucks
+- Profile
+
+Customer improvements:
+- Rename “Browse Trucks” to “Find Food” or “Find Food Near Me”.
+- Rename “Events” to “Events Near Me” or “Events Today”.
+- Rename “Truck Parks” to “Food Truck Parks”.
+- Rename “My Favorites” to “Saved Trucks” or “Favorites”.
+- Add a Now summary block such as:
+  - 12 trucks open nearby
+  - 2 events today
+  - 1 truck park open now
+- Add location context if available.
+- Consider adding a Trending or Popular item if it fits naturally.
+
+2. Vendor menu
+Vendor mindset:
+- They open the app to make money, manage availability, and monitor business activity.
+- This role should feel like a business tool.
+
+Vendor menu priorities:
+- Find Gigs
+- Manage My Business
+- Vendor Dashboard
+- Availability
+- Events
+- Truck Parks
+- Profile
+- Plans and Billing
+
+Vendor improvements:
+- Rename “My Truck” to “My Business” if that better reflects the actual feature set.
+- Rename “Spot Marketplace” to “Find Gigs”.
+- Consider renaming “Browse Trucks” to “Explore Vendors” only if needed, otherwise remove if not useful.
+- Add a Today summary block such as:
+  - 3 events near you
+  - 2 booking requests
+  - 1 unpaid invoice
+- Add a primary action like “Find Gigs” near the top.
+- Add badges for requests, new opportunities, or pending actions.
+- Make the vendor identity area feel more real, for example:
+  - vendor name
+  - truck name
+  - city
+  - rating
+- Add support for an “Available for Booking” status if the product already has or plans to have that feature.
+
+3. Event Organizer menu
+Organizer mindset:
+- They open the app to create, fill, and run events.
+- This role should feel like an event operations tool.
+
+Organizer menu priorities:
+- Manage Events
+- Create Event
+- Fill My Event
+- Find Vendors
+- Event Dashboard
+- Profile
+- Plans and Billing
+
+Organizer improvements:
+- Rename “Browse Trucks” to “Find Vendors”.
+- Rename “My Events” to “Manage Events”.
+- Rename “Organizer Dashboard” to “Event Dashboard”.
+- Add a primary CTA near the top such as “Create Event” or “Fill My Event”.
+- Add a Today summary block such as:
+  - 1 event today
+  - 2 vendors needed
+  - 1 new vendor message
+- Add organizer identity metadata if available such as:
+  - organizer name
+  - city
+  - events hosted
+  - rating
+- “Truck Parks” can remain accessible, but it should not be a primary item unless there is clear organizer value.
+
+4. Park Host menu
+Park host mindset:
+- They manage a location, fill spots, manage vendor activity, and track park performance.
+- This role should feel like a location operations dashboard.
+
+Park host menu priorities:
+- Manage Park
+- Fill Open Spots
+- Manage Vendors
+- Park Performance
+- Schedule or Availability
+- Find Vendors
+- Profile
+
+Park host improvements:
+- Rename “My Park” to “Manage Park”.
+- Rename “Park Dashboard” to “Park Performance”.
+- Rename “Browse Trucks” to “Find Vendors”.
+- Add a strong CTA like “Fill Open Spots”.
+- Add a Today summary block such as:
+  - 6 of 10 spots filled
+  - 3 vendor requests pending
+  - 2 trucks arriving today
+- Add richer identity info where available:
+  - park name
+  - city
+  - spot count
+  - rating
+- If Nearby Events is useful, include it in a lower-priority Explore section.
+
+Implementation guidance:
+- Build this with a role-to-menu-config architecture.
+- Each role should define:
+  - primary CTA
+  - summary block items
+  - sections
+  - menu items
+  - icons
+  - optional badges
+  - identity metadata fields
+- Keep the component easy to maintain and easy to expand later.
+- Avoid hardcoding separate menu components for each role if possible.
+- Make it easy to plug in live counts later even if mocked for now.
+- If real data is not available yet, create a clean fallback state so the menu still looks intentional.
+- Ensure the visual hierarchy is much stronger than it is now.
+- Keep the existing RoamBites branding but elevate the product feel.
+- Make the menu feel polished enough for a production SaaS marketplace app.
+
+Please do the following:
+1. Refactor the current role-based slide-out menu system.
+2. Implement the improved information architecture for all four roles.
+3. Improve naming, grouping, and prioritization of actions.
+4. Add icons, summary cards, badges, and a primary action area where appropriate.
+5. Make the code modular and clean.
+6. Preserve existing functionality and routing.
+7. Use realistic placeholder counts and metadata where needed.
+8. Keep the design mobile-first and visually cohesive with the existing app.
+9. After implementation, summarize exactly what changed for each role and where I can edit the config later.
