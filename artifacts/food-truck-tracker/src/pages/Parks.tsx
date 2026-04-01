@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/Layout";
-import { MapPin, Wifi, Zap, Droplets, Users, Search, Map, List, ExternalLink, ChevronRight } from "lucide-react";
+import { MapPin, Wifi, Zap, Droplets, Users, Search, Map, List, ChevronRight } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 
 interface Park {
@@ -18,6 +18,7 @@ interface Park {
   amenities: string[];
   maxTrucks: number | null;
   openSpots: number;
+  liveTrucksCount: number;
 }
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -57,15 +58,23 @@ function ParkCard({ park }: { park: Park }) {
                 {park.city}
               </p>
             </div>
-            {park.openSpots > 0 ? (
-              <span className="shrink-0 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                {park.openSpots} open
-              </span>
-            ) : (
-              <span className="shrink-0 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-                Full
-              </span>
-            )}
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              {park.liveTrucksCount > 0 && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  {park.liveTrucksCount} live
+                </span>
+              )}
+              {park.openSpots > 0 ? (
+                <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                  {park.openSpots} open
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                  Full
+                </span>
+              )}
+            </div>
           </div>
           {park.description && (
             <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{park.description}</p>
@@ -147,7 +156,8 @@ function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | n
             <div style="font-family:sans-serif;min-width:160px">
               <strong style="font-size:13px">${park.name}</strong>
               <div style="color:#666;font-size:11px;margin-top:2px">${park.city}</div>
-              ${park.openSpots > 0 ? `<div style="color:#16a34a;font-size:11px;margin-top:4px;font-weight:600">${park.openSpots} spot${park.openSpots !== 1 ? "s" : ""} open</div>` : ""}
+              ${park.liveTrucksCount > 0 ? `<div style="color:#16a34a;font-size:11px;margin-top:4px;font-weight:600">🟢 ${park.liveTrucksCount} truck${park.liveTrucksCount !== 1 ? "s" : ""} here now</div>` : ""}
+              ${park.openSpots > 0 ? `<div style="color:#f97316;font-size:11px;margin-top:2px;font-weight:600">${park.openSpots} spot${park.openSpots !== 1 ? "s" : ""} open</div>` : ""}
               <a href="/parks/${park.id}" style="display:block;margin-top:8px;font-size:11px;color:#f97316;font-weight:600">View Park →</a>
             </div>
           `);
@@ -302,11 +312,19 @@ export default function Parks() {
                       <p className="font-semibold text-sm text-foreground">{park.name}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{park.city}</p>
                     </div>
-                    {park.openSpots > 0 ? (
-                      <span className="shrink-0 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                        {park.openSpots} open
-                      </span>
-                    ) : null}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {park.liveTrucksCount > 0 && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                          {park.liveTrucksCount} live
+                        </span>
+                      )}
+                      {park.openSpots > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                          {park.openSpots} open
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Link href={`/parks/${park.id}`} onClick={(e) => e.stopPropagation()}>
                     <span className="text-xs text-primary font-medium mt-2 inline-block hover:underline">View details →</span>
