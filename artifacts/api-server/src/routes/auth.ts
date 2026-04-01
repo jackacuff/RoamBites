@@ -142,4 +142,20 @@ router.put("/auth/profile", requireAuth, async (req, res): Promise<void> => {
   });
 });
 
+router.post("/auth/upgrade-to-organizer", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).user.id;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  if (user.role !== "customer") { res.status(400).json({ error: "Only customer accounts can upgrade to organizer." }); return; }
+
+  const [updated] = await db.update(usersTable).set({ role: "organizer" }).where(eq(usersTable.id, userId)).returning();
+  res.json({
+    id: updated.id,
+    name: updated.name,
+    email: updated.email,
+    role: updated.role,
+    isActive: updated.isActive,
+  });
+});
+
 export default router;

@@ -4,32 +4,122 @@ import { useListEvents } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import EventCard from "@/components/EventCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Calendar, Zap, MapPin, Users, ChevronRight, Share2, Check } from "lucide-react";
+import { Calendar, Zap, MapPin, Users, ChevronRight, Share2, Check, Sparkles, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
+import { getApiUrl, authHeaders } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Events() {
   const [upcoming, setUpcoming] = useState(true);
   const { data: events, isLoading } = useListEvents({ upcoming: upcoming ? true : undefined });
   const [location] = useLocation();
+  const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [upgradeModal, setUpgradeModal] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
+
+  async function handleUpgrade() {
+    setUpgrading(true);
+    try {
+      const res = await fetch(getApiUrl("/api/auth/upgrade-to-organizer"), {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upgrade failed");
+      queryClient.invalidateQueries();
+      toast({ title: "You're now an Event Organizer!", description: "Redirecting to your dashboard…" });
+      setUpgradeModal(false);
+      setTimeout(() => window.location.href = "/organizer", 1200);
+    } catch (err: any) {
+      toast({ title: "Upgrade failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUpgrading(false);
+    }
+  }
+
+  const isOrganizer = user?.role === "organizer";
+  const canHost = !isAuthenticated || user?.role === "customer";
+  const showHostCTA = !isOrganizer;
 
   const featuredEvents = events?.filter((e: any) => e.isFeatured) ?? [];
   const regularEvents  = events?.filter((e: any) => !e.isFeatured) ?? [];
 
   return (
     <Layout>
+      {/* Upgrade Modal */}
+      {upgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setUpgradeModal(false)}>
+          <div className="bg-card border border-border rounded-3xl shadow-2xl max-w-md w-full p-8" onClick={e => e.stopPropagation()}>
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-7 h-7 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground">Host an Event</h2>
+              <p className="text-muted-foreground mt-2 text-sm">Upgrade your account to start organizing food truck events — it's free.</p>
+            </div>
+            <ul className="space-y-2.5 mb-7">
+              {["Create events and fill spots with the right trucks", "Access the food truck marketplace", "Collect spot fees via Stripe Connect", "Manage invites, applications, and your lineup", "Event pages shared across RoamBites"].map((pt, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
+                  <Check className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                  {pt}
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={handleUpgrade}
+              disabled={upgrading}
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2 shadow-md shadow-primary/20"
+            >
+              {upgrading ? <><Loader2 className="w-4 h-4 animate-spin" /> Upgrading…</> : "Upgrade my account — it's free"}
+            </button>
+            <button onClick={() => setUpgradeModal(false)} className="w-full mt-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <div className="relative bg-gradient-to-br from-primary/10 via-background to-secondary/5 border-b border-border/50 pt-12 pb-10 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-2 text-primary font-semibold text-sm mb-3">
-            <Calendar className="w-4 h-4" />
-            <span>Central Oklahoma Food Truck Events</span>
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+          <div>
+            <div className="flex items-center gap-2 text-primary font-semibold text-sm mb-3">
+              <Calendar className="w-4 h-4" />
+              <span>Central Oklahoma Food Truck Events</span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-display font-extrabold text-foreground mb-3 tracking-tight">
+              Events & Festivals
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-xl">
+              Community gatherings, food truck festivals, and street food markets across the region.
+            </p>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-display font-extrabold text-foreground mb-3 tracking-tight">
-            Events & Festivals
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-xl">
-            Community gatherings, food truck festivals, and street food markets across the region.
-          </p>
+          {showHostCTA && (
+            isOrganizer ? (
+              <Link href="/organizer/events/new">
+                <button className="shrink-0 flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-lg hover:opacity-90 transition-opacity">
+                  <Calendar className="w-4 h-4" /> Create Event
+                </button>
+              </Link>
+            ) : isAuthenticated && user?.role === "customer" ? (
+              <button
+                onClick={() => setUpgradeModal(true)}
+                className="shrink-0 flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-lg hover:opacity-90 transition-opacity"
+              >
+                <Sparkles className="w-4 h-4" /> Host an Event
+              </button>
+            ) : !isAuthenticated ? (
+              <Link href="/signup?role=organizer">
+                <button className="shrink-0 flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-lg hover:opacity-90 transition-opacity">
+                  <Sparkles className="w-4 h-4" /> Host an Event
+                </button>
+              </Link>
+            ) : null
+          )}
         </div>
       </div>
 

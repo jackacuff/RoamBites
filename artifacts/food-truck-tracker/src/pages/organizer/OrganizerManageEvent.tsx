@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Trash2, Users, Calendar, MapPin, Globe, Lock, Ticket, DollarSign, CheckCircle, XCircle, Clock, Loader2, Zap } from "lucide-react";
+import { Plus, Trash2, Users, Calendar, MapPin, Globe, Lock, Ticket, DollarSign, CheckCircle, XCircle, Clock, Loader2, Zap, Camera, Star, X, ImageIcon } from "lucide-react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 
 interface EventSpot {
@@ -62,6 +62,22 @@ export default function OrganizerManageEvent() {
     vendorRules: "",
     isInstantBook: false,
   });
+
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState<string>("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [savingPhotos, setSavingPhotos] = useState(false);
+
+  useEffect(() => {
+    if (!event) return;
+    const raw = (event as any).photoUrls;
+    if (raw) {
+      try { setPhotos(JSON.parse(raw)); } catch {
+        setPhotos(raw.split(",").map((s: string) => s.trim()).filter(Boolean));
+      }
+    }
+    setCoverPhotoUrl((event as any).thumbnailUrl || "");
+  }, [event?.id]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: [`/api/events/${eventId}`] });
 
@@ -154,6 +170,49 @@ export default function OrganizerManageEvent() {
     await fetch(getApiUrl(`/api/events/${eventId}/spots/${spotId}`), { method: "DELETE", headers: authHeaders() });
     toast({ title: "Spot deleted" });
     loadSpots();
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(getApiUrl("/api/storage/upload"), {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      const url = getApiUrl(`/api/storage/objects/${data.objectKey}`);
+      setPhotos(prev => [...prev, url]);
+      if (!coverPhotoUrl) setCoverPhotoUrl(url);
+      toast({ title: "Photo uploaded!" });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
+  const savePhotos = async () => {
+    setSavingPhotos(true);
+    try {
+      await updateMutation.mutateAsync({
+        id: eventId,
+        data: {
+          photoUrls: JSON.stringify(photos),
+          thumbnailUrl: coverPhotoUrl || null,
+        } as any,
+      });
+      toast({ title: "Photos saved!" });
+      invalidate();
+    } catch {
+      toast({ title: "Error saving photos", variant: "destructive" });
+    } finally { setSavingPhotos(false); }
   };
 
   if (eventLoading) return <Layout><LoadingSpinner /></Layout>;
@@ -524,6 +583,97 @@ export default function OrganizerManageEvent() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Photos Section */}
+      <div className="max-w-4xl mx-auto px-4 pb-8">
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm mt-8">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Event Photos</h2>
+            {photos.length > 0 && (
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{photos.length}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {photos.length > 0 && (
+              <button
+                onClick={savePhotos}
+                disabled={savingPhotos}
+                className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {savingPhotos && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Save Photos
+              </button>
+            )}
+            <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-sm font-medium hover:bg-accent transition-colors">
+              {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+              {uploadingPhoto ? "Uploading…" : "Upload Photo"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+                disabled={uploadingPhoto}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="p-6">
+          {photos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-border rounded-xl">
+              <Camera className="w-10 h-10 text-muted-foreground opacity-30 mb-3" />
+              <p className="font-medium text-foreground text-sm">No photos yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Upload photos to showcase your event to visitors</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground mb-4">Click ⭐ to set the cover photo shown on event cards. Click ✕ to remove a photo.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {photos.map((url, i) => {
+                  const isCover = url === coverPhotoUrl;
+                  return (
+                    <div key={i} className={`relative group rounded-xl overflow-hidden border-2 transition-all ${isCover ? "border-primary shadow-md" : "border-border"}`}>
+                      <img
+                        src={url}
+                        alt={`Event photo ${i + 1}`}
+                        className="w-full aspect-video object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.3"; }}
+                      />
+                      {isCover && (
+                        <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold">
+                          <Star className="w-3 h-3 fill-current" /> Cover
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                        <button
+                          onClick={() => setCoverPhotoUrl(isCover ? "" : url)}
+                          title={isCover ? "Remove cover" : "Set as cover"}
+                          className="w-8 h-8 rounded-full bg-white/90 hover:bg-white text-foreground flex items-center justify-center transition-colors"
+                        >
+                          <Star className={`w-4 h-4 ${isCover ? "fill-amber-400 text-amber-400" : ""}`} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPhotos(prev => prev.filter((_, idx) => idx !== i));
+                            if (isCover) setCoverPhotoUrl("");
+                          }}
+                          className="w-8 h-8 rounded-full bg-white/90 hover:bg-destructive hover:text-destructive-foreground text-foreground flex items-center justify-center transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">Remember to click "Save Photos" to apply your changes.</p>
+            </>
+          )}
+        </div>
+      </div>
       </div>
     </Layout>
   );

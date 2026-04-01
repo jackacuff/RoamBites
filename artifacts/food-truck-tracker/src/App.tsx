@@ -40,6 +40,7 @@ import Profile from "./pages/Profile";
 import Parks from "./pages/Parks";
 import ParkDetail from "./pages/ParkDetail";
 import ParkHostDashboard from "./pages/park-host/ParkHostDashboard";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/superadmin" component={SuperAdminDashboard} />
       <Route path="/favorites" component={Favorites} />
       <Route path="/profile" component={Profile} />
+      <Route path="/pricing" component={Pricing} />
       <Route component={NotFound} />
     </Switch>
   );

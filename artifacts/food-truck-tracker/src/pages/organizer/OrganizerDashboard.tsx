@@ -5,7 +5,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
 import { Link, useLocation } from "wouter";
 import { format } from "date-fns";
-import { Plus, Calendar, MapPin, Users, Settings, Search, CreditCard, CheckCircle, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Calendar, MapPin, Users, Settings, Search, CreditCard, CheckCircle, AlertCircle, ExternalLink, Loader2, Star } from "lucide-react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +80,24 @@ export default function OrganizerDashboard() {
               </button>
             </Link>
           </div>
+        </div>
+
+        {/* Plan card */}
+        <div className="mb-6 bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20 rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Star className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-foreground">Organizer Plan: Free</h2>
+              <p className="text-sm text-muted-foreground">Create events, fill spots, and collect payments via Stripe Connect</p>
+            </div>
+          </div>
+          <Link href="/pricing">
+            <button className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+              View plans <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </Link>
         </div>
 
         {/* Stripe Connect Payments Card */}

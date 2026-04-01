@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { UtensilsCrossed, Menu, X, LogOut, User, Heart, ChevronDown, Crown, AlertTriangle, Inbox } from "lucide-react";
+import { UtensilsCrossed, Menu, X, LogOut, User, Heart, ChevronDown, Crown, AlertTriangle, Inbox, Truck, CreditCard } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
@@ -100,7 +100,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { name: "Events", path: "/events" },
     { name: "Truck Parks", path: "/parks" },
     ...(user?.role === "vendor" ? [
-      { name: "Dashboard", path: "/vendor/dashboard" },
       { name: "My Truck", path: "/vendor/truck" },
       { name: "Spot Marketplace", path: "/vendor/event-spots" },
     ] : []),
@@ -203,6 +202,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                             <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
                           </div>
                           <div className="py-1">
+                            {user?.role === "vendor" && (
+                              <Link
+                                href="/vendor/truck"
+                                onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-primary/5 transition-colors border-b border-border/40"
+                              >
+                                <Truck className="w-4 h-4 text-primary" />
+                                My Truck
+                              </Link>
+                            )}
                             <Link
                               href="/profile"
                               onClick={() => setProfileOpen(false)}
@@ -233,6 +242,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                                   <UtensilsCrossed className="w-4 h-4 text-muted-foreground" />
                                 )}
                                 {dashboardLink.label}
+                              </Link>
+                            )}
+                            {(user?.role === "vendor" || user?.role === "organizer") && (
+                              <Link
+                                href="/pricing"
+                                onClick={() => setProfileOpen(false)}
+                                className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                              >
+                                <CreditCard className="w-4 h-4 text-muted-foreground" />
+                                Plans & Billing
                               </Link>
                             )}
                             {user?.role === "superadmin" && (
@@ -347,6 +366,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         className={`block px-3 py-3 rounded-xl text-base font-medium hover:bg-primary/10 ${user?.role === "superadmin" ? "text-purple-700" : "text-primary"}`}
                       >
                         {dashboardLink.label}
+                      </Link>
+                    )}
+                    {(user?.role === "vendor" || user?.role === "organizer") && (
+                      <Link
+                        href="/pricing"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-3 rounded-xl text-base font-medium text-foreground hover:bg-muted"
+                      >
+                        Plans & Billing
                       </Link>
                     )}
                     {user?.role === "superadmin" && (

@@ -7,8 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Palette, Sparkles, Copy, Check, Printer, Instagram, Twitter,
   MapPin, Star, Calendar, Zap, Loader2, Download, RefreshCw, Save, Lock,
+  Share2, ExternalLink, ChevronRight, Facebook,
 } from "lucide-react";
-
 
 interface BrandData {
   primaryColor: string;
@@ -26,10 +26,66 @@ interface BrandData {
 type TemplateType = "social" | "open-now" | "special" | "event";
 
 const TEMPLATES: { id: TemplateType; label: string; icon: React.ReactNode; description: string }[] = [
-  { id: "social", label: "Social Post", icon: <Instagram className="w-4 h-4" />, description: "Instagram & Facebook ready" },
+  { id: "social", label: "Brand Card", icon: <Instagram className="w-4 h-4" />, description: "Instagram & Facebook ready" },
   { id: "open-now", label: "Open Now", icon: <Zap className="w-4 h-4" />, description: "Announce you're serving" },
   { id: "special", label: "Daily Special", icon: <Star className="w-4 h-4" />, description: "Highlight today's special" },
   { id: "event", label: "Event Night", icon: <Calendar className="w-4 h-4" />, description: "Event attendance card" },
+];
+
+interface Platform {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  shareUrl: (caption: string, url: string) => string | null;
+  appDeepLink: string | null;
+  tip: string;
+}
+
+const PLATFORMS: Platform[] = [
+  {
+    id: "instagram",
+    name: "Instagram",
+    icon: <Instagram className="w-5 h-5" />,
+    color: "#E1306C",
+    shareUrl: () => null,
+    appDeepLink: "instagram://",
+    tip: "Caption is copied — paste it in Instagram after downloading your image.",
+  },
+  {
+    id: "facebook",
+    name: "Facebook",
+    icon: <Facebook className="w-5 h-5" />,
+    color: "#1877F2",
+    shareUrl: (caption, url) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(caption)}`,
+    appDeepLink: null,
+    tip: "Opens Facebook with your link and caption pre-filled.",
+  },
+  {
+    id: "tiktok",
+    name: "TikTok",
+    icon: <span className="text-sm font-black leading-none">TT</span>,
+    color: "#010101",
+    shareUrl: () => null,
+    appDeepLink: "tiktok://",
+    tip: "Caption is copied — paste it when creating your TikTok video.",
+  },
+  {
+    id: "twitter",
+    name: "X (Twitter)",
+    icon: <Twitter className="w-5 h-5" />,
+    color: "#000000",
+    shareUrl: (caption, url) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption.slice(0, 240))}&url=${encodeURIComponent(url)}`,
+    appDeepLink: null,
+    tip: "Opens X with your caption pre-filled. Ready to post!",
+  },
+];
+
+const QUICK_ACTIONS = [
+  { id: "open-now" as TemplateType, label: "🔛 Open Now", prompt: "We're open and serving!" },
+  { id: "special" as TemplateType, label: "⭐ Today's Special", prompt: "Today's special deal" },
+  { id: "event" as TemplateType, label: "🎪 Event Appearance", prompt: "We're at an event tonight!" },
+  { id: "social" as TemplateType, label: "📣 Brand Post", prompt: "General brand awareness post" },
 ];
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -41,14 +97,11 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 function isLightColor(hex: string): boolean {
   const { r, g, b } = hexToRgb(hex);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
 }
 
 function SocialTemplate({ brand }: { brand: BrandData }) {
   const textOnPrimary = isLightColor(brand.primaryColor) ? "#1a1a1a" : "#ffffff";
-  const textOnSecondary = isLightColor(brand.secondaryColor) ? "#1a1a1a" : "#ffffff";
-  const { r: r1, g: g1, b: b1 } = hexToRgb(brand.primaryColor);
   const { r: r2, g: g2, b: b2 } = hexToRgb(brand.secondaryColor);
   return (
     <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-2xl flex flex-col" style={{ background: `linear-gradient(135deg, ${brand.primaryColor} 0%, ${brand.secondaryColor} 100%)` }}>
@@ -144,7 +197,6 @@ function SpecialTemplate({ brand }: { brand: BrandData }) {
 
 function EventTemplate({ brand }: { brand: BrandData }) {
   const textOnPrimary = isLightColor(brand.primaryColor) ? "#1a1a1a" : "#ffffff";
-  const textOnSecondary = isLightColor(brand.secondaryColor) ? "#1a1a1a" : "#ffffff";
   return (
     <div className="w-full rounded-2xl overflow-hidden shadow-2xl flex flex-col" style={{ background: brand.secondaryColor }}>
       <div className="relative px-8 pt-8 pb-6" style={{ background: `linear-gradient(135deg, ${brand.primaryColor}, ${brand.secondaryColor})` }}>
@@ -166,7 +218,7 @@ function EventTemplate({ brand }: { brand: BrandData }) {
         {(brand.instagramHandle || brand.twitterHandle) && (
           <div className="mt-4 flex items-center gap-4 text-xs" style={{ color: isLightColor(brand.secondaryColor) ? "#6b7280" : "#9ca3af" }}>
             {brand.instagramHandle && <span>📸 @{brand.instagramHandle}</span>}
-            {brand.twitterHandle && <span>🐦 @{brand.twitterHandle}</span>}
+            {brand.twitterHandle && <span>𝕏 @{brand.twitterHandle}</span>}
           </div>
         )}
       </div>
@@ -197,6 +249,8 @@ export default function VendorMarketing() {
   const [copied, setCopied] = useState(false);
   const [localColors, setLocalColors] = useState({ primary: "#FF6B35", secondary: "#2C3E50" });
   const [localTagline, setLocalTagline] = useState("");
+  const [activePlatform, setActivePlatform] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -242,7 +296,9 @@ export default function VendorMarketing() {
     }
   }
 
-  async function generateCopy() {
+  async function generateCopy(templateId?: TemplateType) {
+    const tmpl = templateId ?? selectedTemplate;
+    if (templateId) setSelectedTemplate(templateId);
     setGeneratingCopy(true);
     setGeneratedCopy("");
     const token = localStorage.getItem("token");
@@ -250,7 +306,7 @@ export default function VendorMarketing() {
       const res = await fetch(getApiUrl(`/api/vendor/marketing/copy`), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ templateType: selectedTemplate }),
+        body: JSON.stringify({ templateType: tmpl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Generation failed");
@@ -262,11 +318,33 @@ export default function VendorMarketing() {
     }
   }
 
-  async function copyCopy() {
-    await navigator.clipboard.writeText(generatedCopy);
+  async function copyCaption() {
+    const text = generatedCopy || `${brand?.name} — ${brand?.tagline || brand?.cuisine || ""}\n\nFind us on RoamBites!`;
+    if (navigator.canShare && navigator.canShare({ text })) {
+      try { await navigator.share({ text }); return; } catch {}
+    }
+    await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Copied to clipboard!" });
+    toast({ title: "Caption copied!", description: "Paste it into your post." });
+  }
+
+  async function handlePlatformShare(platform: Platform) {
+    setShareLoading(platform.id);
+    const caption = generatedCopy || `${brand?.name} — ${brand?.tagline || brand?.cuisine || ""}\n\nFind us on RoamBites!`;
+    const url = window.location.origin;
+    const shareUrl = platform.shareUrl(caption, url);
+
+    if (!shareUrl) {
+      await navigator.clipboard.writeText(caption);
+      toast({ title: `Caption copied!`, description: platform.tip });
+      if (platform.appDeepLink) {
+        setTimeout(() => window.open(platform.appDeepLink!, "_blank"), 300);
+      }
+    } else {
+      window.open(shareUrl, "_blank", "width=600,height=500");
+    }
+    setShareLoading(null);
   }
 
   function printTemplate() {
@@ -316,17 +394,42 @@ export default function VendorMarketing() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary" />
+              <Share2 className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Marketing Studio</h1>
-              <p className="text-sm text-muted-foreground">Create on-brand materials for {brand.name}</p>
+              <h1 className="text-2xl font-bold text-foreground">Social Media Hub</h1>
+              <p className="text-sm text-muted-foreground">Create and share branded content for {brand.name}</p>
             </div>
           </div>
         </div>
 
+        {/* Quick Post Actions */}
+        <div className="mb-8 bg-card rounded-2xl border border-border p-5">
+          <h2 className="font-semibold text-foreground mb-1">Quick Post</h2>
+          <p className="text-xs text-muted-foreground mb-4">Pick a post type and we'll generate a branded image + caption instantly</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {QUICK_ACTIONS.map((qa) => (
+              <button
+                key={qa.id}
+                onClick={() => generateCopy(qa.id)}
+                disabled={generatingCopy}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border text-center transition-all hover:border-primary/50 hover:bg-primary/5 ${
+                  selectedTemplate === qa.id ? "border-primary bg-primary/5" : "border-border"
+                }`}
+              >
+                {generatingCopy && selectedTemplate === qa.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                ) : (
+                  <span className="text-xl">{qa.label.split(" ")[0]}</span>
+                )}
+                <span className="text-xs font-semibold text-foreground leading-tight">{qa.label.split(" ").slice(1).join(" ")}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Left panel: Brand Kit + Template Picker + AI Copy */}
+          {/* Left panel */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Brand Kit */}
@@ -339,70 +442,25 @@ export default function VendorMarketing() {
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Primary Color</label>
                   <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <input
-                        type="color"
-                        value={localColors.primary}
-                        onChange={(e) => setLocalColors((c) => ({ ...c, primary: e.target.value }))}
-                        className="w-10 h-10 rounded-lg cursor-pointer border border-border"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={localColors.primary}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setLocalColors((c) => ({ ...c, primary: v }));
-                        }}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background font-mono"
-                        placeholder="#FF6B35"
-                      />
-                    </div>
+                    <input type="color" value={localColors.primary} onChange={(e) => setLocalColors((c) => ({ ...c, primary: e.target.value }))} className="w-10 h-10 rounded-lg cursor-pointer border border-border" />
+                    <input type="text" value={localColors.primary} onChange={(e) => { const v = e.target.value; if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setLocalColors((c) => ({ ...c, primary: v })); }} className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-background font-mono" placeholder="#FF6B35" />
                     <div className="w-10 h-10 rounded-lg shadow-sm border border-border" style={{ background: localColors.primary }} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Secondary Color</label>
                   <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={localColors.secondary}
-                      onChange={(e) => setLocalColors((c) => ({ ...c, secondary: e.target.value }))}
-                      className="w-10 h-10 rounded-lg cursor-pointer border border-border"
-                    />
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={localColors.secondary}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setLocalColors((c) => ({ ...c, secondary: v }));
-                        }}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background font-mono"
-                        placeholder="#2C3E50"
-                      />
-                    </div>
+                    <input type="color" value={localColors.secondary} onChange={(e) => setLocalColors((c) => ({ ...c, secondary: e.target.value }))} className="w-10 h-10 rounded-lg cursor-pointer border border-border" />
+                    <input type="text" value={localColors.secondary} onChange={(e) => { const v = e.target.value; if (/^#[0-9A-Fa-f]{0,6}$/.test(v)) setLocalColors((c) => ({ ...c, secondary: v })); }} className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-background font-mono" placeholder="#2C3E50" />
                     <div className="w-10 h-10 rounded-lg shadow-sm border border-border" style={{ background: localColors.secondary }} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tagline</label>
-                  <input
-                    type="text"
-                    value={localTagline}
-                    onChange={(e) => setLocalTagline(e.target.value)}
-                    placeholder={`e.g., "The best ${brand.cuisine.toLowerCase()} in town"`}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background"
-                    maxLength={80}
-                  />
+                  <input type="text" value={localTagline} onChange={(e) => setLocalTagline(e.target.value)} placeholder={`e.g., "The best ${brand.cuisine.toLowerCase()} in town"`} className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background" maxLength={80} />
                   <p className="text-xs text-muted-foreground mt-1">{localTagline.length}/80</p>
                 </div>
-                <button
-                  onClick={saveBrand}
-                  disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
-                >
+                <button onClick={saveBrand} disabled={saving} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {saving ? "Saving..." : "Save Brand Kit"}
                 </button>
@@ -411,21 +469,15 @@ export default function VendorMarketing() {
 
             {/* Template Selector */}
             <div className="rounded-2xl border border-border bg-card p-5">
-              <h2 className="font-semibold text-foreground mb-3">Template Type</h2>
+              <h2 className="font-semibold text-foreground mb-3">Template</h2>
               <div className="grid grid-cols-2 gap-2">
                 {TEMPLATES.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => { setSelectedTemplate(t.id); setGeneratedCopy(""); }}
-                    className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all ${
-                      selectedTemplate === t.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/40 hover:bg-muted/50"
-                    }`}
+                    className={`flex flex-col items-start p-3 rounded-xl border text-left transition-all ${selectedTemplate === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40 hover:bg-muted/50"}`}
                   >
-                    <div className={`mb-1.5 ${selectedTemplate === t.id ? "text-primary" : "text-muted-foreground"}`}>
-                      {t.icon}
-                    </div>
+                    <div className={`mb-1.5 ${selectedTemplate === t.id ? "text-primary" : "text-muted-foreground"}`}>{t.icon}</div>
                     <p className={`text-xs font-semibold ${selectedTemplate === t.id ? "text-primary" : "text-foreground"}`}>{t.label}</p>
                     <p className="text-xs text-muted-foreground leading-tight mt-0.5">{t.description}</p>
                   </button>
@@ -438,81 +490,98 @@ export default function VendorMarketing() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  <h2 className="font-semibold text-foreground">AI Copy Generator</h2>
+                  <h2 className="font-semibold text-foreground">Caption Generator</h2>
                 </div>
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Pro</span>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Generate caption and hashtags for your selected template, matched to your brand voice.
-              </p>
-              <button
-                onClick={generateCopy}
-                disabled={generatingCopy}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 transition-colors disabled:opacity-50 mb-3"
-              >
-                {generatingCopy ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-                {generatingCopy ? "Generating..." : `Generate ${TEMPLATES.find((t) => t.id === selectedTemplate)?.label} Copy`}
+              <p className="text-xs text-muted-foreground mb-4">Auto-generate a caption + hashtags matched to your brand voice.</p>
+              <button onClick={() => generateCopy()} disabled={generatingCopy} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-primary text-primary text-sm font-semibold hover:bg-primary/5 disabled:opacity-50 mb-3">
+                {generatingCopy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {generatingCopy ? "Generating…" : `Generate ${TEMPLATES.find((t) => t.id === selectedTemplate)?.label} Caption`}
               </button>
               {generatedCopy && (
                 <div className="relative">
                   <textarea
                     value={generatedCopy}
                     onChange={(e) => setGeneratedCopy(e.target.value)}
-                    className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-muted/30 resize-none min-h-[140px] text-foreground leading-relaxed"
-                    placeholder="Your AI-generated copy will appear here…"
+                    className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-muted/30 resize-none min-h-[130px] text-foreground leading-relaxed pr-16"
                   />
-                  <button
-                    onClick={copyCopy}
-                    className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-background border border-border text-xs font-semibold text-foreground hover:bg-muted transition-colors"
-                  >
+                  <button onClick={copyCaption} className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-background border border-border text-xs font-semibold text-foreground hover:bg-muted">
                     {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                     {copied ? "Copied!" : "Copy"}
                   </button>
                 </div>
               )}
+              {!generatedCopy && (
+                <button onClick={copyCaption} className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted">
+                  <Copy className="w-4 h-4" />
+                  Copy basic caption
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Right panel: Template Preview */}
-          <div className="lg:col-span-3">
-            <div className="sticky top-24">
+          {/* Right panel: Preview + Share */}
+          <div className="lg:col-span-3 space-y-6">
+            <div className="sticky top-24 space-y-6">
+
+              {/* Card Preview */}
               <div className="rounded-2xl border border-border bg-card p-6">
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <h2 className="font-semibold text-foreground">Preview</h2>
+                    <h2 className="font-semibold text-foreground">Card Preview</h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {TEMPLATES.find((t) => t.id === selectedTemplate)?.label} — updates live as you edit
+                      {TEMPLATES.find((t) => t.id === selectedTemplate)?.label} — updates live
                     </p>
                   </div>
-                  <button
-                    onClick={printTemplate}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                  >
+                  <button onClick={printTemplate} className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm font-medium text-foreground hover:bg-muted transition-colors">
                     <Printer className="w-4 h-4" />
-                    Save / Print
+                    Download / Print
                   </button>
                 </div>
-
                 <div ref={printRef} className="max-w-md mx-auto">
                   {previewBrand && renderTemplate(selectedTemplate, previewBrand)}
                 </div>
+              </div>
 
-                {/* Usage tips */}
-                <div className="mt-6 rounded-xl bg-muted/50 p-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">How to use</p>
-                  <ul className="space-y-1.5 text-xs text-muted-foreground">
-                    <li className="flex items-start gap-2"><span className="text-primary font-bold mt-0.5">1.</span> Pick your brand colors and tagline in the Brand Kit panel</li>
-                    <li className="flex items-start gap-2"><span className="text-primary font-bold mt-0.5">2.</span> Choose a template type that fits your post</li>
-                    <li className="flex items-start gap-2"><span className="text-primary font-bold mt-0.5">3.</span> Generate AI copy for the perfect caption + hashtags</li>
-                    <li className="flex items-start gap-2"><span className="text-primary font-bold mt-0.5">4.</span> Click "Save / Print" to download your card as a PDF</li>
-                    <li className="flex items-start gap-2"><span className="text-primary font-bold mt-0.5">5.</span> Pair the card with the caption for a complete social post</li>
-                  </ul>
+              {/* Share to Platforms */}
+              <div className="rounded-2xl border border-border bg-card p-5">
+                <div className="flex items-center gap-2 mb-1">
+                  <Share2 className="w-4 h-4 text-primary" />
+                  <h2 className="font-semibold text-foreground">Share to Platforms</h2>
+                </div>
+                <p className="text-xs text-muted-foreground mb-5">
+                  Generate a caption above, then share your card to your favorite platform.
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {PLATFORMS.map((platform) => (
+                    <button
+                      key={platform.id}
+                      onClick={() => handlePlatformShare(platform)}
+                      disabled={shareLoading === platform.id}
+                      className="group flex items-center gap-3 p-3.5 rounded-xl border border-border hover:border-primary/40 hover:shadow-sm transition-all text-left"
+                    >
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform" style={{ background: platform.color }}>
+                        {shareLoading === platform.id ? <Loader2 className="w-4 h-4 animate-spin" /> : platform.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground">{platform.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {platform.shareUrl("", "") ? "Open & post" : "Copy + open"}
+                        </p>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground ml-auto shrink-0" />
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 p-3 bg-muted/40 rounded-xl text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">Tip: </span>
+                  Download your card first, then share it alongside your caption for the best-looking posts.
                 </div>
               </div>
+
             </div>
           </div>
         </div>
