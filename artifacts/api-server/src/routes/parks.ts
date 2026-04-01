@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, truckParksTable, parkVacanciesTable, usersTable } from "@workspace/db";
+import { db, truckParksTable, parkVacanciesTable, usersTable, trucksTable } from "@workspace/db";
 import { eq, and, desc, gte, isNull, or } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
 
@@ -44,9 +44,23 @@ router.get("/parks", async (req, res) => {
       vacancyCountByPark[v.parkId] = (vacancyCountByPark[v.parkId] ?? 0) + v.spotsAvailable;
     }
 
+    // Attach live truck count for each park
+    const liveTrucks = await db
+      .select({ id: trucksTable.id, currentParkId: trucksTable.currentParkId })
+      .from(trucksTable)
+      .where(and(eq(trucksTable.isLive, true), eq(trucksTable.isApproved, true)));
+
+    const liveTruckCountByPark: Record<number, number> = {};
+    for (const t of liveTrucks) {
+      if (t.currentParkId) {
+        liveTruckCountByPark[t.currentParkId] = (liveTruckCountByPark[t.currentParkId] ?? 0) + 1;
+      }
+    }
+
     const result = parks.map((p) => ({
       ...p,
       openSpots: vacancyCountByPark[p.id] ?? 0,
+      liveTrucksCount: liveTruckCountByPark[p.id] ?? 0,
     }));
 
     res.json(result);
@@ -79,7 +93,31 @@ router.get("/parks/:id", async (req, res) => {
       .where(and(eq(parkVacanciesTable.parkId, id), eq(parkVacanciesTable.isActive, true)))
       .orderBy(desc(parkVacanciesTable.createdAt));
 
-    res.json({ ...park, host: host ?? null, vacancies });
+    // Get trucks currently checked in at this park
+    const liveTrucks = await db
+      .select({
+        id: trucksTable.id,
+        name: trucksTable.name,
+        slug: trucksTable.slug,
+        cuisine: trucksTable.cuisine,
+        description: trucksTable.description,
+        logoUrl: trucksTable.logoUrl,
+        imageUrl: trucksTable.imageUrl,
+        isLive: trucksTable.isLive,
+        tagline: trucksTable.tagline,
+        currentLatitude: trucksTable.currentLatitude,
+        currentLongitude: trucksTable.currentLongitude,
+      })
+      .from(trucksTable)
+      .where(
+        and(
+          eq(trucksTable.currentParkId, id),
+          eq(trucksTable.isLive, true),
+          eq(trucksTable.isApproved, true)
+        )
+      );
+
+    res.json({ ...park, host: host ?? null, vacancies, liveTrucks });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch park" });
   }
@@ -142,7 +180,25 @@ router.get("/my-park", requireAuth, requireRole("park_host", "admin"), async (re
       .where(eq(parkVacanciesTable.parkId, park.id))
       .orderBy(desc(parkVacanciesTable.createdAt));
 
-    res.json({ ...park, vacancies });
+    // Get trucks currently checked in
+    const liveTrucks = await db
+      .select({
+        id: trucksTable.id,
+        name: trucksTable.name,
+        cuisine: trucksTable.cuisine,
+        logoUrl: trucksTable.logoUrl,
+        isLive: trucksTable.isLive,
+      })
+      .from(trucksTable)
+      .where(
+        and(
+          eq(trucksTable.currentParkId, park.id),
+          eq(trucksTable.isLive, true),
+          eq(trucksTable.isApproved, true)
+        )
+      );
+
+    res.json({ ...park, vacancies, liveTrucks });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch park" });
   }
@@ -186,6 +242,67 @@ router.put("/parks/:id", requireAuth, requireRole("park_host", "admin"), async (
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: "Failed to update park" });
+  }
+});
+
+// ── Vendor: check in to a park ────────────────────────────────────────────
+router.post("/trucks/:truckId/park-checkin", requireAuth, requireRole("vendor", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const truckId = parseInt(req.params.truckId);
+    if (isNaN(truckId)) return res.status(400).json({ error: "Invalid truck id" });
+
+    const { parkId } = req.body;
+    if (!parkId) return res.status(400).json({ error: "parkId is required" });
+
+    const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.id, truckId));
+    if (!truck) return res.status(404).json({ error: "Truck not found" });
+    if (user.role !== "admin" && truck.vendorUserId !== user.id) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const [park] = await db.select().from(truckParksTable).where(eq(truckParksTable.id, parseInt(parkId)));
+    if (!park) return res.status(404).json({ error: "Park not found" });
+
+    const [updated] = await db
+      .update(trucksTable)
+      .set({
+        currentParkId: park.id,
+        currentLatitude: park.latitude,
+        currentLongitude: park.longitude,
+        isLive: true,
+      })
+      .where(eq(trucksTable.id, truckId))
+      .returning();
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to check in" });
+  }
+});
+
+// ── Vendor: check out of park ─────────────────────────────────────────────
+router.post("/trucks/:truckId/park-checkout", requireAuth, requireRole("vendor", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const truckId = parseInt(req.params.truckId);
+    if (isNaN(truckId)) return res.status(400).json({ error: "Invalid truck id" });
+
+    const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.id, truckId));
+    if (!truck) return res.status(404).json({ error: "Truck not found" });
+    if (user.role !== "admin" && truck.vendorUserId !== user.id) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const [updated] = await db
+      .update(trucksTable)
+      .set({ currentParkId: null })
+      .where(eq(trucksTable.id, truckId))
+      .returning();
+
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to check out" });
   }
 });
 

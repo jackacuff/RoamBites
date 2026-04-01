@@ -134,6 +134,9 @@ export default function VendorDashboard() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [parks, setParks] = useState<{ id: number; name: string; city: string; openSpots: number }[]>([]);
+  const [selectedParkId, setSelectedParkId] = useState("");
+  const [parkCheckingIn, setParkCheckingIn] = useState(false);
 
   const { data: subscription } = useQuery<VendorSubscription | null>({
     queryKey: ["/api/vendor/subscription"],
@@ -207,6 +210,11 @@ export default function VendorDashboard() {
       .then(r => r.json())
       .then(d => setUnreadCount(d.count || 0))
       .catch(() => {});
+
+    fetch(getApiUrl("/api/parks"))
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setParks(data); })
+      .catch(() => {});
   }, []);
 
   const checkInMutation = useCheckInTruck();
@@ -242,6 +250,40 @@ export default function VendorDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleParkCheckIn = async () => {
+    if (!myTruck || !selectedParkId) return;
+    setParkCheckingIn(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/trucks/${myTruck.id}/park-checkin`), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ parkId: parseInt(selectedParkId) }),
+      });
+      if (!res.ok) throw new Error("Check-in failed");
+      const park = parks.find(p => p.id === parseInt(selectedParkId));
+      toast({ title: `Checked in at ${park?.name ?? "the park"}!`, description: "Customers can see you're live here." });
+      queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+    } catch {
+      toast({ title: "Check-in failed", variant: "destructive" });
+    } finally {
+      setParkCheckingIn(false);
+    }
+  };
+
+  const handleParkCheckOut = async () => {
+    if (!myTruck) return;
+    try {
+      await fetch(getApiUrl(`/api/trucks/${myTruck.id}/park-checkout`), {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      toast({ title: "Checked out of park" });
+      queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
+    } catch {
+      toast({ title: "Error checking out", variant: "destructive" });
     }
   };
 
@@ -387,6 +429,79 @@ export default function VendorDashboard() {
                 })()}
               </div>
             </div>
+
+            {/* Park Check-In Widget */}
+            {(() => {
+              const currentParkId = (myTruck as any).currentParkId;
+              const currentPark = currentParkId ? parks.find(p => p.id === currentParkId) : null;
+              const subStatus = subscription?.status;
+              const canGoLive = subStatus === "active" || (subStatus === "trialing" && (subscription?.trialDaysLeft ?? 0) >= 0);
+              if (!canGoLive) return null;
+
+              if (currentPark) {
+                return (
+                  <div className="mb-2 p-4 rounded-2xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
+                        <MapPin className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-green-800 dark:text-green-400 text-sm">Checked in at {currentPark.name}</p>
+                        <p className="text-xs text-green-700 dark:text-green-500">{currentPark.city} · Showing as live on the park page</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/parks/${currentPark.id}`}>
+                        <button className="px-3 py-1.5 rounded-xl border border-green-300 text-green-800 text-xs font-semibold hover:bg-green-100 transition-colors">
+                          View Park
+                        </button>
+                      </Link>
+                      <button
+                        onClick={handleParkCheckOut}
+                        className="px-3 py-1.5 rounded-xl bg-white border border-green-300 text-green-800 text-xs font-semibold hover:bg-green-50 transition-colors"
+                      >
+                        Leave Park
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (parks.length === 0) return null;
+
+              return (
+                <div className="mb-2 p-4 rounded-2xl border border-border bg-gradient-to-r from-primary/3 to-secondary/3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="font-semibold text-foreground text-sm">Check in at a Truck Park</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
+                    <select
+                      value={selectedParkId}
+                      onChange={(e) => setSelectedParkId(e.target.value)}
+                      className="flex-1 min-w-[180px] px-3 py-1.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">Select a park…</option>
+                      {parks.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} — {p.city}{p.openSpots > 0 ? ` (${p.openSpots} open)` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleParkCheckIn}
+                      disabled={!selectedParkId || parkCheckingIn}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 hover:opacity-90 transition-opacity"
+                    >
+                      {parkCheckingIn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
+                      Check In
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Live mini-map */}
             {myTruck.isLive && (myTruck as any).currentLatitude && (myTruck as any).currentLongitude && (

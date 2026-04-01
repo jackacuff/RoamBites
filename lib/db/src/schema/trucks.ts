@@ -28,6 +28,7 @@ export const trucksTable = pgTable("trucks", {
   youtubeUrl: text("youtube_url"),
   currentLatitude: real("current_latitude"),
   currentLongitude: real("current_longitude"),
+  currentParkId: integer("current_park_id"),
   primaryColor: text("primary_color"),
   secondaryColor: text("secondary_color"),
   tagline: text("tagline"),
