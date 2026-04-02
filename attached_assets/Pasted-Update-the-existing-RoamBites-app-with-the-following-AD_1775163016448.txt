@@ -1,0 +1,96 @@
+Update the existing RoamBites app with the following ADDITIONS and CHANGES only. Do NOT rebuild the full app and do NOT duplicate existing core functionality. Extend and refine the current app.
+
+1. Overhaul the vendor “Branding & Media” section into a much more valuable Pro-tier feature
+- The current Branding & Media section needs a major upgrade.
+- It should become a strong Social Media Control Center for food trucks, especially for Pro users.
+- The goal is to make this section materially help vendors run all social media for their truck.
+
+2. Turn Branding & Media into a Social Media Control Center
+- Rework this section so vendors can manage:
+  - brand assets
+  - content creation
+  - social posting workflows
+  - reusable marketing content
+- This should tie directly into the Social Media Hub functionality already being added elsewhere in the app.
+
+3. Add a centralized brand kit for vendors
+- Allow vendors to store and manage:
+  - logo(s)
+  - default cover/hero image
+  - reusable media assets
+  - optional brand colors
+  - optional font preferences or a small preset font style selection
+- These assets should automatically be used in generated social content where applicable.
+
+4. Add fast content generation tools
+- Vendors should be able to quickly generate branded posts such as:
+  - We’re open today
+  - Today’s schedule
+  - Weekly schedule
+  - Event appearance
+  - Special/discount post
+- Each generated post should be able to auto-fill from truck data and include:
+  - branded image
+  - caption
+  - link back to RoamBites
+
+5. Add reusable content templates
+- Provide ready-made templates for common food truck use cases such as:
+  - Today’s Location
+  - Weekend Schedule
+  - Now Open
+  - Special Today
+  - Catch us at [Event]
+- Templates should be pre-designed and easy to use with minimal editing.
+- Vendors should not need design skills.
+
+6. Add lightweight content scheduling / queueing
+- Allow vendors to:
+  - schedule a post for later
+  - maintain a basic queue of upcoming social posts
+- Keep this simple and not overbuilt.
+- This is not meant to become a full enterprise social scheduler.
+
+7. Tie directly into multi-platform posting
+- The upgraded Branding & Media section should connect directly with the Social Media Hub.
+- Vendors should be able to choose platforms such as:
+  - Instagram
+  - Facebook
+  - others as future-ready structure
+- Where APIs allow, support direct posting.
+- Where direct posting is limited, provide fallback options:
+  - copy caption
+  - download image
+  - open/deep link to target social platform
+
+8. Add optional basic performance feedback
+- If practical, show lightweight performance indicators such as:
+  - number of posts created
+  - clicks on RoamBites links from generated/shared posts
+- Keep this minimal and simple.
+
+9. Subscription tie-in
+- This upgraded Social Media Control Center should be a key value driver of the Pro plan (or higher vendor plan).
+- Lower-tier vendor plans can have:
+  - limited access
+  - basic branding/media only
+- Make this feel like a premium business-growth feature, not just a nicer upload section.
+
+10. UX requirements
+- Must be extremely easy to use
+- Mobile-first
+- Minimal clicks
+- Vendors should be able to generate and prepare a useful post in under 30 seconds
+- Keep it practical for real food truck operators
+- Avoid making it feel like a bloated full marketing platform
+
+11. Strategic goal
+- This section should make RoamBites feel like the place vendors run both:
+  - their truck presence
+  - their truck marketing
+
+AFTER IMPLEMENTING, PROVIDE
+1. Summary of changes made
+2. Any schema/database changes
+3. Any new APIs or posting utilities added
+4. Any plan-gating / subscription changes

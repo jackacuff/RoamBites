@@ -17,3 +17,4 @@ export * from "./plans";
 export * from "./vendorSubscriptions";
 export * from "./parks";
 export * from "./truckViews";
+export * from "./socialPosts";

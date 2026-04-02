@@ -32,6 +32,7 @@ export const trucksTable = pgTable("trucks", {
   primaryColor: text("primary_color"),
   secondaryColor: text("secondary_color"),
   tagline: text("tagline"),
+  fontStyle: text("font_style").default("modern"),
   liveStartedAt: timestamp("live_started_at", { withTimezone: true }),
   liveUntil: timestamp("live_until", { withTimezone: true }),
   liveOutsideSchedule: boolean("live_outside_schedule").default(false),
