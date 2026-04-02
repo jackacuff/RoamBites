@@ -21,7 +21,7 @@ export const SignupBody = zod.object({
   name: zod.string(),
   email: zod.string(),
   password: zod.string(),
-  role: zod.enum(["customer", "vendor", "organizer", "park_host"]),
+  role: zod.enum(["customer", "vendor", "organizer"]),
 });
 
 /**
@@ -317,6 +317,11 @@ export const CheckInTruckBody = zod.object({
   scheduleEntryId: zod.number().nullish(),
   latitude: zod.number().nullish(),
   longitude: zod.number().nullish(),
+  liveUntil: zod
+    .string()
+    .nullish()
+    .describe("ISO datetime string until which the truck is live"),
+  liveOutsideSchedule: zod.boolean().nullish(),
 });
 
 export const CheckInTruckResponse = zod.object({

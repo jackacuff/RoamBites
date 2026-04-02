@@ -1,0 +1,93 @@
+Fix and improve the Vendor “Schedule & Availability” / check-in flow in the RoamBites app.
+
+Current issue:
+- The “Check In” action on the Schedule & Availability tab is not clickable or not functioning correctly. Diagnose why it is not working and fully fix it.
+
+Core behavior I want:
+1. Vendors should be able to click “Check In” successfully from the Schedule & Availability tab.
+2. A vendor should not be able to mark themselves live/open without guardrails.
+3. If a vendor clicks “Check In” but does not currently have a scheduled live/open time for right now, show a confirmation dialog before allowing them to proceed.
+4. When checking in, the vendor must enter how long they plan to be live/open for.
+5. The app should automatically mark the vendor as no longer live after their live window ends.
+6. The UI and logic should be clear and hard to misuse.
+
+Detailed requirements:
+
+Bug fix:
+- Find out why the Check In button is not clickable and fix the issue.
+- Check for disabled state bugs, z-index/overlay issues, pointer events issues, missing handler wiring, form state issues, or broken conditional rendering.
+- Make sure the button works on mobile Safari and mobile web views.
+
+Check-in flow:
+- When the vendor clicks Check In, open a modal or bottom sheet.
+- In that flow, require the vendor to enter how long they will be live/open.
+- Allow either:
+  - an end time selection, or
+  - a duration selection such as 30 min, 1 hour, 2 hours, 4 hours, custom.
+- Show the calculated end time clearly before confirmation.
+
+Schedule safety / guardrails:
+- If the current time does not fall within an existing scheduled availability window, show a warning/confirmation dialog before allowing check-in.
+- Example messaging:
+  - “Your schedule does not show that you are supposed to be live right now. Do you still want to go live?”
+- Give them clear options:
+  - Cancel
+  - Go Live Anyway
+- If their schedule does match the current time, do not show the warning and let them proceed normally.
+
+Auto-expire live status:
+- When the vendor goes live, store a live-until timestamp.
+- Automatically switch them from live/open to not live after that timestamp passes.
+- This needs to work reliably on refresh/reload as well, not just in-memory.
+- If needed, compute live status based on current time vs stored live-until timestamp instead of relying only on manual state toggles.
+- Make sure expired live sessions do not continue showing as active.
+
+State and UX requirements:
+- Clearly distinguish between:
+  - scheduled availability
+  - currently live now
+  - checked in but outside scheduled time
+- Show a clear status in the UI, for example:
+  - Live now until 2:30 PM
+  - Scheduled today: 11:00 AM to 3:00 PM
+  - Not currently live
+- If a vendor is already live, the button should change to something like:
+  - End Live Now
+  - Check Out
+- If they end early, clear or update the active live session correctly.
+
+Validation:
+- Prevent invalid live durations or end times in the past.
+- Prevent accidental duplicate check-ins.
+- Handle edge cases such as:
+  - vendor already live
+  - no schedule exists for today
+  - overlapping schedule entries
+  - refreshing the page while live
+  - device time differences if relevant to current architecture
+
+Technical guidance:
+- Preserve existing routing and overall Schedule & Availability UI.
+- Keep the implementation clean and modular.
+- If there is already a schedule model, integrate with it instead of creating a disconnected workaround.
+- If there is already a vendor status model, extend it to support:
+  - isLive
+  - liveStartedAt
+  - liveUntil
+  - checkedInOutsideSchedule or similar helper field if useful
+- Make sure the live status displayed across the app uses the real active status based on timestamps.
+
+Design guidance:
+- Keep the flow mobile-first.
+- Use a clean modal/dialog that feels consistent with the existing RoamBites design.
+- The warning dialog should feel protective but not annoying.
+- The live status should be easy to understand at a glance.
+
+Please do the following:
+1. Diagnose and fix why Check In is not clickable.
+2. Implement the required check-in modal flow.
+3. Add schedule mismatch warning logic.
+4. Require a duration or end time when going live.
+5. Auto-end live status after the selected live window expires.
+6. Update the UI to clearly show current live state vs scheduled availability.
+7. Summarize what you changed and where this logic lives in the code so I can adjust it later.

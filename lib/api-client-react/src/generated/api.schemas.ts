@@ -101,13 +101,8 @@ export interface TruckSummary {
   currentLocation?: string | null;
   /** @nullable */
   currentCity?: string | null;
-  /** @nullable */
-  currentLatitude?: number | null;
-  /** @nullable */
-  currentLongitude?: number | null;
   activeSchedule?: ScheduleEntry | null;
   vendorUserId: number;
-  menuItemCount?: number | null;
 }
 
 export type TruckDetailStatus =
@@ -208,6 +203,13 @@ export interface CheckInBody {
   latitude?: number | null;
   /** @nullable */
   longitude?: number | null;
+  /**
+   * ISO datetime string until which the truck is live
+   * @nullable
+   */
+  liveUntil?: string | null;
+  /** @nullable */
+  liveOutsideSchedule?: boolean | null;
 }
 
 export interface CreateMenuItemBody {
