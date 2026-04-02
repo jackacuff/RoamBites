@@ -8,6 +8,7 @@ export const plansTable = pgTable("plans", {
   trialDays: integer("trial_days").notNull().default(90),
   features: jsonb("features").$type<string[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
+  isRecommended: boolean("is_recommended").notNull().default(false),
   stripePriceId: text("stripe_price_id"),
   stripeProductId: text("stripe_product_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

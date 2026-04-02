@@ -4,7 +4,7 @@ import { useCreateEvent } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronRight, Calendar, MapPin, User, Zap, Info } from "lucide-react";
+import { ChevronRight, Calendar, MapPin, User, Zap, Info, Image as ImageIcon, X as XIcon, Plus } from "lucide-react";
 import { useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 
@@ -33,6 +33,8 @@ export default function OrganizerNewEvent() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const createMutation = useCreateEvent();
   const { register, handleSubmit, control, formState: { errors } } = useForm({
@@ -88,6 +90,34 @@ export default function OrganizerNewEvent() {
     }
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadingPhoto(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(getApiUrl("/api/storage/upload"), {
+          method: "POST",
+          headers: authHeaders(),
+          body: formData,
+        });
+        const data = await res.json();
+        if (data.url) uploaded.push(data.url);
+      }
+      setPhotoUrls(prev => [...prev, ...uploaded]);
+      if (uploaded.length) toast({ title: `${uploaded.length} photo${uploaded.length > 1 ? "s" : ""} uploaded` });
+      else toast({ title: "Upload failed", variant: "destructive" });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  }
+
   const onSubmit = async (data: any) => {
     setSubmitting(true);
     try {
@@ -104,6 +134,8 @@ export default function OrganizerNewEvent() {
         websiteUrl: data.websiteUrl || null,
         isPublished: !!data.isPublished,
         bannerImageUrl: bannerUrl,
+        photoUrls: photoUrls.length ? JSON.stringify(photoUrls) : null,
+        thumbnailUrl: photoUrls[0] || bannerUrl || null,
         contactFirstName: data.contactFirstName || null,
         contactLastName: data.contactLastName || null,
         contactEmail: data.contactEmail || null,
@@ -214,6 +246,36 @@ export default function OrganizerNewEvent() {
                   <input type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} disabled={uploadingBanner} />
                 </label>
               )}
+            </div>
+
+            {/* Event Photos */}
+            <div>
+              <label className={labelClass}>Event Photos <span className="text-muted-foreground font-normal">(gallery shown on event page)</span></label>
+              {photoUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {photoUrls.map((url, i) => (
+                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border group">
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      {i === 0 && (
+                        <span className="absolute bottom-0 left-0 right-0 bg-primary/80 text-primary-foreground text-[9px] text-center py-0.5 font-medium">Thumbnail</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPhotoUrls(prev => prev.filter((_, idx) => idx !== i))}
+                        className="absolute top-1 right-1 bg-black/70 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <XIcon className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label className={`flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors w-fit ${uploadingPhoto ? "opacity-50 pointer-events-none" : ""}`}>
+                <Plus className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{uploadingPhoto ? "Uploading…" : "Add photos"}</span>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+              </label>
+              <p className="text-xs text-muted-foreground mt-1">First photo becomes the thumbnail on event cards. You can reorder by removing and re-uploading.</p>
             </div>
           </Section>
 

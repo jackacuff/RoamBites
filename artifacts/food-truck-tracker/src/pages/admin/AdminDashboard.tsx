@@ -69,7 +69,7 @@ function StatCard({
   );
 }
 
-const BLANK_PLAN = { name: "", description: "", monthlyPrice: "29.99", trialDays: "90", stripePriceId: "", featuresText: "" };
+const BLANK_PLAN = { name: "", description: "", monthlyPrice: "29.99", trialDays: "90", stripePriceId: "", featuresText: "", isRecommended: false };
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
@@ -141,6 +141,7 @@ export default function AdminDashboard() {
       trialDays: String(plan.trialDays),
       stripePriceId: plan.stripePriceId ?? "",
       featuresText: (plan.features ?? []).join("\n"),
+      isRecommended: (plan as any).isRecommended ?? false,
     });
     setEditingPlan(plan);
     setShowPlanForm(true);
@@ -155,6 +156,7 @@ export default function AdminDashboard() {
       trialDays: parseInt(planForm.trialDays),
       stripePriceId: planForm.stripePriceId || null,
       features: planForm.featuresText.split("\n").map(s => s.trim()).filter(Boolean),
+      isRecommended: planForm.isRecommended,
     };
     const url = editingPlan
       ? getApiUrl(`/api/admin/plans/${editingPlan.id}`)
@@ -487,6 +489,20 @@ export default function AdminDashboard() {
                       placeholder={"Unlimited menu items\nLive GPS check-in\nSchedule management\nEvent marketplace access"}
                     />
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-border hover:bg-muted/50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={planForm.isRecommended}
+                        onChange={e => setPlanForm(f => ({ ...f, isRecommended: e.target.checked }))}
+                        className="w-4 h-4 rounded accent-primary"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Mark as Recommended</p>
+                        <p className="text-xs text-muted-foreground">Shows a "Most Popular" badge on the pricing page</p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
                 <div className="flex gap-3 mt-5">
                   <button
@@ -513,11 +529,16 @@ export default function AdminDashboard() {
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                         <h3 className="font-bold text-lg">{plan.name}</h3>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${plan.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                           {plan.isActive ? "Active" : "Inactive"}
                         </span>
+                        {(plan as any).isRecommended && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                            ★ Recommended
+                          </span>
+                        )}
                       </div>
                       {plan.description && <p className="text-sm text-muted-foreground">{plan.description}</p>}
                     </div>

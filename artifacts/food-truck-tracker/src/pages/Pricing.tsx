@@ -14,6 +14,7 @@ interface Plan {
   trialDays: number;
   features: string[];
   stripePriceId: string | null;
+  isRecommended?: boolean;
 }
 
 const VENDOR_SELLING_POINTS = [
@@ -43,7 +44,7 @@ function PlanCard({ plan, index, isCurrentPlan, onSubscribe, loading }: {
   loading: boolean;
 }) {
   const Icon = ICONS[index % ICONS.length];
-  const isPopular = index === 0;
+  const isPopular = plan.isRecommended ?? index === 0;
 
   return (
     <div className={`relative bg-card rounded-3xl border p-8 flex flex-col transition-all hover:shadow-xl ${

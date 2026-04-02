@@ -4,9 +4,10 @@ import { Layout } from "@/components/Layout";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
-import { Calendar, MapPin, Users, Clock, FileText, Globe, ExternalLink, Share2, Check, ChevronRight, X, ChevronLeft, ImageIcon } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, FileText, Globe, ExternalLink, Share2, Check, ChevronRight, X, ChevronLeft, ImageIcon, Phone, Mail, Zap, DollarSign } from "lucide-react";
 import { getApiUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 function useShareEvent() {
   const { toast } = useToast();
@@ -172,6 +173,12 @@ export default function EventDetail() {
   const { share, copied } = useShareEvent();
   const userLocation = useUserLocation();
   const lineupRef = useRef<HTMLDivElement>(null);
+  const { user, isAuthenticated } = useAuth();
+
+  const canSeeLogistics = isAuthenticated && (
+    user?.role === "organizer" || user?.role === "vendor" ||
+    user?.role === "admin" || user?.role === "superadmin"
+  );
 
   const scrollToTruck = (truckId: number) => {
     setSelectedTruckId(truckId);
@@ -339,6 +346,89 @@ export default function EventDetail() {
               </div>
             </div>
 
+            {/* Logistics section for organizers/vendors/admins */}
+            {canSeeLogistics && (
+              (() => {
+                const ev = event as any;
+                const hasContact = ev.contactFirstName || ev.contactEmail || ev.contactPhone;
+                const hasLogistics = ev.availableHookups || ev.vendorFeeStructure;
+                const hasVendorNotes = ev.vendorNotes;
+                if (!hasContact && !hasLogistics && !hasVendorNotes) return null;
+
+                const hookupLabels: Record<string, string> = {
+                  water_electric: "Water + Electric",
+                  water_only: "Water only",
+                  electric_only: "Electric only",
+                  none: "None",
+                  unknown: "Not specified",
+                };
+                const feeLabels: Record<string, string> = {
+                  none: "Free to participate",
+                  flat: `Flat fee: $${ev.spotFeeAmount ?? "—"}`,
+                  percentage: `${ev.spotFeeAmount ?? "—"}% of sales`,
+                };
+                return (
+                  <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+                    <div className="px-5 py-4 border-b border-border bg-muted/20">
+                      <h2 className="font-semibold text-foreground flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-primary" /> Event Logistics
+                      </h2>
+                      <p className="text-xs text-muted-foreground mt-0.5">Visible to organizers and vendors only</p>
+                    </div>
+                    <div className="p-5 space-y-4">
+                      {hasContact && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contact</p>
+                          <div className="space-y-1.5">
+                            {(ev.contactFirstName || ev.contactLastName) && (
+                              <p className="text-sm text-foreground font-medium">{[ev.contactFirstName, ev.contactLastName].filter(Boolean).join(" ")}</p>
+                            )}
+                            {ev.contactEmail && (
+                              <a href={`mailto:${ev.contactEmail}`} className="flex items-center gap-2 text-sm text-primary hover:underline">
+                                <Mail className="w-3.5 h-3.5" /> {ev.contactEmail}
+                              </a>
+                            )}
+                            {ev.contactPhone && (
+                              <a href={`tel:${ev.contactPhone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+                                <Phone className="w-3.5 h-3.5" /> {ev.contactPhone}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {hasLogistics && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Setup</p>
+                          <div className="space-y-1.5">
+                            {ev.availableHookups && ev.availableHookups !== "unknown" && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                <span className="text-muted-foreground">Hookups:</span>
+                                <span className="text-foreground font-medium">{hookupLabels[ev.availableHookups] ?? ev.availableHookups}</span>
+                              </div>
+                            )}
+                            {ev.vendorFeeStructure && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <DollarSign className="w-3.5 h-3.5 text-green-500" />
+                                <span className="text-muted-foreground">Fee:</span>
+                                <span className="text-foreground font-medium">{feeLabels[ev.vendorFeeStructure] ?? ev.vendorFeeStructure}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {hasVendorNotes && (
+                        <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                          <p className="text-xs font-semibold text-primary mb-1">Vendor Notes</p>
+                          <p className="text-sm text-foreground">{ev.vendorNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()
+            )}
+
             {event.latitude && event.longitude && (
               <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
                 <div className="px-5 py-4 border-b border-border flex items-center justify-between">
@@ -410,19 +500,20 @@ export default function EventDetail() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <h3 className={`font-bold text-base truncate transition-colors ${isSelected ? "text-green-700" : "text-foreground group-hover:text-primary"}`}>
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <h3 className={`font-bold text-base transition-colors ${isSelected ? "text-green-700" : "text-foreground group-hover:text-primary"}`}>
                               {truck.name}
                             </h3>
                             {truck.isLive && (
-                              <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                              <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live
                               </span>
                             )}
                           </div>
-                          {truck.cuisine && <p className="text-sm text-muted-foreground mt-0.5">{truck.cuisine}</p>}
-                          {truck.description && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{truck.description}</p>
+                          {truck.cuisine && (
+                            <span className="inline-block px-2 py-0.5 rounded-full bg-primary/8 text-primary text-xs font-medium">
+                              {truck.cuisine}
+                            </span>
                           )}
                         </div>
                       </div>

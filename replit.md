@@ -158,9 +158,23 @@ Vendor Pro feature at `/vendor/marketing`. Backed by `GET/POST /api/vendor/marke
 - `POST /api/vendor/marketing/brand` — save brand colors + tagline
 - `POST /api/vendor/marketing/copy` — generate AI copy (`templateType`: social/event/special/open-now/general, optional `customPrompt`)
 
+## Recent Feature Changes (Session Plan T001–T010)
+
+- **T001** — Vendor nav cleanup: Replaced "Dashboard" with "Schedule" in vendor top bar; dropdown "My Business" → "My Truck"
+- **T002** — Event lineup cards: Removed description text from truck cards on EventDetail; cuisine shown as pill badge instead of plain text
+- **T004** — Parks map user location: Blue pulsing dot on the Parks map (session-scoped geolocation, no repeated prompts). `useUserLocation` hook also already present in EventDetail.
+- **T005** — Plans `isRecommended` field: Added `isRecommended boolean` to `plansTable` schema (pushed). Admin plan editor now shows "Mark as Recommended" toggle. Pricing.tsx uses `isRecommended` instead of hardcoded `index === 0` for "Most Popular" badge. Admin API routes (POST/PUT) updated to accept + store `isRecommended`.
+- **T007** — Role-adaptive signup: Step 2 of Signup shows "What you'll do first" numbered guidance box for vendor (3 setup steps) and organizer (3 steps) roles; customer sees minimal form.
+- **T008** — Event Logistics section on EventDetail: Logged-in organizers, vendors, and admins see a new "Event Logistics" card with contact info (name, email, phone), hookups, fee structure, and vendor notes.
+- **T009** — Customer → Organizer upgrade: Profile page now shows "Host an Event" CTA for customer role. Clicking opens an upgrade modal listing benefits; confirm button calls `POST /api/auth/upgrade-to-organizer` and redirects to /organizer on success.
+- **T010** — Multi-photo upload in OrganizerNewEvent: Photo upload section added below banner image; supports multiple files. First photo auto-selected as thumbnail. `photoUrls` stored as JSON array in events table; `thumbnailUrl` set from first photo.
+
 ## Database Schema
 
 Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`, `plans`, `vendorSubscriptions`
+
+Key schema additions:
+- `plans.isRecommended` (boolean, default false) — marks plan for "Most Popular" badge on pricing page
 
 Truck fields include `logoUrl`, `coverImageUrl` (updated automatically when media is attached).
 Truck status logic (open/closing_soon/opening_later/closed) computed in `artifacts/api-server/src/lib/truckStatus.ts`.
