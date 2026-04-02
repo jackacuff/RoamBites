@@ -8,7 +8,23 @@ import { computeTruckStatus, slugify } from "../lib/truckStatus";
 const router: IRouter = Router();
 
 async function buildTruckSummary(truck: any, schedules: any[]) {
-  const { status, activeSchedule, currentLocation, currentCity } = computeTruckStatus(schedules, truck.isLive);
+  const now = new Date();
+  // Auto-expire live status: if liveUntil is in the past, treat as not live
+  const liveExpired = truck.isLive && truck.liveUntil && new Date(truck.liveUntil) <= now;
+  const effectiveIsLive = truck.isLive && !liveExpired;
+
+  // Fire-and-forget DB cleanup when live session has expired
+  if (liveExpired) {
+    db.update(trucksTable)
+      .set({ isLive: false, currentLatitude: null, currentLongitude: null, liveUntil: null, liveStartedAt: null, liveOutsideSchedule: false })
+      .where(eq(trucksTable.id, truck.id))
+      .then(() => {
+        db.update(scheduleEntriesTable).set({ isLive: false }).where(eq(scheduleEntriesTable.truckId, truck.id)).catch(() => {});
+      })
+      .catch(() => {});
+  }
+
+  const { status, activeSchedule, currentLocation, currentCity } = computeTruckStatus(schedules, effectiveIsLive);
   return {
     id: truck.id,
     name: truck.name,
@@ -17,7 +33,10 @@ async function buildTruckSummary(truck: any, schedules: any[]) {
     description: truck.description,
     imageUrl: truck.imageUrl,
     isApproved: truck.isApproved,
-    isLive: truck.isLive,
+    isLive: effectiveIsLive,
+    liveUntil: effectiveIsLive && truck.liveUntil ? truck.liveUntil.toISOString() : null,
+    liveStartedAt: effectiveIsLive && truck.liveStartedAt ? truck.liveStartedAt.toISOString() : null,
+    liveOutsideSchedule: effectiveIsLive ? (truck.liveOutsideSchedule ?? false) : false,
     status,
     currentLocation,
     currentCity,
@@ -423,10 +442,17 @@ router.post("/trucks/:id/checkin", requireRole("vendor", "admin"), async (req, r
 
   const lat = parsed.success ? parsed.data.latitude ?? null : null;
   const lng = parsed.success ? parsed.data.longitude ?? null : null;
+  const liveUntilRaw = parsed.success ? (parsed.data as any).liveUntil ?? null : null;
+  const liveOutsideSchedule = parsed.success ? (parsed.data as any).liveOutsideSchedule ?? false : false;
+  const liveUntil = liveUntilRaw ? new Date(liveUntilRaw) : null;
+  const liveStartedAt = new Date();
 
   await db.update(trucksTable)
     .set({
       isLive: true,
+      liveStartedAt,
+      liveUntil,
+      liveOutsideSchedule,
       ...(lat !== null && lng !== null ? { currentLatitude: lat, currentLongitude: lng } : {}),
     })
     .where(eq(trucksTable.id, id));
@@ -438,7 +464,7 @@ router.post("/trucks/:id/checkin", requireRole("vendor", "admin"), async (req, r
       .where(eq(scheduleEntriesTable.id, parsed.data.scheduleEntryId));
   }
 
-  res.json({ message: "Truck checked in as live", latitude: lat, longitude: lng });
+  res.json({ message: "Truck checked in as live", latitude: lat, longitude: lng, liveUntil: liveUntil?.toISOString() ?? null });
 });
 
 router.post("/trucks/:id/checkout", requireRole("vendor", "admin"), async (req, res): Promise<void> => {
@@ -446,7 +472,7 @@ router.post("/trucks/:id/checkout", requireRole("vendor", "admin"), async (req, 
   const id = parseInt(rawId, 10);
 
   await db.update(trucksTable)
-    .set({ isLive: false, currentLatitude: null, currentLongitude: null })
+    .set({ isLive: false, currentLatitude: null, currentLongitude: null, liveUntil: null, liveStartedAt: null, liveOutsideSchedule: false })
     .where(eq(trucksTable.id, id));
   await db
     .update(scheduleEntriesTable)

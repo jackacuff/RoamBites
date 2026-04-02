@@ -13,5 +13,4 @@ export const SignupBodyRole = {
   customer: "customer",
   vendor: "vendor",
   organizer: "organizer",
-  park_host: "park_host",
 } as const;

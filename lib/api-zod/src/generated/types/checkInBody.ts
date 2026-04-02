@@ -13,4 +13,11 @@ export interface CheckInBody {
   latitude?: number | null;
   /** @nullable */
   longitude?: number | null;
+  /**
+   * ISO datetime string until which the truck is live
+   * @nullable
+   */
+  liveUntil?: string | null;
+  /** @nullable */
+  liveOutsideSchedule?: boolean | null;
 }

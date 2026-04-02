@@ -1242,6 +1242,11 @@ components:
           type: ["number", "null"]
         longitude:
           type: ["number", "null"]
+        liveUntil:
+          type: ["string", "null"]
+          description: ISO datetime string until which the truck is live
+        liveOutsideSchedule:
+          type: ["boolean", "null"]
       required: []
 
     MenuItem:

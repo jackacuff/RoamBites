@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useListTrucks, useListSchedules, useCreateScheduleEntry, useSetScheduleLive, useCheckInTruck, useCheckOutTruck } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
@@ -7,13 +7,9 @@ import EmptyState from "@/components/EmptyState";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Wifi, WifiOff, MapPin, Calendar, X, Star, ChevronDown, ChevronUp, Copy } from "lucide-react";
-
-import { format, addWeeks } from "date-fns";
-
-const CheckInMapModal = lazy(() =>
-  import("@/components/CheckInMapModal").then((m) => ({ default: m.CheckInMapModal }))
-);
+import { Plus, Wifi, WifiOff, MapPin, Calendar, X, Star, ChevronDown, ChevronUp, Copy, Clock } from "lucide-react";
+import { format, addWeeks, isToday } from "date-fns";
+import { GoLiveModal, type ScheduleWindow } from "@/components/GoLiveModal";
 
 interface DayRow {
   id: string;
@@ -68,15 +64,21 @@ export default function VendorSchedule() {
   const [showAdd, setShowAdd] = useState(false);
   const [showSpots, setShowSpots] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [checkInModalOpen, setCheckInModalOpen] = useState(false);
+  const [goLiveModalOpen, setGoLiveModalOpen] = useState(false);
 
   const [location, setLocation] = useState<LocationForm>({ venueName: "", address: "", city: "", notes: "" });
   const [days, setDays] = useState<DayRow[]>([defaultDayRow()]);
 
+  // Live countdown display — tick every 30s
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const invalidateTrucks = () => queryClient.invalidateQueries({ queryKey: ["/api/trucks"] });
   const invalidateSchedules = () => queryClient.invalidateQueries({ queryKey: ["/api/schedules"] });
 
-  // Derive frequent spots from all past schedule entries, sorted by usage count
   const frequentSpots = useMemo(() => {
     if (!schedules) return [];
     const map = new Map<string, { venueName: string; address: string; city: string; count: number }>();
@@ -88,9 +90,16 @@ export default function VendorSchedule() {
         map.set(key, { venueName: s.venueName, address: s.address ?? "", city: s.city, count: 1 });
       }
     }
-    return Array.from(map.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
+    return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 6);
+  }, [schedules]);
+
+  // Today's schedule windows (sorted by start time)
+  const todaySchedules: ScheduleWindow[] = useMemo(() => {
+    if (!schedules) return [];
+    return schedules
+      .filter(s => isToday(new Date(s.startDateTime)) || isToday(new Date(s.endDateTime)))
+      .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime())
+      .map(s => ({ id: s.id, venueName: s.venueName, startDateTime: s.startDateTime, endDateTime: s.endDateTime }));
   }, [schedules]);
 
   const fillFromSpot = (spot: { venueName: string; address: string; city: string }) => {
@@ -100,7 +109,6 @@ export default function VendorSchedule() {
   const addDay = () => {
     const last = days[days.length - 1];
     if (last) {
-      // Default the new day to tomorrow at same time
       const start = new Date(last.startDateTime);
       const end = new Date(last.endDateTime);
       start.setDate(start.getDate() + 1);
@@ -182,20 +190,19 @@ export default function VendorSchedule() {
     }
   };
 
-  const handleCheckIn = async (lat?: number, lng?: number) => {
+  const handleGoLiveConfirm = async (params: { lat?: number; lng?: number; liveUntil: Date; liveOutsideSchedule: boolean }) => {
     if (!myTruck) return;
-    try {
-      await checkInMutation.mutateAsync({
-        id: myTruck.id,
-        data: {
-          ...(lat !== undefined && lng !== undefined ? { latitude: lat, longitude: lng } : {}),
-        },
-      });
-      toast({ title: "You're live! Customers can see you now." });
-      invalidateTrucks();
-    } catch (e: any) {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    }
+    await checkInMutation.mutateAsync({
+      id: myTruck.id,
+      data: {
+        latitude: params.lat ?? null,
+        longitude: params.lng ?? null,
+        liveUntil: params.liveUntil.toISOString(),
+        liveOutsideSchedule: params.liveOutsideSchedule,
+      } as any,
+    });
+    toast({ title: "You're live!", description: `Customers can find you until ${format(params.liveUntil, "h:mm a")}` });
+    invalidateTrucks();
   };
 
   const handleCheckOut = async () => {
@@ -221,6 +228,14 @@ export default function VendorSchedule() {
   const now = new Date();
   const upcoming = (schedules || []).filter(s => new Date(s.endDateTime) >= now);
 
+  // Compute live-until label
+  const liveUntilDate = (myTruck as any).liveUntil ? new Date((myTruck as any).liveUntil) : null;
+  const liveUntilLabel = liveUntilDate ? format(liveUntilDate, "h:mm a") : null;
+  const isLiveOutsideSchedule = (myTruck as any).liveOutsideSchedule ?? false;
+
+  // Minutes remaining until live expires
+  const minsRemaining = liveUntilDate ? Math.max(0, Math.round((liveUntilDate.getTime() - now.getTime()) / 60000)) : null;
+
   return (
     <Layout>
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -241,28 +256,57 @@ export default function VendorSchedule() {
         </div>
 
         {/* Live status banner */}
-        <div className={`mb-6 p-4 rounded-2xl border flex items-center justify-between gap-4 ${myTruck.isLive ? 'bg-green-50 border-green-200' : 'bg-muted border-border'}`}>
-          <div className="flex items-center gap-3">
-            {myTruck.isLive ? <Wifi className="w-5 h-5 text-green-600" /> : <WifiOff className="w-5 h-5 text-muted-foreground" />}
-            <div>
-              <p className={`font-semibold ${myTruck.isLive ? 'text-green-800' : 'text-foreground'}`}>
-                {myTruck.isLive ? "You're Live!" : "Not Currently Live"}
-              </p>
-              {myTruck.isLive && myTruck.currentLocation && (
-                <p className="text-sm text-green-700">{myTruck.currentLocation}</p>
-              )}
+        <div className={`mb-6 p-4 rounded-2xl border ${myTruck.isLive ? 'bg-green-50 border-green-200' : 'bg-muted border-border'}`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {myTruck.isLive
+                ? <div className="relative flex-shrink-0"><Wifi className="w-5 h-5 text-green-600" /><span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 animate-pulse" /></div>
+                : <WifiOff className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              }
+              <div className="min-w-0">
+                <p className={`font-semibold ${myTruck.isLive ? 'text-green-800' : 'text-foreground'}`}>
+                  {myTruck.isLive ? "You're Live Now" : "Not Currently Live"}
+                </p>
+                {myTruck.isLive && liveUntilLabel && (
+                  <p className="text-sm text-green-700 flex items-center gap-1 mt-0.5">
+                    <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                    Live until {liveUntilLabel}
+                    {minsRemaining !== null && minsRemaining <= 30 && (
+                      <span className="ml-1 text-amber-700 font-medium">({minsRemaining}m left)</span>
+                    )}
+                    {isLiveOutsideSchedule && (
+                      <span className="ml-2 text-amber-700 text-xs">(outside schedule)</span>
+                    )}
+                  </p>
+                )}
+                {!myTruck.isLive && todaySchedules.length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {todaySchedules.some(s => new Date(s.startDateTime) <= now && new Date(s.endDateTime) >= now)
+                      ? `Scheduled now · ${todaySchedules.find(s => new Date(s.startDateTime) <= now && new Date(s.endDateTime) >= now)?.venueName}`
+                      : `Next stop · ${format(new Date(todaySchedules[0].startDateTime), "h:mm a")} at ${todaySchedules[0].venueName}`
+                    }
+                  </p>
+                )}
+              </div>
             </div>
+            {myTruck.isLive ? (
+              <button
+                onClick={handleCheckOut}
+                disabled={checkOutMutation.isPending}
+                className="flex-shrink-0 px-4 py-2 bg-white border border-green-300 text-green-800 rounded-lg text-sm font-medium hover:bg-green-50 disabled:opacity-50"
+              >
+                {checkOutMutation.isPending ? "Ending…" : "End Live Now"}
+              </button>
+            ) : (
+              <button
+                onClick={() => setGoLiveModalOpen(true)}
+                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 active:scale-95 transition-transform"
+              >
+                <Wifi className="w-4 h-4" />
+                Go Live
+              </button>
+            )}
           </div>
-          {myTruck.isLive ? (
-            <button onClick={handleCheckOut} disabled={checkOutMutation.isPending} className="px-4 py-2 bg-white border border-green-300 text-green-800 rounded-lg text-sm font-medium hover:bg-green-50 disabled:opacity-50">
-              Check Out
-            </button>
-          ) : (
-            <button onClick={() => setCheckInModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-              <Wifi className="w-4 h-4" />
-              Go Live
-            </button>
-          )}
         </div>
 
         {/* Add Stop Form */}
@@ -275,7 +319,6 @@ export default function VendorSchedule() {
               </button>
             </div>
 
-            {/* Frequent Spots */}
             {frequentSpots.length > 0 && (
               <div>
                 <button
@@ -306,7 +349,6 @@ export default function VendorSchedule() {
               </div>
             )}
 
-            {/* Location Fields */}
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Location</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -342,7 +384,6 @@ export default function VendorSchedule() {
               </div>
             </div>
 
-            {/* Date/Time Rows */}
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 Date &amp; Time — {days.length} {days.length === 1 ? "day" : "days"}
@@ -384,7 +425,6 @@ export default function VendorSchedule() {
                 ))}
               </div>
 
-              {/* Add Day Shortcuts */}
               <div className="flex flex-wrap gap-2 mt-3">
                 <button
                   type="button"
@@ -407,7 +447,6 @@ export default function VendorSchedule() {
               </div>
             </div>
 
-            {/* Notes */}
             <div>
               <label className="block text-sm font-medium mb-1">Notes <span className="text-muted-foreground font-normal">(optional)</span></label>
               <input
@@ -451,9 +490,14 @@ export default function VendorSchedule() {
                           <div className="flex items-center gap-2 mb-1">
                             <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
                             <span className="font-medium text-foreground">{entry.venueName}</span>
+                            {isActive && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                                Active window
+                              </span>
+                            )}
                             {entry.isLive && (
-                              <span className="px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />Live
+                              <span className="px-1.5 py-0.5 rounded-full bg-green-200 text-green-800 text-xs font-medium flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse" />Live
                               </span>
                             )}
                           </div>
@@ -464,17 +508,15 @@ export default function VendorSchedule() {
                           </div>
                           {entry.notes && <p className="text-sm text-muted-foreground mt-1 italic">{entry.notes}</p>}
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {isActive && !entry.isLive && (
-                            <button
-                              onClick={() => handleSetLive(entry.id)}
-                              disabled={setLiveMutation.isPending}
-                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50"
-                            >
-                              Set Live
-                            </button>
-                          )}
-                        </div>
+                        {isActive && !entry.isLive && (
+                          <button
+                            onClick={() => handleSetLive(entry.id)}
+                            disabled={setLiveMutation.isPending}
+                            className="flex-shrink-0 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                          >
+                            Set Live
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -488,6 +530,16 @@ export default function VendorSchedule() {
           />
         )}
       </div>
+
+      {/* Go Live Modal — rendered here (was the missing bug) */}
+      {goLiveModalOpen && (
+        <GoLiveModal
+          truckName={myTruck.name}
+          todaySchedules={todaySchedules}
+          onConfirm={handleGoLiveConfirm}
+          onClose={() => setGoLiveModalOpen(false)}
+        />
+      )}
     </Layout>
   );
 }
