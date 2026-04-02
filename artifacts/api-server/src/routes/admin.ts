@@ -95,7 +95,7 @@ router.get("/admin/plans", requireRole("admin"), async (_req, res): Promise<void
 });
 
 router.post("/admin/plans", requireRole("admin"), async (req, res): Promise<void> => {
-  const { name, description, monthlyPrice, trialDays, features, isActive, stripePriceId } = req.body;
+  const { name, description, monthlyPrice, trialDays, features, isActive, isRecommended, stripePriceId } = req.body;
   if (!name) { res.status(400).json({ error: "name is required" }); return; }
   const [plan] = await db.insert(plansTable).values({
     name,
@@ -104,6 +104,7 @@ router.post("/admin/plans", requireRole("admin"), async (req, res): Promise<void
     trialDays: Number(trialDays ?? 90),
     features: Array.isArray(features) ? features : [],
     isActive: isActive !== false,
+    isRecommended: isRecommended === true,
     stripePriceId: stripePriceId ?? null,
   }).returning();
   res.status(201).json(plan);
@@ -111,7 +112,7 @@ router.post("/admin/plans", requireRole("admin"), async (req, res): Promise<void
 
 router.put("/admin/plans/:id", requireRole("admin"), async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
-  const { name, description, monthlyPrice, trialDays, features, isActive, stripePriceId } = req.body;
+  const { name, description, monthlyPrice, trialDays, features, isActive, isRecommended, stripePriceId } = req.body;
   const update: Record<string, unknown> = {};
   if (name !== undefined) update.name = name;
   if (description !== undefined) update.description = description;
@@ -119,6 +120,7 @@ router.put("/admin/plans/:id", requireRole("admin"), async (req, res): Promise<v
   if (trialDays !== undefined) update.trialDays = Number(trialDays);
   if (features !== undefined) update.features = features;
   if (isActive !== undefined) update.isActive = isActive;
+  if (isRecommended !== undefined) update.isRecommended = isRecommended === true;
   if (stripePriceId !== undefined) update.stripePriceId = stripePriceId;
   const [plan] = await db.update(plansTable).set(update).where(eq(plansTable.id, id)).returning();
   res.json(plan);

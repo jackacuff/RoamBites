@@ -1,6 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
-import { User, Mail, Shield, Heart, Star, Bell, LogOut, Loader2, Save, Edit2, X, Check, Lock, Unlock, MapPin, BellOff, ExternalLink } from "lucide-react";
+import { User, Mail, Shield, Heart, Star, Bell, LogOut, Loader2, Save, Edit2, X, Check, Lock, Unlock, MapPin, BellOff, ExternalLink, Calendar, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
@@ -162,6 +162,8 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", twitterHandle: "", instagramHandle: "", facebookUrl: "", isPrivate: false });
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradingRole, setUpgradingRole] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) { setDataLoading(false); return; }
@@ -214,6 +216,27 @@ export default function Profile() {
 
   const handleNotifRemove = (truckId: number) => {
     setNotifications(prev => prev.filter(n => n.truckId !== truckId));
+  };
+
+  const handleUpgradeToOrganizer = async () => {
+    setUpgradingRole(true);
+    try {
+      const res = await fetch(getApiUrl("/api/auth/upgrade-to-organizer"), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Upgrade failed");
+      }
+      toast({ title: "Upgraded to Organizer!", description: "Redirecting to your organizer dashboard…" });
+      setTimeout(() => { window.location.href = "/organizer"; }, 1200);
+    } catch (err: any) {
+      toast({ title: "Could not upgrade", description: err.message, variant: "destructive" });
+    } finally {
+      setUpgradingRole(false);
+      setShowUpgradeModal(false);
+    }
   };
 
   if (isLoading) {
@@ -430,15 +453,30 @@ export default function Profile() {
         <div className="space-y-3 mb-10">
           <h2 className="text-lg font-display font-bold text-foreground mb-4">Quick Links</h2>
           {user.role === "customer" && (
-            <Link href="/favorites" className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-sm transition-all group">
-              <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
-                <Heart className="w-5 h-5 text-red-500" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground group-hover:text-primary transition-colors">My Favorites</p>
-                <p className="text-sm text-muted-foreground">{favorites.length} favorited truck{favorites.length !== 1 ? "s" : ""}</p>
-              </div>
-            </Link>
+            <>
+              <Link href="/favorites" className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-sm transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground group-hover:text-primary transition-colors">My Favorites</p>
+                  <p className="text-sm text-muted-foreground">{favorites.length} favorited truck{favorites.length !== 1 ? "s" : ""}</p>
+                </div>
+              </Link>
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="w-full flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-secondary/10 to-primary/10 border border-secondary/30 hover:border-secondary/60 hover:shadow-sm transition-all group text-left"
+              >
+                <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center shrink-0">
+                  <Calendar className="w-5 h-5 text-secondary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground group-hover:text-secondary transition-colors">Host an Event</p>
+                  <p className="text-sm text-muted-foreground">Upgrade to Organizer — create events and book trucks</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-secondary transition-colors shrink-0" />
+              </button>
+            </>
           )}
           {dashboardLink && (
             <Link href={dashboardLink.href} className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-sm transition-all group">
@@ -517,6 +555,44 @@ export default function Profile() {
           onUpdate={handleNotifUpdate}
           onRemove={handleNotifRemove}
         />
+      )}
+
+      {/* Host an Event Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowUpgradeModal(false)} />
+          <div className="relative bg-card border border-border rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <button onClick={() => setShowUpgradeModal(false)} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors z-10">
+              <X className="w-4 h-4" />
+            </button>
+            <div className="p-6">
+              <div className="w-12 h-12 rounded-2xl bg-secondary/15 flex items-center justify-center mb-4">
+                <Calendar className="w-6 h-6 text-secondary" />
+              </div>
+              <h3 className="text-xl font-display font-bold text-foreground mb-2">Become an Event Organizer</h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                Upgrade your account to unlock event hosting — create events, fill lineup spots, and collect fees via Stripe.
+              </p>
+              <ul className="space-y-2 mb-6">
+                {["Create and publish events", "Browse the food truck marketplace", "Collect spot fees via Stripe Connect", "Manage vendor invitations and applications"].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                    <Check className="w-4 h-4 text-green-500 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={handleUpgradeToOrganizer}
+                disabled={upgradingRole}
+                className="w-full py-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-bold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
+              >
+                {upgradingRole ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                {upgradingRole ? "Upgrading…" : "Upgrade to Organizer — Free"}
+              </button>
+              <p className="text-xs text-muted-foreground text-center mt-3">No credit card required to get started.</p>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );

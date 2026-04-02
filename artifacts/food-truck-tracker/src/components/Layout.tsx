@@ -697,7 +697,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
     if (user.role === "vendor") {
       return [
-        { name: "Dashboard", path: "/vendor" },
+        { name: "Schedule", path: "/vendor/schedule" },
         { name: "Find Gigs", path: "/vendor/event-spots" },
         { name: "Truck Parks", path: "/parks" },
       ];
@@ -824,7 +824,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                             {user?.role === "vendor" && (
                               <Link href="/vendor/truck" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">
                                 <Truck className="w-4 h-4 text-muted-foreground" />
-                                My Business
+                                My Truck
                               </Link>
                             )}
                             <Link href="/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors">

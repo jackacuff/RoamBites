@@ -198,7 +198,35 @@ export default function Signup() {
             )}
 
             {ctx?.subheading && (
-              <p className="text-muted-foreground text-sm mb-6">{ctx.subheading}</p>
+              <p className="text-muted-foreground text-sm mb-5">{ctx.subheading}</p>
+            )}
+
+            {selectedRole === "vendor" && (
+              <div className="mb-5 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">What you'll do first</p>
+                <ul className="space-y-1.5">
+                  {["Create your truck profile and menu", "Set your weekly schedule", "Activate your free trial — no card needed yet"].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                      <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-xs flex items-center justify-center font-bold shrink-0">{i + 1}</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {selectedRole === "organizer" && (
+              <div className="mb-5 p-4 bg-secondary/5 border border-secondary/20 rounded-2xl">
+                <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">What you'll do first</p>
+                <ul className="space-y-1.5">
+                  {["Create your first event and set the lineup", "Browse the truck marketplace to invite vendors", "Connect Stripe to collect spot fees automatically"].map((item, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                      <span className="w-4 h-4 rounded-full bg-secondary/20 text-secondary text-xs flex items-center justify-center font-bold shrink-0">{i + 1}</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {serverError && (
@@ -247,10 +275,9 @@ export default function Signup() {
               </div>
 
               {selectedRole === "vendor" && (
-                <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl text-sm text-foreground">
-                  <span className="font-semibold text-primary">Free trial included. </span>
-                  After your trial, plans start at $39/mo — cancel anytime.
-                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Plans start at $39/mo after your trial. Cancel anytime.
+                </p>
               )}
 
               <button

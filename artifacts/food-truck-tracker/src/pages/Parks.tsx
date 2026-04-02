@@ -90,10 +90,28 @@ function ParkCard({ park }: { park: Park }) {
   );
 }
 
-function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | null }) {
+function useUserLocation() {
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    if (sessionStorage.getItem("roambites_location_requested") === "denied") return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        sessionStorage.setItem("roambites_location_requested", "granted");
+      },
+      () => { sessionStorage.setItem("roambites_location_requested", "denied"); },
+      { timeout: 5000, maximumAge: 60000 }
+    );
+  }, []);
+  return location;
+}
+
+function ParksMap({ parks, selectedId, userLocation }: { parks: Park[]; selectedId: number | null; userLocation: { lat: number; lng: number } | null }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const userMarkerRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -174,6 +192,25 @@ function ParksMap({ parks, selectedId }: { parks: Park[]; selectedId: number | n
     });
   }, [parks, selectedId, mapReady]);
 
+  useEffect(() => {
+    if (!mapReady || !leafletMapRef.current) return;
+    import("leaflet").then((L) => {
+      if (userMarkerRef.current) { userMarkerRef.current.remove(); userMarkerRef.current = null; }
+      if (!userLocation) return;
+      const icon = L.default.divIcon({
+        className: "",
+        html: `<div style="position:relative;width:16px;height:16px">
+          <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.3;animation:ping 1.5s ease-in-out infinite"></div>
+          <div style="position:absolute;inset:3px;border-radius:50%;background:#3b82f6;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>
+        </div>`,
+        iconSize: [16, 16], iconAnchor: [8, 8],
+      });
+      userMarkerRef.current = L.default.marker([userLocation.lat, userLocation.lng], { icon })
+        .addTo(leafletMapRef.current!)
+        .bindPopup("You are here");
+    });
+  }, [userLocation, mapReady]);
+
   return <div ref={mapRef} className="w-full h-full rounded-2xl overflow-hidden z-0" />;
 }
 
@@ -184,6 +221,7 @@ export default function Parks() {
   const [cityFilter, setCityFilter] = useState("all");
   const [view, setView] = useState<"list" | "map">("list");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const userLocation = useUserLocation();
 
   useEffect(() => {
     fetch(getApiUrl("/api/parks"))
@@ -317,7 +355,8 @@ export default function Parks() {
             </div>
             {/* Map */}
             <div className="h-[70vh] rounded-2xl overflow-hidden border border-border">
-              <ParksMap parks={filtered} selectedId={selectedId} />
+              <style>{`@keyframes ping { 0%,100%{transform:scale(1);opacity:0.3} 50%{transform:scale(1.8);opacity:0.1} }`}</style>
+              <ParksMap parks={filtered} selectedId={selectedId} userLocation={userLocation} />
             </div>
           </div>
         )}

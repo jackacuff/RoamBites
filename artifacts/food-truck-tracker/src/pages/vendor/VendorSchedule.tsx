@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useListTrucks, useListSchedules, useCreateScheduleEntry, useSetScheduleLive, useCheckInTruck, useCheckOutTruck } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
@@ -7,8 +7,13 @@ import EmptyState from "@/components/EmptyState";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, Wifi, WifiOff, Trash2, MapPin, Calendar, Clock, X, Star, ChevronDown, ChevronUp, Copy } from "lucide-react";
-import { format, addDays, addWeeks } from "date-fns";
+import { Plus, Wifi, WifiOff, MapPin, Calendar, X, Star, ChevronDown, ChevronUp, Copy } from "lucide-react";
+
+import { format, addWeeks } from "date-fns";
+
+const CheckInMapModal = lazy(() =>
+  import("@/components/CheckInMapModal").then((m) => ({ default: m.CheckInMapModal }))
+);
 
 interface DayRow {
   id: string;
@@ -63,6 +68,7 @@ export default function VendorSchedule() {
   const [showAdd, setShowAdd] = useState(false);
   const [showSpots, setShowSpots] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false);
 
   const [location, setLocation] = useState<LocationForm>({ venueName: "", address: "", city: "", notes: "" });
   const [days, setDays] = useState<DayRow[]>([defaultDayRow()]);
@@ -176,10 +182,15 @@ export default function VendorSchedule() {
     }
   };
 
-  const handleCheckIn = async () => {
+  const handleCheckIn = async (lat?: number, lng?: number) => {
     if (!myTruck) return;
     try {
-      await checkInMutation.mutateAsync({ id: myTruck.id, data: {} });
+      await checkInMutation.mutateAsync({
+        id: myTruck.id,
+        data: {
+          ...(lat !== undefined && lng !== undefined ? { latitude: lat, longitude: lng } : {}),
+        },
+      });
       toast({ title: "You're live! Customers can see you now." });
       invalidateTrucks();
     } catch (e: any) {
@@ -247,8 +258,9 @@ export default function VendorSchedule() {
               Check Out
             </button>
           ) : (
-            <button onClick={handleCheckIn} disabled={checkInMutation.isPending} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
-              Check In
+            <button onClick={() => setCheckInModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+              <Wifi className="w-4 h-4" />
+              Go Live
             </button>
           )}
         </div>
