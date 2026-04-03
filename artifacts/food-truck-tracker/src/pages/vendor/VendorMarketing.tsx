@@ -79,10 +79,9 @@ interface Platform {
   name: string;
   icon: React.ReactNode;
   color: string;
-  buildShareUrl: (caption: string, truckUrl: string) => string | null;
-  appDeepLink: string | null;
-  tip: string;
-  stepByStep: string[];
+  buildDesktopUrl: (caption: string, truckUrl: string) => string | null;
+  mobileSteps: string[];
+  desktopSteps: string[];
 }
 
 const PLATFORMS: Platform[] = [
@@ -91,42 +90,38 @@ const PLATFORMS: Platform[] = [
     name: "Instagram",
     icon: <Instagram className="w-5 h-5" />,
     color: "#E1306C",
-    buildShareUrl: () => null,
-    appDeepLink: "instagram://",
-    tip: "Caption copied — open Instagram, create a post, and paste it in.",
-    stepByStep: ["Caption is copied to clipboard", "Open Instagram app", "Tap + to create a new post", "Paste your caption"],
+    buildDesktopUrl: () => null,
+    mobileSteps: ["Caption copied", "Share menu opens — tap Instagram", "Paste your caption and post"],
+    desktopSteps: ["Caption is copied to clipboard", "Open Instagram on your phone", "Paste your caption and post"],
   },
   {
     id: "facebook",
     name: "Facebook",
     icon: <Facebook className="w-5 h-5" />,
     color: "#1877F2",
-    buildShareUrl: (_caption, truckUrl) =>
+    buildDesktopUrl: (_caption, truckUrl) =>
       `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(truckUrl)}`,
-    appDeepLink: null,
-    tip: "Opens Facebook share dialog with your RoamBites page. Add your caption in the post box.",
-    stepByStep: ["Opens Facebook with your RoamBites page link", "Paste your caption into the post box", "Tap Post"],
+    mobileSteps: ["Caption copied", "Share menu opens — tap Facebook", "Paste your caption and tap Post"],
+    desktopSteps: ["Facebook opens in a new tab", "Paste your caption into the post box", "Click Post"],
   },
   {
     id: "twitter",
     name: "X (Twitter)",
     icon: <Twitter className="w-5 h-5" />,
     color: "#000000",
-    buildShareUrl: (caption, truckUrl) =>
+    buildDesktopUrl: (caption, truckUrl) =>
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption.slice(0, 220))}&url=${encodeURIComponent(truckUrl)}`,
-    appDeepLink: null,
-    tip: "Opens X with your caption pre-filled. Just tap Post.",
-    stepByStep: ["Opens X with caption pre-filled", "Review and tap Post"],
+    mobileSteps: ["Caption copied", "Share menu opens — tap X", "Review and tap Post"],
+    desktopSteps: ["X opens with your caption pre-filled", "Review and click Post"],
   },
   {
     id: "tiktok",
     name: "TikTok",
     icon: <span className="text-sm font-black leading-none">TT</span>,
     color: "#010101",
-    buildShareUrl: () => null,
-    appDeepLink: "snssdk1233://",
-    tip: "Caption copied — open TikTok, record or upload a video, and paste the caption.",
-    stepByStep: ["Caption is copied to clipboard", "Open TikTok app", "Create or upload a video", "Paste your caption"],
+    buildDesktopUrl: () => null,
+    mobileSteps: ["Caption copied", "Share menu opens — tap TikTok", "Create a video and paste your caption"],
+    desktopSteps: ["Caption is copied to clipboard", "Open TikTok on your phone", "Create a video and paste your caption"],
   },
 ];
 
@@ -470,27 +465,42 @@ export default function VendorMarketing() {
   }
 
   // ── Share to platform ──────────────────────────────────────────────────────
+  const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const canNativeShare = isMobileDevice && typeof navigator.share === "function";
+
   async function handlePlatformShare(platform: Platform) {
     setShareLoading(platform.id);
     setActivePlatformTip(platform.id);
 
     const caption = generatedCopy || `${brand?.name} — ${brand?.tagline || brand?.cuisine || ""}\n\nFind us on RoamBites: ${buildTruckUrl(brand?.slug ?? null)}`;
     const truckUrl = buildTruckUrl(brand?.slug ?? null);
-    const shareUrl = platform.buildShareUrl(caption, truckUrl);
 
-    // Always copy caption first (useful for all platforms)
-    try {
-      await navigator.clipboard.writeText(caption);
-    } catch { /* ignore clipboard errors */ }
+    // Always copy caption to clipboard first — useful regardless of share method
+    try { await navigator.clipboard.writeText(caption); } catch { /* ignore */ }
 
-    if (shareUrl) {
-      // Has a web share URL — open it
-      window.open(shareUrl, "_blank", "width=650,height=600,noopener,noreferrer");
-    } else if (platform.appDeepLink) {
-      // No web URL — try app deep link
-      window.location.href = platform.appDeepLink;
-      // Fallback: show tip (already shown via activePlatformTip)
+    if (canNativeShare) {
+      // On mobile: use the OS native share sheet (the ONLY reliable path to Facebook/Instagram
+      // on mobile without registering a Facebook App ID or using the Instagram Graph API)
+      try {
+        await navigator.share({ title: brand?.name ?? "RoamBites", text: caption, url: truckUrl });
+        setTimeout(() => setShareLoading(null), 300);
+        return;
+      } catch (e: any) {
+        // User dismissed the share sheet (AbortError) — that's fine, just clear state
+        if ((e as Error)?.name === "AbortError") {
+          setShareLoading(null);
+          return;
+        }
+        // Any other error: fall through to desktop URL
+      }
     }
+
+    // Desktop fallback (or mobile share failed): open platform's web URL
+    const desktopUrl = platform.buildDesktopUrl(caption, truckUrl);
+    if (desktopUrl) {
+      window.open(desktopUrl, "_blank", "width=650,height=600,noopener,noreferrer");
+    }
+    // If no URL (Instagram/TikTok on desktop): caption is already copied, instructions visible below
 
     setTimeout(() => setShareLoading(null), 800);
   }
@@ -716,8 +726,11 @@ export default function VendorMarketing() {
 
                   <div className="grid grid-cols-2 gap-3">
                     {PLATFORMS.map(platform => {
-                      const hasShareUrl = !!platform.buildShareUrl("x", "x");
                       const isActive = activePlatformTip === platform.id;
+                      const steps = canNativeShare ? platform.mobileSteps : platform.desktopSteps;
+                      const subLabel = canNativeShare
+                        ? "Opens share menu"
+                        : platform.buildDesktopUrl("x", "x") ? "Opens post dialog" : "Copies caption";
                       return (
                         <div key={platform.id}>
                           <button
@@ -732,9 +745,7 @@ export default function VendorMarketing() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-foreground">{platform.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {hasShareUrl ? "Opens post dialog" : "Copies caption + opens app"}
-                              </p>
+                              <p className="text-xs text-muted-foreground">{subLabel}</p>
                             </div>
                             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
                           </button>
@@ -742,7 +753,7 @@ export default function VendorMarketing() {
                           {/* Step-by-step instructions after clicking */}
                           {isActive && (
                             <div className="mt-2 px-3 py-2.5 rounded-xl bg-muted/60 border border-border text-xs space-y-1">
-                              {platform.stepByStep.map((step, i) => (
+                              {steps.map((step, i) => (
                                 <div key={i} className="flex items-start gap-2">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                                   <span className="text-muted-foreground">{step}</span>
