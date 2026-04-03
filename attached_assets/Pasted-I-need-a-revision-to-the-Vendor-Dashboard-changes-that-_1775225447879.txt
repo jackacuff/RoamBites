@@ -1,0 +1,88 @@
+I need a revision to the Vendor Dashboard changes that were just implemented.
+
+The previous version did not meet expectations. It feels overly complex, has too many sections, and is not as intuitive or easy to use as intended. There is too much going on, and it introduces confusion rather than simplifying the experience.
+
+Because this revision did not meet the requested goals, I am requesting this update as a correction to the previous implementation.
+
+GOAL
+Simplify the Vendor Dashboard. Reduce clutter, remove redundancy, and make the experience more intuitive and action-oriented.
+
+(Then continue with the rest of the prompt below)
+
+---
+
+Refactor the Vendor Dashboard layout to simplify the UI, reduce duplication, and improve clarity. Do NOT add more features. This change is focused on simplifying structure and improving usability.
+
+1. Reduce number of top-level sections
+- Limit dashboard to 5–6 sections maximum
+- Remove or merge overlapping sections
+
+2. Keep “You’re Live” as the primary top section
+- Keep:
+  - Share
+  - Update Location
+  - Go Offline
+
+3. Keep ONE Quick Actions row
+- Include:
+  - Update Location
+  - Share Today
+  - View Events
+
+4. Consolidate “Make Money” section
+- Rename “Revenue & Opportunities” to:
+  - “Make Money”
+- Include:
+  - Spot Marketplace
+  - Event Invitations
+  - Messages & Leads
+
+5. Merge all promotion-related sections into ONE
+- Remove duplication between:
+  - Share & Promote
+  - Promote Your Truck Today
+  - scattered share buttons
+- Create ONE section:
+  - “Promote Your Truck”
+
+Include:
+- Share today’s location
+- Post your schedule
+- Create social content
+
+6. Simplify marketing sections
+- Combine:
+  - Social Media Hub
+  - Analytics
+Into:
+- “Growth Tools (Pro)”
+
+7. Move truck management to the bottom
+- Group under:
+  - “Manage Your Truck”
+- Include:
+  - Truck Profile
+  - Menu
+  - Schedule
+  - Specials
+
+8. Reduce visual weight of subscription card
+- Keep it visible but less dominant
+- Reduce size or move lower
+
+9. Remove redundancy
+- Ensure no repeated actions across sections
+- Especially reduce duplicate “Share” functionality
+
+10. UX principles
+- Each section must have a clear purpose
+- Optimize for mobile scanning
+- Prioritize:
+  - live status
+  - making money
+  - quick actions
+
+AFTER IMPLEMENTING, PROVIDE
+1. Updated dashboard structure
+2. List of removed or merged sections
+3. Explanation of how redundancy was reduced
