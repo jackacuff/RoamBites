@@ -1,0 +1,175 @@
+Update the existing Vendor Dashboard in RoamBites with the following UX, layout, and conversion improvements. Do NOT rebuild the entire dashboard from scratch. Refine and reorganize the current dashboard to make it more valuable, more action-oriented, and more focused on helping vendors make money.
+
+GOAL
+The vendor dashboard should feel less like a settings panel and more like a business control center. It should clearly guide vendors toward:
+- getting found
+- getting booked
+- promoting themselves
+- taking quick daily actions
+
+1. Improve the subscription / membership card
+The current subscription card is too passive.
+
+Update the trial / subscription card so it feels more outcome-driven and valuable.
+
+Instead of emphasizing only:
+- days left in trial
+- price after trial
+
+Shift messaging toward value such as:
+- Get more bookings
+- Unlock featured placement
+- Access advanced social media tools
+- Get more event visibility
+
+Change button language from:
+- “Subscribe Now”
+
+To something stronger such as:
+- “Unlock Pro Features”
+- “Upgrade for More Bookings”
+- “Go Pro”
+
+Keep trial information visible, but make the card sell outcomes, not just billing.
+
+2. Add a “Grow Your Business” section near the top
+Add a new high-visibility section near the top of the vendor dashboard focused on revenue-driving actions.
+
+Suggested section title:
+- “Grow Your Business”
+
+This section should surface the most important monetization/growth actions, such as:
+- Booking Requests
+- Event Opportunities / Spot Marketplace
+- Promote Your Truck
+- Social Media tools
+
+This section should feel like the most important daily-use area of the dashboard.
+
+3. Move and strengthen the “Share & Promote” area
+The existing “Share & Promote” area is important, but it currently feels secondary.
+
+Move it higher on the dashboard, ideally close to or directly below the live status section.
+
+Strengthen the content and framing.
+
+Consider changing it from:
+- “Share & Promote”
+
+To something more action-oriented such as:
+- “Promote Your Truck Today”
+
+And clarify value:
+- Share today’s location
+- Post your schedule
+- Drive customers to your RoamBites page
+
+Make this feel like a core action, not a footer-style add-on.
+
+4. Rename and reposition “Branding & Media”
+The current “Branding & Media” card sounds too much like a basic settings page.
+
+Rename it to something more aligned with value and Pro plan positioning, such as:
+- “Social Media Hub (Pro)”
+- “Social Media Control Center (Pro)”
+
+Update the description so it reflects business value, such as:
+- Create and post branded content
+- Manage your socials
+- Drive more customers back to your truck
+
+This section should feel like a premium marketing engine, not just a media upload tool.
+
+5. Improve the live status card
+The “You’re Live!” section is strong and should remain prominent.
+
+Make the following improvements:
+- Add “Last updated X minutes ago”
+- Change “Update Pin” to “Update Location” for clarity
+- Consider changing “Check Out” to something more intuitive like:
+  - “End Live Status”
+  - “End Day”
+  - “Go Offline”
+
+Keep this section fast and highly usable.
+
+6. Add a quick action row near the top
+Near the top of the dashboard, add a compact quick action row for high-frequency actions.
+
+Suggested quick actions:
+- Go Live / Update Location
+- Share Today
+- View Events
+
+These should be visually prominent and fast to use from mobile.
+
+7. Reorganize dashboard cards into clearer groups
+Right now too many dashboard cards appear to have equal importance. Improve hierarchy by grouping cards into meaningful sections.
+
+Suggested grouping:
+
+A. Setup & Profile
+- Truck Profile
+- Menu
+- Branding / Social Media Hub
+
+B. Operations
+- Schedule
+- Check In / Live Status
+
+C. Revenue
+- Booking Requests
+- Event Invitations
+- Spot Marketplace
+- Messages / Leads
+
+D. Growth
+- Social Media Hub
+- Share & Promote
+- Analytics
+
+You do not have to use these exact section titles, but the information architecture should clearly separate:
+- setup
+- operations
+- revenue
+- growth
+
+8. Reframe Inbox as a revenue/support tool
+Rename “Inbox” to something more valuable and clearer, such as:
+- “Messages & Leads”
+- “Messages & Opportunities”
+
+The goal is to make it feel tied to customer/organizer engagement and potential business, not just generic messaging.
+
+9. Improve the overall dashboard framing
+The dashboard should not just feel like:
+- “Manage your food truck”
+
+It should feel more like:
+- “Grow your food truck business”
+
+Update page copy and section framing where helpful so the dashboard feels more outcome-focused.
+
+10. Mobile-first UX requirement
+Keep all improvements mobile-first.
+The dashboard should remain:
+- clean
+- fast
+- easy to scan
+- easy to use one-handed
+
+Avoid clutter.
+Do not make the dashboard feel overloaded.
+Improve hierarchy rather than adding too much noise.
+
+IMPORTANT
+- Do NOT break existing functionality
+- Do NOT remove useful features
+- Reorganize and reframe existing features to improve clarity and conversion
+- Keep design consistent with current RoamBites branding and UI system
+
+AFTER IMPLEMENTING, PROVIDE
+1. Summary of dashboard changes made
+2. Updated dashboard structure / section grouping
+3. Any renamed cards or actions
+4. Any recommendations for further conversion improvements
