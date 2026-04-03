@@ -47,6 +47,8 @@ router.get("/vendor/marketing/brand", requireAuth, async (req, res): Promise<voi
     twitterHandle: truck.twitterHandle,
     logoUrl: truck.logoUrl,
     coverImageUrl: truck.coverImageUrl,
+    slug: truck.slug,
+    truckId: truck.id,
   });
 });
 
