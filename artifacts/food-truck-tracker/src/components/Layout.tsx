@@ -179,7 +179,7 @@ function getRoleConfig(
     organizer: {
       primaryCta: {
         label: "Create Event",
-        href: "/organizer/new",
+        href: "/organizer/events/new",
         icon: <Plus className="w-4 h-4" />,
       },
       summaryItems: [
@@ -193,7 +193,7 @@ function getRoleConfig(
           items: [
             { label: "Event Dashboard", href: "/organizer", icon: <LayoutDashboard className="w-4 h-4" /> },
             { label: "Manage Events", href: "/organizer", icon: <Calendar className="w-4 h-4" /> },
-            { label: "Create Event", href: "/organizer/new", icon: <Plus className="w-4 h-4" /> },
+            { label: "Create Event", href: "/organizer/events/new", icon: <Plus className="w-4 h-4" /> },
           ],
         },
         {
