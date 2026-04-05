@@ -43,11 +43,35 @@ const AMENITY_ICONS: Record<string, React.ReactNode> = {
   restrooms: <Users className="w-4 h-4" />,
 };
 
-function SmallMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
+function useUserLocation() {
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const prev = sessionStorage.getItem("roambites_location_requested");
+    if (prev === "denied") return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        sessionStorage.setItem("roambites_location_requested", "granted");
+      },
+      () => { sessionStorage.setItem("roambites_location_requested", "denied"); },
+      { timeout: 5000, maximumAge: 60000 }
+    );
+  }, []);
+  return location;
+}
+
+function SmallMap({ lat, lng, name, userLocation }: {
+  lat: number; lng: number; name: string;
+  userLocation: { lat: number; lng: number } | null;
+}) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || mapInstanceRef.current) return;
     let map: any;
     import("leaflet").then((L) => {
       map = L.default.map(mapRef.current!, { center: [lat, lng], zoom: 14, zoomControl: false });
@@ -56,14 +80,34 @@ function SmallMap({ lat, lng, name }: { lat: number; lng: number; name: string }
       }).addTo(map);
       const icon = L.default.divIcon({
         className: "",
-        html: `<div style="width:18px;height:18px;border-radius:50%;background:#f97316;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
+        html: `<div style="width:20px;height:20px;border-radius:50%;background:#f97316;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
       });
-      L.default.marker([lat, lng], { icon }).addTo(map).bindPopup(name).openPopup();
+      L.default.marker([lat, lng], { icon }).addTo(map).bindPopup(`<strong>${name}</strong>`).openPopup();
+      mapInstanceRef.current = map;
+      setMapReady(true);
     });
-    return () => { map?.remove(); };
+    return () => { map?.remove(); mapInstanceRef.current = null; setMapReady(false); };
   }, [lat, lng, name]);
+
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !userLocation) return;
+    import("leaflet").then((L) => {
+      if (userMarkerRef.current) { userMarkerRef.current.remove(); userMarkerRef.current = null; }
+      const icon = L.default.divIcon({
+        className: "",
+        html: `<div style="position:relative;width:16px;height:16px">
+          <div style="position:absolute;inset:0;border-radius:50%;background:#3b82f6;opacity:0.3;animation:ping 1.5s ease-in-out infinite"></div>
+          <div style="position:absolute;inset:3px;border-radius:50%;background:#3b82f6;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>
+        </div>`,
+        iconSize: [16, 16], iconAnchor: [8, 8],
+      });
+      userMarkerRef.current = L.default.marker([userLocation.lat, userLocation.lng], { icon })
+        .addTo(mapInstanceRef.current!)
+        .bindPopup("You are here");
+    });
+  }, [userLocation, mapReady]);
 
   return <div ref={mapRef} className="w-full h-52 rounded-2xl overflow-hidden border border-border" />;
 }
@@ -73,6 +117,7 @@ export default function ParkDetail() {
   const [park, setPark] = useState<Park | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const userLocation = useUserLocation();
 
   useEffect(() => {
     fetch(getApiUrl(`/api/parks/${params.id}`))
@@ -112,6 +157,7 @@ export default function ParkDetail() {
 
   return (
     <Layout>
+      <style>{`@keyframes ping { 0%,100%{transform:scale(1);opacity:0.3} 50%{transform:scale(1.8);opacity:0.1} }`}</style>
       {/* Hero */}
       <div className="relative">
         {park.imageUrl ? (
@@ -282,7 +328,7 @@ export default function ParkDetail() {
 
             {/* Map */}
             {park.latitude && park.longitude && (
-              <SmallMap lat={park.latitude} lng={park.longitude} name={park.name} />
+              <SmallMap lat={park.latitude} lng={park.longitude} name={park.name} userLocation={userLocation} />
             )}
 
             {/* Host info */}

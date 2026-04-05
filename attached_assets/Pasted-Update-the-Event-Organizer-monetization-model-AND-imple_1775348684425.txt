@@ -1,0 +1,212 @@
+Update the Event Organizer monetization model AND implement a fully built-out Featured Event system. This is an ADDITION and REFINEMENT to the existing event and pricing system.
+
+GOAL
+Create a low-friction organizer experience (free to start), monetize through usage, and introduce a high-value Featured Event upgrade that clearly improves visibility and drives conversions.
+
+--------------------------------------------------
+1. EVENT ORGANIZER PRICING MODEL (USAGE-BASED)
+--------------------------------------------------
+
+A. Free Event Creation
+- Organizers can create events for free
+- No upfront cost
+
+B. Per Event Fee
+- Charge when:
+  - event is published OR
+  - event is opened to vendors (pick one consistent trigger)
+
+- Default:
+  $10–$30 per event (admin configurable)
+
+- Show this fee clearly before publishing
+
+C. Transaction Fee
+- Platform takes % of vendor spot payments
+- Default:
+  10–15% (admin configurable)
+
+--------------------------------------------------
+2. FEATURED EVENT SYSTEM (CORE UPGRADE)
+--------------------------------------------------
+
+Add a paid upgrade:
+- “Featured Event”
+
+Suggested price:
+- $20–$50 per event (admin configurable)
+
+This must NOT be just a badge.
+It must provide REAL visibility improvements across the app.
+
+--------------------------------------------------
+3. DATABASE / BACKEND
+--------------------------------------------------
+
+Add fields to Event model:
+- isFeatured (boolean)
+- featuredPurchasedAt (datetime)
+- featuredExpiresAt (optional)
+- featuredPriorityScore (optional)
+
+Must be editable by admin and set during purchase flow.
+
+--------------------------------------------------
+4. EVENT CARD VISUAL DIFFERENTIATION
+--------------------------------------------------
+
+Featured events must look different:
+
+- “Featured” badge
+- stronger border or accent color
+- slightly higher visual weight
+- better use of cover image
+- optional star/spotlight icon
+
+Do NOT make this subtle.
+
+--------------------------------------------------
+5. EVENT LISTING PRIORITY
+--------------------------------------------------
+
+Across all event lists:
+
+Sort logic:
+1. Featured events first
+2. Then by soonest date
+
+Apply to:
+- main events page
+- event search results
+- discovery sections
+- vendor marketplace views
+
+--------------------------------------------------
+6. FRONT PAGE FEATURED LOGIC
+--------------------------------------------------
+
+If:
+- event is Featured
+AND
+- event starts within 7 days
+
+Then:
+- show on homepage
+
+Create section:
+- “Featured This Week”
+
+Rules:
+- only featured events
+- only within 7 days
+- sort by soonest date
+- admin controls max number shown
+
+--------------------------------------------------
+7. VENDOR-SIDE PRIORITY
+--------------------------------------------------
+
+In vendor views:
+
+- Featured events appear first in:
+  - Spot Marketplace
+  - Event browsing
+
+- Include:
+  - Featured badge
+  - stronger visual styling
+
+--------------------------------------------------
+8. SEARCH PRIORITY
+--------------------------------------------------
+
+In search results:
+- Featured events rank higher within filters
+
+Add optional filter:
+- “Featured Events”
+
+--------------------------------------------------
+9. EVENT DETAIL PAGE UPGRADES
+--------------------------------------------------
+
+Featured events should feel premium:
+
+- prominent badge near title
+- strong hero image
+- improved spacing and layout
+- optional “Featured Event” label
+
+--------------------------------------------------
+10. ORGANIZER PURCHASE FLOW
+--------------------------------------------------
+
+During event publish:
+
+Show pricing clearly:
+
+Example:
+- Publish Event: $20
+- Feature Event: $30
+
+Explain benefits:
+- better placement
+- homepage exposure
+- more vendor visibility
+- featured badge
+
+Allow:
+- publish normally
+- publish + feature
+
+--------------------------------------------------
+11. ADMIN CONTROLS
+--------------------------------------------------
+
+Admin can:
+- set publish fee
+- set transaction %
+- set featured price
+- control homepage featured section
+- control max events shown
+- manually feature/unfeature events
+
+--------------------------------------------------
+12. ANALYTICS (STRUCTURE)
+--------------------------------------------------
+
+Prepare to track:
+- views per event
+- vendor applications
+- reservations
+
+Especially for featured vs non-featured
+
+--------------------------------------------------
+13. UX REQUIREMENTS
+--------------------------------------------------
+
+- Pricing must be clear and simple
+- Featured must feel valuable
+- Do NOT overwhelm user
+- Do NOT make it subtle
+- Keep UI clean and premium
+
+--------------------------------------------------
+14. STRATEGIC REQUIREMENTS
+--------------------------------------------------
+
+This system should:
+- maximize adoption (free entry)
+- monetize usage (per event)
+- scale with success (transaction fees)
+- upsell visibility (featured events)
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE:
+
+1. Where fees are triggered in workflow
+2. How Featured events are stored
+3. Sorting logic implementation
+4. Homepage featured logic
+5. Admin configuration options

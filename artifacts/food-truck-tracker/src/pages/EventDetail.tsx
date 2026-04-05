@@ -483,19 +483,19 @@ export default function EventDetail() {
                       onClick={() => setSelectedTruckId(isSelected ? null : truck.id)}
                       className={`group bg-card border rounded-2xl overflow-hidden cursor-pointer transition-all ${
                         isSelected
-                          ? "border-green-500 shadow-md ring-2 ring-green-500/20"
+                          ? "border-primary shadow-lg ring-2 ring-primary/15"
                           : "border-border hover:border-primary/40 hover:shadow-md"
                       }`}
                     >
-                      <div className="flex items-center gap-4 p-4">
+                      <div className="flex items-center gap-3 p-4">
                         {truck.logoUrl || truck.imageUrl ? (
                           <img
                             src={truck.logoUrl || truck.imageUrl || ""}
                             alt={truck.name}
-                            className="w-14 h-14 rounded-xl object-cover shrink-0 border border-border"
+                            className="w-12 h-12 rounded-xl object-cover shrink-0 border border-border"
                           />
                         ) : (
-                          <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl shrink-0">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0">
                             {truck.name.charAt(0)}
                           </div>
                         )}
@@ -517,13 +517,16 @@ export default function EventDetail() {
                           )}
                         </div>
                       </div>
-                      <div className="px-4 pb-3 flex justify-end">
+                      <div className="px-4 pb-3 flex items-center justify-between">
+                        {isSelected && (
+                          <span className="text-xs text-primary/60 font-medium">Highlighted on map</span>
+                        )}
                         <Link
                           href={`/trucks/${truck.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
+                          className="ml-auto inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline"
                         >
-                          View Truck <ChevronRight className="w-3 h-3" />
+                          View details <ChevronRight className="w-3 h-3" />
                         </Link>
                       </div>
                     </div>

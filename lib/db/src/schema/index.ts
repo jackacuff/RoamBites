@@ -18,3 +18,4 @@ export * from "./vendorSubscriptions";
 export * from "./parks";
 export * from "./truckViews";
 export * from "./socialPosts";
+export * from "./platformSettings";
