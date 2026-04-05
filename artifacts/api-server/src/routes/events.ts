@@ -1,10 +1,51 @@
 import { Router, type IRouter } from "express";
 import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable, messagesTable } from "@workspace/db";
 import { eq, and, gt, inArray } from "drizzle-orm";
-import { CreateEventBody, UpdateEventBody, InviteTruckToEventBody, RespondToEventInviteBody } from "@workspace/api-zod";
+import { InviteTruckToEventBody, RespondToEventInviteBody } from "@workspace/api-zod";
 import { requireRole, requireAuth, optionalAuth } from "../lib/auth";
 import { slugify, computeTruckStatus } from "../lib/truckStatus";
 import { getUncachableStripeClient } from "../lib/stripeClient";
+import { z } from "zod";
+
+const EventWriteSchema = z.object({
+  name: z.string(),
+  description: z.string().nullish(),
+  venueName: z.string(),
+  address: z.string().nullish(),
+  city: z.string(),
+  latitude: z.number().nullish(),
+  longitude: z.number().nullish(),
+  startDateTime: z.coerce.date(),
+  endDateTime: z.coerce.date(),
+  publicNotes: z.string().nullish(),
+  vendorNotes: z.string().nullish(),
+  isPublished: z.boolean().optional(),
+  bannerImageUrl: z.string().nullish(),
+  websiteUrl: z.string().nullish(),
+  photoUrls: z.string().nullish(),
+  thumbnailUrl: z.string().nullish(),
+  contactFirstName: z.string().nullish(),
+  contactLastName: z.string().nullish(),
+  contactEmail: z.string().nullish(),
+  contactPhone: z.string().nullish(),
+  howHeardAboutUs: z.string().nullish(),
+  availableHookups: z.string().nullish(),
+  vendorFeeStructure: z.string().nullish(),
+  spotFeeAmount: z.number().nullish(),
+  vendorPaymentMethod: z.string().nullish(),
+  expectedAttendance: z.number().nullish(),
+  eventType: z.string().nullish(),
+  notificationMethod: z.string().nullish(),
+  additionalInfo: z.string().nullish(),
+});
+
+const CreateEventSchema = EventWriteSchema.extend({
+  name: z.string().min(1),
+  venueName: z.string().min(1),
+  city: z.string().min(1),
+});
+
+const UpdateEventSchema = EventWriteSchema.partial();
 
 const router: IRouter = Router();
 
@@ -143,7 +184,7 @@ router.get("/events/:id", optionalAuth, async (req, res): Promise<void> => {
 });
 
 router.post("/events", requireRole("organizer", "admin"), async (req, res): Promise<void> => {
-  const parsed = CreateEventBody.safeParse(req.body);
+  const parsed = CreateEventSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
@@ -178,7 +219,7 @@ router.post("/events", requireRole("organizer", "admin"), async (req, res): Prom
 router.put("/events/:id", requireRole("organizer", "admin"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
-  const parsed = UpdateEventBody.safeParse(req.body);
+  const parsed = UpdateEventSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
@@ -207,9 +248,24 @@ router.put("/events/:id", requireRole("organizer", "admin"), async (req, res): P
   if (body.endDateTime !== null && body.endDateTime !== undefined) updateData.endDateTime = new Date(body.endDateTime);
   if (body.publicNotes !== undefined) updateData.publicNotes = body.publicNotes;
   if (body.vendorNotes !== undefined) updateData.vendorNotes = body.vendorNotes;
-  if (req.body.isPublished !== undefined) updateData.isPublished = Boolean(req.body.isPublished);
-  if (req.body.bannerImageUrl !== undefined) updateData.bannerImageUrl = req.body.bannerImageUrl;
-  if (req.body.websiteUrl !== undefined) updateData.websiteUrl = req.body.websiteUrl;
+  if (body.isPublished !== undefined) updateData.isPublished = Boolean(body.isPublished);
+  if (body.bannerImageUrl !== undefined) updateData.bannerImageUrl = body.bannerImageUrl;
+  if (body.websiteUrl !== undefined) updateData.websiteUrl = body.websiteUrl;
+  if (body.photoUrls !== undefined) updateData.photoUrls = body.photoUrls;
+  if (body.thumbnailUrl !== undefined) updateData.thumbnailUrl = body.thumbnailUrl;
+  if (body.contactFirstName !== undefined) updateData.contactFirstName = body.contactFirstName;
+  if (body.contactLastName !== undefined) updateData.contactLastName = body.contactLastName;
+  if (body.contactEmail !== undefined) updateData.contactEmail = body.contactEmail;
+  if (body.contactPhone !== undefined) updateData.contactPhone = body.contactPhone;
+  if (body.howHeardAboutUs !== undefined) updateData.howHeardAboutUs = body.howHeardAboutUs;
+  if (body.availableHookups !== undefined) updateData.availableHookups = body.availableHookups;
+  if (body.vendorFeeStructure !== undefined) updateData.vendorFeeStructure = body.vendorFeeStructure;
+  if (body.spotFeeAmount !== undefined) updateData.spotFeeAmount = body.spotFeeAmount;
+  if (body.vendorPaymentMethod !== undefined) updateData.vendorPaymentMethod = body.vendorPaymentMethod;
+  if (body.expectedAttendance !== undefined) updateData.expectedAttendance = body.expectedAttendance;
+  if (body.eventType !== undefined) updateData.eventType = body.eventType;
+  if (body.notificationMethod !== undefined) updateData.notificationMethod = body.notificationMethod;
+  if (body.additionalInfo !== undefined) updateData.additionalInfo = body.additionalInfo;
 
   const [updated] = await db.update(eventsTable).set(updateData).where(eq(eventsTable.id, id)).returning();
   res.json({ ...updated, trucks: [] });

@@ -22,6 +22,7 @@
     "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
     "openai": "^6.33.0",
+    "zod": "catalog:",
     "pino": "^9",
     "pino-http": "^10"
   },
