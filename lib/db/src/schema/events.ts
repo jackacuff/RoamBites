@@ -22,6 +22,8 @@ export const eventsTable = pgTable("events", {
   websiteUrl: text("website_url"),
   isFeatured: boolean("is_featured").notNull().default(false),
   featuredUntil: timestamp("featured_until", { withTimezone: true }),
+  featuredPurchasedAt: timestamp("featured_purchased_at", { withTimezone: true }),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 
   // Organizer questionnaire fields
