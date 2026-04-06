@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
 import { TruckCard } from "@/components/TruckCard";
-import { MapPin, Search, Calendar, ChevronRight, Navigation, Star, Wifi } from "lucide-react";
+import { MapPin, Search, Calendar, ChevronRight, Navigation, Star, Wifi, Map } from "lucide-react";
 import { motion } from "framer-motion";
 import { useListEvents } from "@workspace/api-client-react";
 import { useState, useEffect } from "react";
@@ -103,8 +103,15 @@ export default function Home() {
               Find your flavor in <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Central Oklahoma</span>
             </h1>
             
-            <p className="text-sm sm:text-lg md:text-xl text-muted-foreground mb-5 sm:mb-8 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-sm sm:text-lg md:text-xl text-muted-foreground mb-2 sm:mb-3 max-w-2xl mx-auto leading-relaxed">
               Track your favorite food trucks, discover new cuisines, and find live street food events happening near you right now.
+            </p>
+            <p className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium mb-5 sm:mb-8 flex items-center justify-center gap-1.5">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+              </span>
+              See what's open right now on the live map
             </p>
 
             {/* Hero Search Bar */}
@@ -132,9 +139,9 @@ export default function Home() {
                 Browse Trucks
                 <ArrowRight className="ml-1.5 w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/events" className="flex-1 sm:flex-none sm:w-auto px-5 sm:px-8 py-3 sm:py-4 rounded-full bg-card border-2 border-border text-foreground font-bold text-sm sm:text-lg hover:border-primary/50 hover:bg-muted transition-all flex items-center justify-center">
-                <Calendar className="mr-1.5 w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                Events
+              <Link href="/trucks?view=map" className="flex-1 sm:flex-none sm:w-auto px-5 sm:px-8 py-3 sm:py-4 rounded-full bg-card border-2 border-green-500/40 text-foreground font-bold text-sm sm:text-lg hover:border-green-500/70 hover:bg-green-500/5 transition-all flex items-center justify-center gap-2">
+                <Map className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
+                View Live Map
               </Link>
             </div>
           </motion.div>
@@ -166,9 +173,15 @@ export default function Home() {
               </div>
               <p className="text-sm sm:text-base text-muted-foreground">{sub}</p>
             </div>
-            <Link href="/trucks" className="hidden sm:flex items-center text-primary font-semibold hover:text-primary/80 transition-colors">
-              See all <ChevronRight className="w-4 h-4 ml-1" />
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/trucks?view=map" className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full bg-green-500/10 text-green-700 dark:text-green-400 text-xs sm:text-sm font-semibold border border-green-500/20 hover:bg-green-500/20 transition-colors whitespace-nowrap shrink-0">
+                <Map className="w-3.5 h-3.5 shrink-0" />
+                Open Live Map
+              </Link>
+              <Link href="/trucks" className="hidden sm:flex items-center text-primary font-semibold hover:text-primary/80 transition-colors text-sm">
+                See all <ChevronRight className="w-4 h-4 ml-1" />
+              </Link>
+            </div>
           </div>
 
           {featuredLoading ? (
@@ -218,6 +231,19 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Mobile Floating Live Map Button */}
+      <Link
+        href="/trucks?view=map"
+        className="md:hidden fixed bottom-5 right-5 z-50 flex items-center gap-2 pl-4 pr-5 py-3 rounded-full bg-green-600 text-white shadow-xl shadow-green-600/30 hover:bg-green-700 active:scale-95 transition-all"
+      >
+        <Map className="w-4 h-4 shrink-0" />
+        <span className="text-sm font-bold">Live Map</span>
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+        </span>
+      </Link>
     </Layout>
   );
 }
