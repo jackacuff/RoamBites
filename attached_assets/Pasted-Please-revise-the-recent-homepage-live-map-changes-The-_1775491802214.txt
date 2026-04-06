@@ -1,0 +1,85 @@
+Please revise the recent homepage/live map changes. The current version feels too repetitive, over-emphasizes the live map, and removed the Events CTA. I want this to be a correction to the previous implementation.
+
+GOAL
+Keep the live map more visible than before, but avoid repetition and restore Events as a core homepage action.
+
+ISSUES TO FIX
+- “Live Map” is repeated too many times
+- homepage feels overly focused on one feature
+- Events button/CTA is missing from the hero area
+- card/button language is not as intuitive as it could be
+
+REQUIRED CHANGES
+
+1. Simplify the hero section
+Keep the hero focused on the 3 primary user actions:
+- Browse Trucks
+- View Live Map
+- View Events
+
+Recommended structure:
+- Keep “Browse Trucks” as the primary CTA
+- Keep “View Live Map” as a secondary CTA
+- Add “View Events” back as a visible CTA
+
+This can be:
+- 3 buttons if the layout stays clean
+OR
+- 2 main buttons plus a third lighter/tertiary button or link
+
+2. Remove repetitive live map copy
+Remove the extra supporting line:
+- “See what’s open right now on the live map”
+
+Reason:
+- the CTA button already communicates this
+- it creates repetition and visual noise
+
+3. Reduce live map repetition in the “Open Near You” section
+The “Open Near You” section already implies live/open map-based discovery.
+
+Do NOT repeat large live map CTAs too many times here.
+
+Specifically:
+- remove or reduce the “Open Live Map” button in the section header if it feels redundant
+- do not overuse “Live Map” wording multiple times in one section
+
+4. Update card button language
+On the individual truck cards, do NOT label the button simply as “Live Map”
+
+Use clearer action language such as:
+- “See Location”
+- “View Truck”
+- “Open on Map”
+
+Preferred option:
+- “See Location”
+
+5. Restore event visibility
+Make sure Events is clearly represented again on the homepage hero area.
+
+Events should feel like one of the app’s 3 main actions, alongside:
+- browsing trucks
+- viewing the live map
+
+6. Keep homepage clean
+Do NOT add more sections.
+Do NOT clutter the hero.
+Do NOT over-correct by hiding the live map again.
+
+The goal is balance:
+- live map should be more apparent than before
+- but not dominate the page or repeat excessively
+
+DESIGN / UX PRIORITIES
+- mobile-first
+- simple hierarchy
+- minimal repetition
+- clear actions
+- maintain polished visual design
+
+AFTER IMPLEMENTING, PROVIDE
+1. Summary of what was changed
+2. Where live map is now surfaced
+3. How Events was restored to the homepage flow
+4. What wording was used for truck card actions
