@@ -1,0 +1,117 @@
+Update the RoamBites home page and navigation to make the live map for open food trucks much more apparent, without making the map itself display directly on the home page.
+
+GOAL
+The live map is one of the app’s core value features, but it is currently too hidden. Make it much easier for users to discover and access, while keeping the home page clean and uncluttered.
+
+IMPORTANT
+- Do NOT place the full map directly on the home page
+- Do NOT clutter the hero section
+- Increase discoverability through navigation, calls to action, and subtle UI improvements
+
+1. Add “Live Map” as a primary navigation item
+Update the top navigation to make the map a clearer core feature.
+
+Current nav includes:
+- Home
+- Browse Trucks
+- Events
+
+Update to something like:
+- Home
+- Live Map
+- Browse Trucks
+- Events
+
+Requirements:
+- “Live Map” should be clearly visible in desktop and mobile nav
+- It should not feel buried under another menu item
+- It should route directly to the existing map/open trucks experience
+
+2. Add a “View Live Map” button in the hero section
+The hero currently has calls to action like:
+- Browse All Trucks
+- View Events
+
+Add or replace one of the secondary CTAs with:
+- “View Live Map”
+
+Requirements:
+- Keep “Browse All Trucks” as the primary CTA
+- Make “View Live Map” the secondary CTA
+- Use an icon if helpful, such as a map pin or map icon
+- Keep styling aligned with the existing brand system
+- This button should route directly to the map experience
+
+3. Improve “Live & Open Now” section with a map shortcut
+The existing “Live & Open Now” section should include a more obvious path to the map.
+
+Add a stronger entry point such as:
+- “Open Live Map”
+- “See all open trucks on map”
+- “Find trucks near you now”
+
+Requirements:
+- Keep the section clean
+- This should feel like a natural extension of the “Live & Open Now” section
+- If no trucks are open, still allow user to click through to the map view
+
+4. Add a floating map shortcut button on mobile (if it fits cleanly)
+Add a small floating action button on mobile for quick access to the live map.
+
+Requirements:
+- Show a simple icon, such as a map or map pin
+- Position it so it does not interfere with other UI
+- It should be subtle and useful, not distracting
+- Clicking it routes directly to the live map
+
+If this feels too cluttered, use a very clean sticky shortcut bar instead.
+
+5. Add subtle supporting copy on the home page
+Without overloading the hero, add one small piece of copy somewhere relevant that reinforces the map feature.
+
+Example ideas:
+- “See what’s open right now on the live map”
+- “Find open food trucks near you”
+- “Track live truck locations”
+
+Requirements:
+- Keep it concise
+- Do not let it compete with the main headline
+- Use it to reinforce map discoverability
+
+6. Improve naming and clarity
+Wherever the feature is referenced, avoid vague language like:
+- “See map”
+
+Prefer clearer, value-driven naming such as:
+- “Live Map”
+- “What’s Open Now”
+- “Find Trucks Near You”
+
+Use consistent language across:
+- navbar
+- hero CTA
+- live/open section
+- mobile shortcut
+
+7. UX priorities
+The updated experience should:
+- make the live map feel like a core feature
+- keep the homepage visually clean
+- guide users naturally toward the map
+- work especially well on mobile
+
+8. Do not break current layout quality
+The home page currently has a clean, polished look. Preserve that.
+
+Requirements:
+- maintain good spacing
+- avoid too many competing CTAs
+- keep hierarchy clear
+- do not overcrowd the page
+
+AFTER IMPLEMENTING, PROVIDE
+1. Summary of what changed
+2. Where the live map is now surfaced
+3. Any naming updates used for the feature
+4. Any mobile-specific adjustments made

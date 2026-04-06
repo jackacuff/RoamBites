@@ -5,7 +5,7 @@ import {
   AlertTriangle, Inbox, Truck, CreditCard, MapPin, Calendar, Search,
   LayoutDashboard, Briefcase, Wifi, Building2, BarChart2, Plus,
   Radio, Star, Flame, CalendarRange, TrendingUp, Zap, Settings,
-  ChevronRight, ShieldCheck,
+  ChevronRight, ShieldCheck, Map,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -602,16 +602,25 @@ function MobileDrawer({
                     Explore
                   </p>
                   {[
+                    { label: "Live Map", href: "/trucks?view=map", icon: <Map className="w-4 h-4" />, highlight: true },
                     { label: "Find Food", href: "/trucks", icon: <Search className="w-4 h-4" /> },
                     { label: "Events Near Me", href: "/events", icon: <Calendar className="w-4 h-4" /> },
                     { label: "Food Truck Parks", href: "/parks", icon: <Building2 className="w-4 h-4" /> },
                   ].map((item) => (
                     <Link key={item.href} href={item.href} onClick={onClose}>
                       <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
-                        location === item.href ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+                        (item as any).highlight
+                          ? "bg-green-500/10 text-green-700 dark:text-green-400 font-semibold"
+                          : location === item.href ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
                       }`}>
-                        <span className="text-muted-foreground">{item.icon}</span>
+                        <span className={(item as any).highlight ? "text-green-600 dark:text-green-400" : "text-muted-foreground"}>{item.icon}</span>
                         <span className="text-sm font-medium">{item.label}</span>
+                        {(item as any).highlight && (
+                          <span className="ml-auto relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+                          </span>
+                        )}
                       </div>
                     </Link>
                   ))}
@@ -683,16 +692,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const desktopNavLinks = (() => {
     if (!user) {
       return [
+        { name: "Live Map", path: "/trucks?view=map" },
         { name: "Browse Trucks", path: "/trucks" },
         { name: "Events", path: "/events" },
-        { name: "Truck Parks", path: "/parks" },
       ];
     }
     if (user.role === "customer") {
       return [
+        { name: "Live Map", path: "/trucks?view=map" },
         { name: "Find Food", path: "/trucks" },
         { name: "Events", path: "/events" },
-        { name: "Truck Parks", path: "/parks" },
       ];
     }
     if (user.role === "vendor") {
@@ -705,7 +714,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (user.role === "organizer") {
       return [
         { name: "My Events", path: "/organizer" },
-        { name: "Create Event", path: "/organizer/new" },
+        { name: "Create Event", path: "/organizer/events/new" },
         { name: "Find Vendors", path: "/trucks" },
       ];
     }
@@ -757,15 +766,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-6">
-              {desktopNavLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  href={link.path}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${location === link.path ? "text-primary" : "text-muted-foreground"}`}
-                >
-                  {link.name}
-                </Link>
-              ))}
+              {desktopNavLinks.map((link) => {
+                const isLiveMap = link.path.includes("?view=map");
+                const linkBase = link.path.split("?")[0];
+                const isActive = isLiveMap
+                  ? location === "/trucks" && new URLSearchParams(window.location.search).get("view") === "map"
+                  : location === linkBase;
+                return (
+                  <Link
+                    key={link.path}
+                    href={link.path}
+                    className={`text-sm font-medium transition-colors hover:text-primary flex items-center gap-1.5 ${isActive ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    {isLiveMap && <Map className="w-3.5 h-3.5" />}
+                    {link.name}
+                    {isLiveMap && (
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </nav>
 
             {/* Desktop Auth */}

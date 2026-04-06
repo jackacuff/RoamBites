@@ -18,7 +18,9 @@ export default function Trucks() {
   const [openNow, setOpenNow] = useState(searchParams.get('openNow') === 'true');
   const [search, setSearch] = useState(searchParams.get('search') || "");
   
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>(() =>
+    new URLSearchParams(window.location.search).get('view') === 'map' ? 'map' : 'list'
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [favoriteTruckIds, setFavoriteTruckIds] = useState<Set<number>>(new Set());
 
