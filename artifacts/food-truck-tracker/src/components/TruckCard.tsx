@@ -54,7 +54,7 @@ export function TruckCard({ truck }: TruckCardProps) {
             </span>
           </div>
           <div className="hidden sm:flex items-center text-sm font-semibold text-primary">
-            View details <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+            View Truck <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
       </div>

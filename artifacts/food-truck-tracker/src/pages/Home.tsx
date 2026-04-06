@@ -103,15 +103,8 @@ export default function Home() {
               Find your flavor in <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Central Oklahoma</span>
             </h1>
             
-            <p className="text-sm sm:text-lg md:text-xl text-muted-foreground mb-2 sm:mb-3 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-sm sm:text-lg md:text-xl text-muted-foreground mb-5 sm:mb-8 max-w-2xl mx-auto leading-relaxed">
               Track your favorite food trucks, discover new cuisines, and find live street food events happening near you right now.
-            </p>
-            <p className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium mb-5 sm:mb-8 flex items-center justify-center gap-1.5">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
-              </span>
-              See what's open right now on the live map
             </p>
 
             {/* Hero Search Bar */}
@@ -134,14 +127,21 @@ export default function Home() {
               </button>
             </form>
             
-            <div className="flex flex-row sm:flex-row items-center justify-center gap-3 sm:gap-4">
-              <Link href="/trucks" className="flex-1 sm:flex-none sm:w-auto px-5 sm:px-8 py-3 sm:py-4 rounded-full bg-primary text-primary-foreground font-bold text-sm sm:text-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center group">
-                Browse Trucks
-                <ArrowRight className="ml-1.5 w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link href="/trucks?view=map" className="flex-1 sm:flex-none sm:w-auto px-5 sm:px-8 py-3 sm:py-4 rounded-full bg-card border-2 border-green-500/40 text-foreground font-bold text-sm sm:text-lg hover:border-green-500/70 hover:bg-green-500/5 transition-all flex items-center justify-center gap-2">
-                <Map className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
-                View Live Map
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 w-full">
+                <Link href="/trucks" className="flex-1 sm:flex-none sm:w-auto px-5 sm:px-8 py-3 sm:py-4 rounded-full bg-primary text-primary-foreground font-bold text-sm sm:text-lg shadow-lg shadow-primary/30 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center group">
+                  Browse Trucks
+                  <ArrowRight className="ml-1.5 w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link href="/trucks?view=map" className="flex-1 sm:flex-none sm:w-auto px-5 sm:px-8 py-3 sm:py-4 rounded-full bg-card border-2 border-green-500/40 text-foreground font-bold text-sm sm:text-lg hover:border-green-500/70 hover:bg-green-500/5 transition-all flex items-center justify-center gap-2">
+                  <Map className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
+                  View Live Map
+                </Link>
+              </div>
+              <Link href="/events" className="flex items-center gap-1.5 text-sm sm:text-base text-muted-foreground hover:text-primary transition-colors font-medium">
+                <Calendar className="w-4 h-4" />
+                View Events
+                <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </motion.div>
@@ -173,15 +173,9 @@ export default function Home() {
               </div>
               <p className="text-sm sm:text-base text-muted-foreground">{sub}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Link href="/trucks?view=map" className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full bg-green-500/10 text-green-700 dark:text-green-400 text-xs sm:text-sm font-semibold border border-green-500/20 hover:bg-green-500/20 transition-colors whitespace-nowrap shrink-0">
-                <Map className="w-3.5 h-3.5 shrink-0" />
-                Open Live Map
-              </Link>
-              <Link href="/trucks" className="hidden sm:flex items-center text-primary font-semibold hover:text-primary/80 transition-colors text-sm">
-                See all <ChevronRight className="w-4 h-4 ml-1" />
-              </Link>
-            </div>
+            <Link href="/trucks" className="hidden sm:flex items-center text-primary font-semibold hover:text-primary/80 transition-colors text-sm shrink-0">
+              See all <ChevronRight className="w-4 h-4 ml-1" />
+            </Link>
           </div>
 
           {featuredLoading ? (
