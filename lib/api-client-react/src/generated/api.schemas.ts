@@ -102,6 +102,15 @@ export interface TruckSummary {
   /** @nullable */
   currentCity?: string | null;
   activeSchedule?: ScheduleEntry | null;
+  /** @nullable */
+  currentLatitude?: number | null;
+  /** @nullable */
+  currentLongitude?: number | null;
+  /** @nullable */
+  liveUntil?: string | null;
+  /** @nullable */
+  liveStartedAt?: string | null;
+  liveOutsideSchedule?: boolean;
   vendorUserId: number;
 }
 

@@ -104,6 +104,11 @@ export const ListTrucksResponseItem = zod.object({
       truckName: zod.string().nullish(),
     })
     .nullish(),
+  currentLatitude: zod.number().nullish(),
+  currentLongitude: zod.number().nullish(),
+  liveUntil: zod.string().nullish(),
+  liveStartedAt: zod.string().nullish(),
+  liveOutsideSchedule: zod.boolean().optional(),
   vendorUserId: zod.number(),
 });
 export const ListTrucksResponse = zod.array(ListTrucksResponseItem);
@@ -597,6 +602,11 @@ export const GetEventResponse = zod.object({
               truckName: zod.string().nullish(),
             })
             .nullish(),
+          currentLatitude: zod.number().nullish(),
+          currentLongitude: zod.number().nullish(),
+          liveUntil: zod.string().nullish(),
+          liveStartedAt: zod.string().nullish(),
+          liveOutsideSchedule: zod.boolean().optional(),
           vendorUserId: zod.number(),
         })
         .optional(),
@@ -678,6 +688,11 @@ export const UpdateEventResponse = zod.object({
               truckName: zod.string().nullish(),
             })
             .nullish(),
+          currentLatitude: zod.number().nullish(),
+          currentLongitude: zod.number().nullish(),
+          liveUntil: zod.string().nullish(),
+          liveStartedAt: zod.string().nullish(),
+          liveOutsideSchedule: zod.boolean().optional(),
           vendorUserId: zod.number(),
         })
         .optional(),
@@ -827,6 +842,11 @@ export const RespondToEventInviteResponse = zod.object({
           truckName: zod.string().nullish(),
         })
         .nullish(),
+      currentLatitude: zod.number().nullish(),
+      currentLongitude: zod.number().nullish(),
+      liveUntil: zod.string().nullish(),
+      liveStartedAt: zod.string().nullish(),
+      liveOutsideSchedule: zod.boolean().optional(),
       vendorUserId: zod.number(),
     })
     .optional(),
