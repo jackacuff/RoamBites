@@ -1,0 +1,307 @@
+This project is now the MOBILE APP FRONTEND for RoamBites.
+
+IMPORTANT:
+Do NOT convert or destroy the existing website architecture. Do NOT turn this into just a wrapped webview. Do NOT rebuild the backend from scratch unless absolutely necessary.
+
+The goal is to create a native-feeling iOS app version of RoamBites that stays connected to the same backend, database, auth system, and business logic as the existing web app.
+
+The website and mobile app should remain connected through shared data and backend logic, but this mobile project should have its own frontend, navigation, layouts, and mobile-specific UX.
+
+-----------------------------------
+CORE GOAL
+-----------------------------------
+
+Build an App Store-ready iOS mobile app version of RoamBites using the best mobile-native framework Replit supports, preferably:
+- Expo
+- React Native
+
+Reuse the existing RoamBites backend and data structure where possible.
+
+This app should feel like a true mobile app, not a website inside an app shell.
+
+-----------------------------------
+DO NOT
+-----------------------------------
+
+- Do NOT make this just a web wrapper
+- Do NOT break the existing shared backend
+- Do NOT remove current user roles or business logic
+- Do NOT create a disconnected second system unless necessary
+- Do NOT overcomplicate the first mobile version
+
+-----------------------------------
+SHARED SYSTEMS THAT SHOULD STAY CONNECTED
+-----------------------------------
+
+The mobile app should use the same:
+- user accounts
+- authentication
+- food truck data
+- event data
+- booking data
+- favorites
+- reviews
+- organizer data
+- vendor data
+- admin/superadmin logic if practical
+- subscription and monetization structure where relevant
+
+If backend APIs need cleanup or new endpoints for mobile consumption, improve them carefully without breaking the web version.
+
+-----------------------------------
+MOBILE APP EXPERIENCE
+-----------------------------------
+
+The mobile app should be optimized for iPhone first.
+
+Use mobile-native UX patterns including:
+- bottom tab navigation
+- stack navigation for detail pages
+- native-feeling buttons and spacing
+- loading states
+- error states
+- pull to refresh where appropriate
+- mobile-friendly map behavior
+- native share integration where possible
+- proper permission prompts for location
+- image upload behavior that makes sense on mobile
+- smooth transitions between screens
+
+-----------------------------------
+MAIN APP SECTIONS
+-----------------------------------
+
+Build the mobile app around these main areas:
+
+1. Home
+- Hero/home screen adapted for mobile
+- easy access to:
+  - Browse Trucks
+  - Live Map
+  - Events
+- surface open trucks and featured events cleanly
+
+2. Live Map
+- map of open/live food trucks
+- user location dot if permission granted
+- easy access to truck details from pins/cards
+- fast and clean mobile map experience
+
+3. Trucks / Browse
+- browse all trucks
+- filter/search
+- truck detail pages
+- favorites
+- reviews
+- see menus, schedules, specials, and branding
+
+4. Events
+- browse events
+- featured events
+- event detail pages
+- food truck lineup
+- event map if implemented
+- event organizer flows if practical for mobile
+
+5. Account
+Role-aware account area
+
+For customer:
+- profile
+- favorites
+- reviews
+- notifications
+
+For vendor:
+- vendor dashboard
+- truck management
+- schedule
+- live location
+- bookings
+- event opportunities
+- social/share tools if practical
+
+For organizer:
+- organizer dashboard
+- create/manage events
+- manage spots
+- reservations
+- payments if practical
+
+-----------------------------------
+ROLE SUPPORT
+-----------------------------------
+
+Maintain support for these user roles:
+- customer
+- vendor
+- event organizer
+- admin
+- superadmin if practical
+
+The first mobile version should prioritize:
+1. customer flows
+2. vendor core flows
+3. organizer core flows
+
+Admin can be simplified for mobile if needed, but do not remove underlying role support.
+
+-----------------------------------
+CUSTOMER MOBILE PRIORITIES
+-----------------------------------
+
+Must work very well on mobile:
+- browse trucks
+- search/filter
+- live map
+- truck details
+- favorites
+- reviews
+- browse events
+- event details
+- host an event CTA if that exists
+
+-----------------------------------
+VENDOR MOBILE PRIORITIES
+-----------------------------------
+
+Must work very well on mobile:
+- log in
+- access vendor dashboard
+- update schedule
+- update live location
+- use “Update My Location”
+- see booking requests
+- browse event opportunities
+- manage truck basics
+- post/share daily schedule
+- access quick actions easily
+
+The vendor app experience should feel useful during an actual workday on a truck.
+
+-----------------------------------
+ORGANIZER MOBILE PRIORITIES
+-----------------------------------
+
+Must support at least:
+- create event
+- edit event
+- publish event
+- browse/manage vendor interest
+- see event details
+- see featured event options
+- manage event photos
+- review event questionnaire responses and settings
+
+-----------------------------------
+DESIGN / BRANDING
+-----------------------------------
+
+Reuse the current RoamBites branding:
+- colors
+- tone
+- typography direction
+- logo/icon style
+
+But adapt the UI to feel mobile-native and cleaner than the web app where needed.
+
+The app should feel polished enough for App Store submission.
+
+-----------------------------------
+APP STORE READINESS
+-----------------------------------
+
+Prepare this project so it can realistically be submitted as an iOS app.
+
+That means:
+- mobile-native structure
+- app icon support
+- splash/loading screen support
+- correct navigation structure
+- location permission handling
+- share support where relevant
+- settings/config structure for iOS app deployment
+- no obvious “this is just a website” feel
+
+If needed, create:
+- Expo app config
+- app.json / app.config
+- icon placeholders
+- splash placeholders
+- environment variable structure
+
+-----------------------------------
+TECHNICAL APPROACH
+-----------------------------------
+
+Preferred approach:
+- Expo / React Native frontend
+- shared API/backend with existing RoamBites system
+
+If parts of the backend need to be consumed differently for mobile, add or improve API endpoints carefully.
+
+If auth/session handling needs mobile-specific work, implement it in a way that still preserves compatibility with the web product.
+
+-----------------------------------
+MVP FOR MOBILE
+-----------------------------------
+
+For the first mobile version, prioritize a strong usable MVP over complete feature parity.
+
+Must-have mobile MVP:
+- login/signup
+- customer browsing
+- live map
+- truck detail pages
+- event browsing
+- favorites
+- reviews
+- vendor dashboard basics
+- vendor location update
+- vendor schedule basics
+
+Nice-to-have after that:
+- organizer full flows
+- advanced social tools
+- deeper admin tools
+
+-----------------------------------
+FILE / PROJECT STRUCTURE
+-----------------------------------
+
+Organize this as a clean mobile app project, not a hacked conversion.
+
+Keep code structured for:
+- screens
+- navigation
+- reusable components
+- API services
+- auth
+- role-based rendering
+- theme/branding
+
+-----------------------------------
+IMPORTANT UX PRINCIPLES
+-----------------------------------
+
+- mobile-first
+- clean and fast
+- not cluttered
+- obvious primary actions
+- easy map access
+- easy truck discovery
+- easy daily vendor actions
+- native-feeling interactions
+
+-----------------------------------
+FINAL OUTPUT REQUIRED
+-----------------------------------
+
+After building, provide:
+
+1. Summary of what was created
+2. What parts are using the existing backend/shared systems
+3. What mobile screens were built first
+4. Any backend/API adjustments needed
+5. What remains before TestFlight/App Store submission
+6. Any areas where the web and mobile versions should still be aligned manually

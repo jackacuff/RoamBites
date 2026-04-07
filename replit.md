@@ -95,6 +95,35 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
 
+### `artifacts/roambites-mobile` (`@workspace/roambites-mobile`)
+
+Expo React Native app — RoamBites mobile frontend for iOS/Android.
+
+- **Port**: `$PORT` (19571 in dev), Expo Go QR code served from the same server
+- **Auth**: JWT in AsyncStorage (`@roambites_token`). `setAuthTokenGetter` called in `app/_layout.tsx` via `setBaseUrl` + token getter pattern from `@workspace/api-client-react`.
+- **Routing**: Expo Router file-based. Root layout → `(tabs)` group (5 tabs) + modal screens.
+- **Tabs**: Home, Map, Browse, Events, Account
+- **Screens**:
+  - `app/(tabs)/index.tsx` — Home: featured section, open-now horizontal scroll, upcoming events list
+  - `app/(tabs)/map.tsx` — Live map (native: react-native-maps; web: truck list fallback via `MapViewWrapper`)
+  - `app/(tabs)/browse.tsx` — All trucks with search + city/open-now filters
+  - `app/(tabs)/events.tsx` — Upcoming / All events toggle
+  - `app/(tabs)/account.tsx` — Auth-aware profile or sign-in CTA
+  - `app/trucks/[id].tsx` — Truck detail: menu, reviews, favorites, schedule
+  - `app/events/[id].tsx` — Event detail: lineup, date/time/venue
+  - `app/auth/login.tsx`, `app/auth/signup.tsx` — JWT auth screens
+  - `app/vendor/index.tsx` — Vendor dashboard
+  - `app/organizer/index.tsx` — Organizer dashboard
+- **Key components**:
+  - `components/MapViewWrapper.native.tsx` / `.web.tsx` — Platform split to avoid react-native-maps bundling on web
+  - `components/TruckCard.tsx`, `components/EventCard.tsx`, `components/SearchBar.tsx`, `components/StatusBadge.tsx`
+  - `context/AuthContext.tsx` — AuthProvider with login/logout + token persistence
+  - `hooks/useColors.ts` — Light/dark theme-aware color accessor
+  - `constants/colors.ts` — Brand palette (primary #F47825, accent #2EB860, secondary #FFB300)
+- **Maps**: `react-native-maps@1.18.0` (pinned, not in app.json plugins). Does NOT support web — platform-split wrapper used.
+- **Location**: `expo-location` dynamically imported on native; `navigator.geolocation` used on web.
+- **Fonts**: `@expo-google-fonts/inter` (400/500/600/700)
+
 ### `artifacts/food-truck-tracker` (`@workspace/food-truck-tracker`)
 
 React + Vite frontend — Central Oklahoma Food Truck Tracker.

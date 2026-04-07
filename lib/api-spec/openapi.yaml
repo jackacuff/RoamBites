@@ -614,6 +614,121 @@ paths:
               schema:
                 $ref: "#/components/schemas/EventTruck"
 
+  /favorites:
+    get:
+      operationId: listFavorites
+      tags: [trucks]
+      summary: List the current user's favorite trucks
+      responses:
+        "200":
+          description: Favorite trucks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FavoriteItem"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: addFavorite
+      tags: [trucks]
+      summary: Add a truck to favorites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddFavoriteBody"
+      responses:
+        "201":
+          description: Favorite added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteItem"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /favorites/{truckId}:
+    delete:
+      operationId: removeFavorite
+      tags: [trucks]
+      summary: Remove a truck from favorites
+      parameters:
+        - name: truckId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Removed
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /trucks/{id}/reviews:
+    get:
+      operationId: getTruckReviews
+      tags: [trucks]
+      summary: Get reviews for a truck
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Truck reviews with stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TruckReviewsResponse"
+
+  /reviews:
+    post:
+      operationId: createReview
+      tags: [trucks]
+      summary: Create a review for a truck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewBody"
+      responses:
+        "201":
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /events/{id}/respond:
     post:
       operationId: respondToEventInvite
@@ -1886,6 +2001,109 @@ components:
         - planId
         - planName
         - monthlyPrice
+
+    FavoriteItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        truckId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        truck:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: ["integer", "null"]
+            name:
+              type: ["string", "null"]
+            slug:
+              type: ["string", "null"]
+            cuisine:
+              type: ["string", "null"]
+            description:
+              type: ["string", "null"]
+            imageUrl:
+              type: ["string", "null"]
+            isLive:
+              type: ["boolean", "null"]
+            isApproved:
+              type: ["boolean", "null"]
+            status:
+              type: ["string", "null"]
+      required:
+        - id
+        - createdAt
+
+    AddFavoriteBody:
+      type: object
+      properties:
+        truckId:
+          type: integer
+      required:
+        - truckId
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        truckId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        userName:
+          type: ["string", "null"]
+      required:
+        - id
+        - userId
+        - truckId
+        - rating
+        - comment
+        - createdAt
+
+    TruckReviewsResponse:
+      type: object
+      properties:
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        avgRating:
+          type: ["number", "null"]
+        total:
+          type: integer
+      required:
+        - reviews
+        - total
+
+    CreateReviewBody:
+      type: object
+      properties:
+        truckId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+      required:
+        - truckId
+        - rating
+        - comment
 
     GrantTrialBody:
       type: object
