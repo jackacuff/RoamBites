@@ -69,16 +69,24 @@ export default function MapScreen() {
   };
 
   const trucksWithLocation =
-    trucks?.filter(
-      (t) => t.activeSchedule?.latitude && t.activeSchedule?.longitude
-    ) ?? [];
+    (trucks ?? []).filter(
+      (t) =>
+        (t.isLive && t.currentLatitude != null && t.currentLongitude != null) ||
+        (t.activeSchedule?.latitude != null && t.activeSchedule?.longitude != null)
+    );
 
-  const markers = trucksWithLocation.map((t) => ({
-    id: t.id,
-    latitude: t.activeSchedule!.latitude!,
-    longitude: t.activeSchedule!.longitude!,
-    color: colors.primary,
-  }));
+  const markers = trucksWithLocation.map((t) => {
+    const useLiveCoords =
+      t.isLive && t.currentLatitude != null && t.currentLongitude != null;
+    return {
+      id: t.id,
+      latitude: useLiveCoords ? t.currentLatitude! : t.activeSchedule!.latitude!,
+      longitude: useLiveCoords
+        ? t.currentLongitude!
+        : t.activeSchedule!.longitude!,
+      color: t.isLive ? colors.accent : colors.primary,
+    };
+  });
 
   const handleMarkerPress = (id: number) => {
     const truck = trucksWithLocation.find((t) => t.id === id);

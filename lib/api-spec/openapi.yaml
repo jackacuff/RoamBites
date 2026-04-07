@@ -1237,6 +1237,16 @@ components:
         activeSchedule:
           $ref: "#/components/schemas/ScheduleEntry"
           nullable: true
+        currentLatitude:
+          type: ["number", "null"]
+        currentLongitude:
+          type: ["number", "null"]
+        liveUntil:
+          type: ["string", "null"]
+        liveStartedAt:
+          type: ["string", "null"]
+        liveOutsideSchedule:
+          type: boolean
         vendorUserId:
           type: integer
       required:

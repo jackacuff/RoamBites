@@ -20,6 +20,26 @@ export function computeTruckStatus(schedules: ScheduleEntry[], isLive: boolean):
     };
   }
 
+  // Live check-in always wins — whether inside or outside a scheduled slot
+  if (isLive) {
+    const liveSchedule = schedules.find(s => s.isLive);
+    if (liveSchedule) {
+      return {
+        status: "open",
+        activeSchedule: liveSchedule,
+        currentLocation: liveSchedule.venueName,
+        currentCity: liveSchedule.city,
+      };
+    }
+    // Live outside any schedule (vendor checked in manually)
+    return {
+      status: "open",
+      activeSchedule: null,
+      currentLocation: null,
+      currentCity: null,
+    };
+  }
+
   const todayEnd = new Date(now);
   todayEnd.setHours(23, 59, 59, 999);
   const upcoming = schedules
@@ -33,16 +53,6 @@ export function computeTruckStatus(schedules: ScheduleEntry[], isLive: boolean):
       activeSchedule: next,
       currentLocation: next.venueName,
       currentCity: next.city,
-    };
-  }
-
-  const liveSchedule = schedules.find(s => s.isLive);
-  if (liveSchedule && isLive) {
-    return {
-      status: "open",
-      activeSchedule: liveSchedule,
-      currentLocation: liveSchedule.venueName,
-      currentCity: liveSchedule.city,
     };
   }
 
