@@ -23,7 +23,7 @@ export default function EventDetailScreen() {
 
   const { data: event, isLoading } = useGetEvent(id);
 
-  if (isLoading) {
+  if (!id || isLoading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
