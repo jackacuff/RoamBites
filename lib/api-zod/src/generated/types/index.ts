@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./addFavoriteBody";
 export * from "./adminSubscription";
 export * from "./adminSubscriptionStatus";
 export * from "./adminTruck";
@@ -22,6 +23,7 @@ export * from "./copyGenerateResponse";
 export * from "./createEventBody";
 export * from "./createMenuItemBody";
 export * from "./createPlanBody";
+export * from "./createReviewBody";
 export * from "./createScheduleBody";
 export * from "./createTruckBody";
 export * from "./errorResponse";
@@ -29,6 +31,8 @@ export * from "./eventDetail";
 export * from "./eventSummary";
 export * from "./eventTruck";
 export * from "./eventTruckStatus";
+export * from "./favoriteItem";
+export * from "./favoriteItemTruck";
 export * from "./grantTrialBody";
 export * from "./healthStatus";
 export * from "./inviteTruckBody";
@@ -42,6 +46,7 @@ export * from "./platformStats";
 export * from "./portalResponse";
 export * from "./respondToEventBody";
 export * from "./respondToEventBodyStatus";
+export * from "./review";
 export * from "./scheduleEntry";
 export * from "./setPlanBody";
 export * from "./setPlanBodyStatus";
@@ -51,6 +56,7 @@ export * from "./subscribeBody";
 export * from "./successResponse";
 export * from "./truckDetail";
 export * from "./truckDetailStatus";
+export * from "./truckReviewsResponse";
 export * from "./truckSummary";
 export * from "./truckSummaryStatus";
 export * from "./updateEventBody";

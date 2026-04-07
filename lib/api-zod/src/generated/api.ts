@@ -704,6 +704,82 @@ export const InviteTruckToEventBody = zod.object({
 });
 
 /**
+ * @summary List the current user's favorite trucks
+ */
+export const ListFavoritesResponseItem = zod.object({
+  id: zod.number(),
+  truckId: zod.number().nullish(),
+  createdAt: zod.date(),
+  truck: zod
+    .object({
+      id: zod.number().nullish(),
+      name: zod.string().nullish(),
+      slug: zod.string().nullish(),
+      cuisine: zod.string().nullish(),
+      description: zod.string().nullish(),
+      imageUrl: zod.string().nullish(),
+      isLive: zod.boolean().nullish(),
+      isApproved: zod.boolean().nullish(),
+      status: zod.string().nullish(),
+    })
+    .nullish(),
+});
+export const ListFavoritesResponse = zod.array(ListFavoritesResponseItem);
+
+/**
+ * @summary Add a truck to favorites
+ */
+export const AddFavoriteBody = zod.object({
+  truckId: zod.number(),
+});
+
+/**
+ * @summary Remove a truck from favorites
+ */
+export const RemoveFavoriteParams = zod.object({
+  truckId: zod.coerce.number(),
+});
+
+/**
+ * @summary Get reviews for a truck
+ */
+export const GetTruckReviewsParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const getTruckReviewsResponseReviewsItemRatingMax = 5;
+
+export const GetTruckReviewsResponse = zod.object({
+  reviews: zod.array(
+    zod.object({
+      id: zod.number(),
+      userId: zod.number(),
+      truckId: zod.number(),
+      rating: zod
+        .number()
+        .min(1)
+        .max(getTruckReviewsResponseReviewsItemRatingMax),
+      comment: zod.string(),
+      createdAt: zod.date(),
+      userName: zod.string().nullish(),
+    }),
+  ),
+  avgRating: zod.number().nullish(),
+  total: zod.number(),
+});
+
+/**
+ * @summary Create a review for a truck
+ */
+export const createReviewBodyRatingMax = 5;
+
+export const CreateReviewBody = zod.object({
+  truckId: zod.number(),
+  rating: zod.number().min(1).max(createReviewBodyRatingMax),
+  comment: zod.string(),
+});
+
+/**
  * @summary Respond to event invitation (vendor)
  */
 export const RespondToEventInviteParams = zod.object({

@@ -558,6 +558,71 @@ export interface AdminSubscription {
   monthlyPrice: number;
 }
 
+export type FavoriteItemTruck = {
+  /** @nullable */
+  id?: number | null;
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  slug?: string | null;
+  /** @nullable */
+  cuisine?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  isLive?: boolean | null;
+  /** @nullable */
+  isApproved?: boolean | null;
+  /** @nullable */
+  status?: string | null;
+} | null;
+
+export interface FavoriteItem {
+  id: number;
+  /** @nullable */
+  truckId?: number | null;
+  createdAt: string;
+  truck?: FavoriteItemTruck;
+}
+
+export interface AddFavoriteBody {
+  truckId: number;
+}
+
+export interface Review {
+  id: number;
+  userId: number;
+  truckId: number;
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating: number;
+  comment: string;
+  createdAt: string;
+  /** @nullable */
+  userName?: string | null;
+}
+
+export interface TruckReviewsResponse {
+  reviews: Review[];
+  /** @nullable */
+  avgRating?: number | null;
+  total: number;
+}
+
+export interface CreateReviewBody {
+  truckId: number;
+  /**
+   * @minimum 1
+   * @maximum 5
+   */
+  rating: number;
+  comment: string;
+}
+
 export interface GrantTrialBody {
   /** @minimum 1 */
   days: number;

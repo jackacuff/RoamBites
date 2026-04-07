@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddFavoriteBody,
   AdminSubscription,
   AdminTruck,
   AdminUser,
@@ -31,12 +32,14 @@ import type {
   CreateEventBody,
   CreateMenuItemBody,
   CreatePlanBody,
+  CreateReviewBody,
   CreateScheduleBody,
   CreateTruckBody,
   ErrorResponse,
   EventDetail,
   EventSummary,
   EventTruck,
+  FavoriteItem,
   GrantTrialBody,
   HealthStatus,
   InviteTruckBody,
@@ -49,12 +52,14 @@ import type {
   PlatformStats,
   PortalResponse,
   RespondToEventBody,
+  Review,
   ScheduleEntry,
   SetPlanBody,
   SignupBody,
   SubscribeBody,
   SuccessResponse,
   TruckDetail,
+  TruckReviewsResponse,
   TruckSummary,
   UpdateEventBody,
   UpdateMenuItemBody,
@@ -2375,6 +2380,424 @@ export const useInviteTruckToEvent = <
   TContext
 > => {
   return useMutation(getInviteTruckToEventMutationOptions(options));
+};
+
+/**
+ * @summary List the current user's favorite trucks
+ */
+export const getListFavoritesUrl = () => {
+  return `/api/favorites`;
+};
+
+export const listFavorites = async (
+  options?: RequestInit,
+): Promise<FavoriteItem[]> => {
+  return customFetch<FavoriteItem[]>(getListFavoritesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFavoritesQueryKey = () => {
+  return [`/api/favorites`] as const;
+};
+
+export const getListFavoritesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFavorites>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFavorites>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFavoritesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFavorites>>> = ({
+    signal,
+  }) => listFavorites({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFavorites>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFavoritesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFavorites>>
+>;
+export type ListFavoritesQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List the current user's favorite trucks
+ */
+
+export function useListFavorites<
+  TData = Awaited<ReturnType<typeof listFavorites>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFavorites>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFavoritesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a truck to favorites
+ */
+export const getAddFavoriteUrl = () => {
+  return `/api/favorites`;
+};
+
+export const addFavorite = async (
+  addFavoriteBody: AddFavoriteBody,
+  options?: RequestInit,
+): Promise<FavoriteItem> => {
+  return customFetch<FavoriteItem>(getAddFavoriteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addFavoriteBody),
+  });
+};
+
+export const getAddFavoriteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addFavorite>>,
+    TError,
+    { data: BodyType<AddFavoriteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addFavorite>>,
+  TError,
+  { data: BodyType<AddFavoriteBody> },
+  TContext
+> => {
+  const mutationKey = ["addFavorite"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addFavorite>>,
+    { data: BodyType<AddFavoriteBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return addFavorite(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddFavoriteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addFavorite>>
+>;
+export type AddFavoriteMutationBody = BodyType<AddFavoriteBody>;
+export type AddFavoriteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Add a truck to favorites
+ */
+export const useAddFavorite = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addFavorite>>,
+    TError,
+    { data: BodyType<AddFavoriteBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addFavorite>>,
+  TError,
+  { data: BodyType<AddFavoriteBody> },
+  TContext
+> => {
+  return useMutation(getAddFavoriteMutationOptions(options));
+};
+
+/**
+ * @summary Remove a truck from favorites
+ */
+export const getRemoveFavoriteUrl = (truckId: number) => {
+  return `/api/favorites/${truckId}`;
+};
+
+export const removeFavorite = async (
+  truckId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getRemoveFavoriteUrl(truckId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveFavoriteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFavorite>>,
+    TError,
+    { truckId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeFavorite>>,
+  TError,
+  { truckId: number },
+  TContext
+> => {
+  const mutationKey = ["removeFavorite"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeFavorite>>,
+    { truckId: number }
+  > = (props) => {
+    const { truckId } = props ?? {};
+
+    return removeFavorite(truckId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveFavoriteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeFavorite>>
+>;
+
+export type RemoveFavoriteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Remove a truck from favorites
+ */
+export const useRemoveFavorite = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFavorite>>,
+    TError,
+    { truckId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeFavorite>>,
+  TError,
+  { truckId: number },
+  TContext
+> => {
+  return useMutation(getRemoveFavoriteMutationOptions(options));
+};
+
+/**
+ * @summary Get reviews for a truck
+ */
+export const getGetTruckReviewsUrl = (id: string) => {
+  return `/api/trucks/${id}/reviews`;
+};
+
+export const getTruckReviews = async (
+  id: string,
+  options?: RequestInit,
+): Promise<TruckReviewsResponse> => {
+  return customFetch<TruckReviewsResponse>(getGetTruckReviewsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTruckReviewsQueryKey = (id: string) => {
+  return [`/api/trucks/${id}/reviews`] as const;
+};
+
+export const getGetTruckReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTruckReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTruckReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTruckReviewsQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTruckReviews>>> = ({
+    signal,
+  }) => getTruckReviews(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTruckReviews>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTruckReviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTruckReviews>>
+>;
+export type GetTruckReviewsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get reviews for a truck
+ */
+
+export function useGetTruckReviews<
+  TData = Awaited<ReturnType<typeof getTruckReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTruckReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTruckReviewsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a review for a truck
+ */
+export const getCreateReviewUrl = () => {
+  return `/api/reviews`;
+};
+
+export const createReview = async (
+  createReviewBody: CreateReviewBody,
+  options?: RequestInit,
+): Promise<Review> => {
+  return customFetch<Review>(getCreateReviewUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createReviewBody),
+  });
+};
+
+export const getCreateReviewMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createReview>>,
+    TError,
+    { data: BodyType<CreateReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createReview>>,
+  TError,
+  { data: BodyType<CreateReviewBody> },
+  TContext
+> => {
+  const mutationKey = ["createReview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createReview>>,
+    { data: BodyType<CreateReviewBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createReview(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createReview>>
+>;
+export type CreateReviewMutationBody = BodyType<CreateReviewBody>;
+export type CreateReviewMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a review for a truck
+ */
+export const useCreateReview = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createReview>>,
+    TError,
+    { data: BodyType<CreateReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createReview>>,
+  TError,
+  { data: BodyType<CreateReviewBody> },
+  TContext
+> => {
+  return useMutation(getCreateReviewMutationOptions(options));
 };
 
 /**
