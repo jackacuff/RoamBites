@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,22 +14,40 @@ import { useListEvents } from "@workspace/api-client-react";
 import { EventCard } from "@/components/EventCard";
 import { useColors } from "@/hooks/useColors";
 
+type Tab = "upcoming" | "featured" | "all";
+
+const TABS: { label: string; value: Tab }[] = [
+  { label: "Upcoming", value: "upcoming" },
+  { label: "⭐ Featured", value: "featured" },
+  { label: "All Events", value: "all" },
+];
+
 export default function EventsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const [upcoming, setUpcoming] = useState(true);
+  const [activeTab, setActiveTab] = useState<Tab>("upcoming");
   const [refreshing, setRefreshing] = useState(false);
   const isWeb = Platform.OS === "web";
 
   const { data: events, isLoading, refetch } = useListEvents({
-    upcoming: upcoming || undefined,
+    upcoming: activeTab === "upcoming" ? true : undefined,
   });
+
+  const displayEvents = useMemo(() => {
+    if (!events) return [];
+    if (activeTab === "featured") return events.filter((e) => e.isFeatured);
+    const featured = events.filter((e) => e.isFeatured);
+    const rest = events.filter((e) => !e.isFeatured);
+    return [...featured, ...rest];
+  }, [events, activeTab]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
   };
+
+  const hasFeatured = events?.some((e) => e.isFeatured);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -42,7 +60,9 @@ export default function EventsScreen() {
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>Events</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>
+          Events near you
+        </Text>
         <View
           style={[
             styles.toggle,
@@ -52,35 +72,32 @@ export default function EventsScreen() {
             },
           ]}
         >
-          {[
-            { label: "Upcoming", value: true },
-            { label: "All Events", value: false },
-          ].map((opt) => (
-            <Pressable
-              key={opt.label}
-              onPress={() => setUpcoming(opt.value)}
-              style={[
-                styles.toggleBtn,
-                {
-                  backgroundColor:
-                    upcoming === opt.value ? colors.primary : "transparent",
-                  borderRadius: colors.radius - 2,
-                },
-              ]}
-            >
-              <Text
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.value;
+            return (
+              <Pressable
+                key={tab.value}
+                onPress={() => setActiveTab(tab.value)}
                 style={[
-                  styles.toggleText,
+                  styles.toggleBtn,
                   {
-                    color:
-                      upcoming === opt.value ? "#FFF" : colors.mutedForeground,
+                    backgroundColor: isActive ? colors.primary : "transparent",
+                    borderRadius: colors.radius - 2,
                   },
                 ]}
               >
-                {opt.label}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  style={[
+                    styles.toggleText,
+                    { color: isActive ? "#FFF" : colors.mutedForeground },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
       </View>
 
@@ -90,7 +107,7 @@ export default function EventsScreen() {
         </View>
       ) : (
         <FlatList
-          data={events ?? []}
+          data={displayEvents}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => <EventCard event={item} />}
           contentContainerStyle={[
@@ -98,7 +115,7 @@ export default function EventsScreen() {
             { paddingBottom: isWeb ? 34 : insets.bottom + 100 },
           ]}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!!(events && events.length > 0)}
+          scrollEnabled={displayEvents.length > 0}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -106,10 +123,32 @@ export default function EventsScreen() {
               tintColor={colors.primary}
             />
           }
+          ListHeaderComponent={
+            activeTab !== "featured" && hasFeatured && displayEvents.length > 0
+              ? () => (
+                  <View
+                    style={[
+                      styles.featuredBanner,
+                      {
+                        backgroundColor: colors.secondary + "15",
+                        borderColor: colors.secondary + "40",
+                        borderRadius: colors.radius,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.featuredBannerText, { color: colors.foreground }]}>
+                      ⭐ Featured events are shown first
+                    </Text>
+                  </View>
+                )
+              : null
+          }
           ListEmptyComponent={() => (
             <View style={styles.emptyState}>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                No events found
+                {activeTab === "featured"
+                  ? "No featured events right now"
+                  : "No events found"}
               </Text>
               <Text
                 style={[
@@ -117,8 +156,9 @@ export default function EventsScreen() {
                   { color: colors.mutedForeground },
                 ]}
               >
-                Check back soon for upcoming food truck events in Central
-                Oklahoma
+                {activeTab === "featured"
+                  ? "Check back soon for featured food truck events"
+                  : "Check back soon for upcoming food truck events in Central Oklahoma"}
               </Text>
             </View>
           )}
@@ -137,14 +177,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   toggle: { flexDirection: "row", padding: 4 },
-  toggleBtn: { flex: 1, paddingVertical: 8, alignItems: "center" },
-  toggleText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  toggleBtn: { flex: 1, paddingVertical: 8, alignItems: "center", paddingHorizontal: 4 },
+  toggleText: { fontSize: 12, fontFamily: "Inter_500Medium" },
   loaderContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   listContent: { paddingHorizontal: 16, paddingTop: 8 },
+  featuredBanner: {
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  featuredBannerText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
   emptyState: {
     paddingTop: 60,
     alignItems: "center",

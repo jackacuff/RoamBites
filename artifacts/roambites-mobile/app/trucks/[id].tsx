@@ -121,6 +121,19 @@ export default function TruckDetailScreen() {
     (r) => r.userId === user?.id
   );
 
+  const achievements: { icon: string; label: string; color: string; bg: string }[] = [];
+  const avg = truck.avgRating ?? 0;
+  const reviews = truck.reviewCount ?? 0;
+  const favs = truck.favoritesCount ?? 0;
+  if (avg >= 4.5 && reviews >= 3) achievements.push({ icon: "⭐", label: "Top Rated", color: "#92400e", bg: "#fef3c7" });
+  else if (avg >= 4.0 && reviews >= 5) achievements.push({ icon: "❤️", label: "Customer Favorite", color: "#7f1d1d", bg: "#fee2e2" });
+  if (reviews >= 50) achievements.push({ icon: "💬", label: "50+ Reviews", color: "#1e3a5f", bg: "#dbeafe" });
+  else if (reviews >= 10) achievements.push({ icon: "💬", label: "10+ Reviews", color: "#1e3a5f", bg: "#dbeafe" });
+  if (favs >= 20) achievements.push({ icon: "🔥", label: "Popular Choice", color: "#7c2d12", bg: "#ffedd5" });
+  const memberSince = new Date(truck.createdAt);
+  const yearsOld = (Date.now() - memberSince.getTime()) / (365.25 * 24 * 3600 * 1000);
+  if (yearsOld >= 1) achievements.push({ icon: "🏆", label: "Established Vendor", color: "#065f46", bg: "#d1fae5" });
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -233,6 +246,28 @@ export default function TruckDetailScreen() {
           </Pressable>
         )}
       </View>
+
+      {/* Achievements */}
+      {achievements.length > 0 && (
+        <View style={[styles.section, { paddingTop: 0 }]}>
+          <Text style={[styles.achievementsLabel, { color: colors.mutedForeground }]}>
+            ACHIEVEMENTS
+          </Text>
+          <View style={styles.achievementsRow}>
+            {achievements.slice(0, 5).map((a) => (
+              <View
+                key={a.label}
+                style={[styles.achievementPill, { backgroundColor: a.bg }]}
+              >
+                <Text style={styles.achievementIcon}>{a.icon}</Text>
+                <Text style={[styles.achievementText, { color: a.color }]}>
+                  {a.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Menu */}
       {truck.menuItems.length > 0 && (
@@ -692,5 +727,29 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     paddingVertical: 20,
+  },
+  achievementsLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  achievementsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  achievementPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  achievementIcon: { fontSize: 13 },
+  achievementText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
 });

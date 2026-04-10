@@ -35,5 +35,9 @@ export interface TruckDetail {
   menuItems: MenuItem[];
   scheduleEntries: ScheduleEntry[];
   events: EventSummary[];
+  /** @nullable */
+  avgRating?: number | null;
+  reviewCount?: number;
+  favoritesCount?: number;
   activeSchedule?: ScheduleEntry | null;
 }

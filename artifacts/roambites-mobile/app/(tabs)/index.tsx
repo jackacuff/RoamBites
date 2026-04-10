@@ -19,6 +19,13 @@ import { TruckCard } from "@/components/TruckCard";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
+function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -45,10 +52,14 @@ export default function HomeScreen() {
   };
 
   const quickActions = [
-    { icon: "map-pin" as const, label: "Live Map", route: "/(tabs)/map" as any },
-    { icon: "truck" as const, label: "Browse", route: "/(tabs)/browse" as any },
-    { icon: "calendar" as const, label: "Events", route: "/(tabs)/events" as any },
+    { icon: "map-pin" as const, label: "Find Near Me", route: "/(tabs)/map" as any },
+    { icon: "truck" as const, label: "Browse All", route: "/(tabs)/browse" as any },
+    { icon: "calendar" as const, label: "Explore Events", route: "/(tabs)/events" as any },
   ];
+
+  const featuredEvents = events?.filter((e) => e.isFeatured) ?? [];
+  const regularEvents = events?.filter((e) => !e.isFeatured) ?? [];
+  const sortedEvents = [...featuredEvents, ...regularEvents];
 
   return (
     <ScrollView
@@ -75,16 +86,24 @@ export default function HomeScreen() {
       >
         <View style={{ flex: 1 }}>
           <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
-            {user ? `Hey, ${user.name.split(" ")[0]}` : "Welcome to"}
+            {user ? `${getTimeGreeting()}, ${user.name.split(" ")[0]}` : getTimeGreeting()}
           </Text>
           <Text style={[styles.heroTitle, { color: colors.foreground }]}>
-            RoamBites
+            {user ? "Find trucks near you" : "Find food trucks"}
           </Text>
-          <Text style={[styles.heroSub, { color: colors.mutedForeground }]}>
-            Central Oklahoma Food Trucks
-          </Text>
+          {!user && (
+            <Text style={[styles.heroAccent, { color: colors.primary }]}>
+              near you
+            </Text>
+          )}
+          <View style={styles.locationRow}>
+            <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+            <Text style={[styles.locationText, { color: colors.mutedForeground }]}>
+              Central Oklahoma
+            </Text>
+          </View>
         </View>
-        {user ? (
+        {user && (
           <Pressable
             onPress={() => router.push("/(tabs)/account")}
             style={[styles.avatarBtn, { backgroundColor: colors.primary }]}
@@ -92,19 +111,6 @@ export default function HomeScreen() {
             <Text style={styles.avatarText}>
               {user.name.charAt(0).toUpperCase()}
             </Text>
-          </Pressable>
-        ) : (
-          <Pressable
-            onPress={() => router.push("/auth/login")}
-            style={[
-              styles.signInBtn,
-              {
-                backgroundColor: colors.primary,
-                borderRadius: colors.radius,
-              },
-            ]}
-          >
-            <Text style={styles.signInText}>Sign In</Text>
           </Pressable>
         )}
       </View>
@@ -135,6 +141,7 @@ export default function HomeScreen() {
             </View>
             <Text
               style={[styles.quickActionLabel, { color: colors.foreground }]}
+              numberOfLines={2}
             >
               {item.label}
             </Text>
@@ -145,9 +152,19 @@ export default function HomeScreen() {
       {/* Live Trucks */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-            Open Now
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            <View style={[styles.liveIndicator, { backgroundColor: colors.accent }]} />
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Open Now
+            </Text>
+            {liveTrucks && liveTrucks.length > 0 && (
+              <View style={[styles.countBadge, { backgroundColor: colors.accent + "20" }]}>
+                <Text style={[styles.countBadgeText, { color: colors.accent }]}>
+                  {liveTrucks.length}
+                </Text>
+              </View>
+            )}
+          </View>
           <Pressable onPress={() => router.push("/(tabs)/browse")}>
             <Text style={[styles.seeAll, { color: colors.primary }]}>
               See all
@@ -198,8 +215,8 @@ export default function HomeScreen() {
         </View>
         {eventsLoading ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
-        ) : events && events.length > 0 ? (
-          events.slice(0, 3).map((event) => (
+        ) : sortedEvents && sortedEvents.length > 0 ? (
+          sortedEvents.slice(0, 3).map((event) => (
             <EventCard key={event.id} event={event} />
           ))
         ) : (
@@ -239,14 +256,25 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   heroTitle: {
-    fontSize: 30,
+    fontSize: 28,
     fontFamily: "Inter_700Bold",
-    lineHeight: 34,
+    lineHeight: 33,
   },
-  heroSub: {
+  heroAccent: {
+    fontSize: 28,
+    fontFamily: "Inter_700Bold",
+    lineHeight: 33,
+    marginTop: -2,
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  locationText: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    marginTop: 2,
   },
   avatarBtn: {
     width: 42,
@@ -260,16 +288,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 18,
     fontFamily: "Inter_700Bold",
-  },
-  signInBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    marginTop: 4,
-  },
-  signInText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
   },
   quickActions: {
     flexDirection: "row",
@@ -302,8 +320,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  liveIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   sectionTitle: {
     fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  countBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  countBadgeText: {
+    fontSize: 12,
     fontFamily: "Inter_700Bold",
   },
   seeAll: {

@@ -1306,6 +1306,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/EventSummary"
+        avgRating:
+          type: ["number", "null"]
+        reviewCount:
+          type: integer
+        favoritesCount:
+          type: integer
         activeSchedule:
           $ref: "#/components/schemas/ScheduleEntry"
           nullable: true
@@ -1548,6 +1554,11 @@ components:
           type: integer
         confirmedTruckCount:
           type: integer
+        isFeatured:
+          type: boolean
+        featuredUntil:
+          type: ["string", "null"]
+          format: date-time
       required:
         - id
         - name
@@ -1558,6 +1569,7 @@ components:
         - endDateTime
         - organizerUserId
         - confirmedTruckCount
+        - isFeatured
 
     EventDetail:
       type: object

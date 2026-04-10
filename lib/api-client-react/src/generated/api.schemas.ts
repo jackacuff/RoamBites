@@ -147,6 +147,9 @@ export interface EventSummary {
   endDateTime: string;
   organizerUserId: number;
   confirmedTruckCount: number;
+  isFeatured: boolean;
+  /** @nullable */
+  featuredUntil?: string | null;
 }
 
 export interface TruckDetail {
@@ -174,6 +177,10 @@ export interface TruckDetail {
   menuItems: MenuItem[];
   scheduleEntries: ScheduleEntry[];
   events: EventSummary[];
+  /** @nullable */
+  avgRating?: number | null;
+  reviewCount?: number;
+  favoritesCount?: number;
   activeSchedule?: ScheduleEntry | null;
 }
 

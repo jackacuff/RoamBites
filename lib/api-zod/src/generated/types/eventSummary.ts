@@ -18,4 +18,7 @@ export interface EventSummary {
   endDateTime: Date;
   organizerUserId: number;
   confirmedTruckCount: number;
+  isFeatured: boolean;
+  /** @nullable */
+  featuredUntil?: Date | null;
 }

@@ -10,6 +10,17 @@ interface EventCardProps {
   compact?: boolean;
 }
 
+function isThisWeekend(dateStr: string): boolean {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const day = date.getDay();
+  const isWeekend = day === 0 || day === 6;
+  if (!isWeekend) return false;
+  const diffMs = date.getTime() - now.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  return diffDays >= 0 && diffDays <= 7;
+}
+
 export function EventCard({ event, compact = false }: EventCardProps) {
   const colors = useColors();
 
@@ -23,6 +34,15 @@ export function EventCard({ event, compact = false }: EventCardProps) {
     minute: "2-digit",
   });
 
+  const featured = event.isFeatured;
+  const popular = event.confirmedTruckCount >= 3;
+  const thisWeekend = isThisWeekend(event.startDateTime);
+
+  const badges: { label: string; color: string; bg: string }[] = [];
+  if (featured) badges.push({ label: "⭐ Featured", color: "#92400e", bg: "#fef3c7" });
+  else if (popular) badges.push({ label: "🔥 Popular", color: "#7c2d12", bg: "#ffedd5" });
+  if (thisWeekend) badges.push({ label: "📅 This Weekend", color: "#1e3a5f", bg: "#dbeafe" });
+
   return (
     <Pressable
       testID={`event-card-${event.id}`}
@@ -30,19 +50,39 @@ export function EventCard({ event, compact = false }: EventCardProps) {
       style={({ pressed }) => [
         styles.container,
         {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
+          backgroundColor: featured ? colors.card : colors.card,
+          borderColor: featured ? colors.secondary + "60" : colors.border,
           borderRadius: colors.radius,
           opacity: pressed ? 0.85 : 1,
         },
+        featured && styles.featuredContainer,
         compact && { width: 220, marginRight: 12, marginBottom: 0 },
       ]}
     >
-      <View style={[styles.dateBlock, { backgroundColor: colors.primary }]}>
+      <View
+        style={[
+          styles.dateBlock,
+          { backgroundColor: featured ? colors.secondary : colors.primary },
+        ]}
+      >
         <Text style={styles.month}>{month}</Text>
         <Text style={styles.day}>{day}</Text>
       </View>
       <View style={styles.content}>
+        {badges.length > 0 && (
+          <View style={styles.badgeRow}>
+            {badges.slice(0, 2).map((b) => (
+              <View
+                key={b.label}
+                style={[styles.badge, { backgroundColor: b.bg }]}
+              >
+                <Text style={[styles.badgeText, { color: b.color }]}>
+                  {b.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
         <Text
           style={[styles.name, { color: colors.foreground }]}
           numberOfLines={2}
@@ -84,6 +124,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 10,
   },
+  featuredContainer: {
+    borderWidth: 1.5,
+  },
   dateBlock: {
     width: 56,
     alignItems: "center",
@@ -107,6 +150,21 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 4,
     justifyContent: "center",
+  },
+  badgeRow: {
+    flexDirection: "row",
+    gap: 6,
+    flexWrap: "wrap",
+    marginBottom: 2,
+  },
+  badge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 20,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
   },
   name: {
     fontSize: 14,
