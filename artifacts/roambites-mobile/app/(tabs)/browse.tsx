@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,7 +16,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { TruckCard } from "@/components/TruckCard";
 import { useColors } from "@/hooks/useColors";
 
-const CITIES = ["All", "OKC", "Edmond", "Norman", "Moore"];
+type SortMode = "default" | "topRated";
 
 export default function BrowseScreen() {
   const colors = useColors();
@@ -24,21 +24,45 @@ export default function BrowseScreen() {
   const isWeb = Platform.OS === "web";
 
   const [search, setSearch] = useState("");
-  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [openNow, setOpenNow] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("default");
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: trucks, isLoading, refetch } = useListTrucks({
     search: search || undefined,
-    city: selectedCity || undefined,
     openNow: openNow || undefined,
   });
+
+  const sortedTrucks = useMemo(() => {
+    if (!trucks) return [];
+    if (sortMode === "default") {
+      return [...trucks].sort((a, b) => {
+        const aOpen = a.status === "open" ? 1 : 0;
+        const bOpen = b.status === "open" ? 1 : 0;
+        return bOpen - aOpen;
+      });
+    }
+    return trucks;
+  }, [trucks, sortMode]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
   };
+
+  const chips: { label: string; active: boolean; onPress: () => void }[] = [
+    {
+      label: "Open Now",
+      active: openNow,
+      onPress: () => setOpenNow(!openNow),
+    },
+    {
+      label: "All Trucks",
+      active: !openNow && sortMode === "default",
+      onPress: () => { setOpenNow(false); setSortMode("default"); },
+    },
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -52,7 +76,7 @@ export default function BrowseScreen() {
         ]}
       >
         <Text style={[styles.title, { color: colors.foreground }]}>
-          Browse Trucks
+          Browse Trucks Near You
         </Text>
         <View style={styles.searchWrap}>
           <SearchBar
@@ -68,59 +92,28 @@ export default function BrowseScreen() {
           style={styles.filtersRow}
           contentContainerStyle={{ paddingRight: 16 }}
         >
-          <Pressable
-            onPress={() => setOpenNow(!openNow)}
-            style={[
-              styles.chip,
-              {
-                backgroundColor: openNow ? colors.accent : colors.muted,
-                borderRadius: colors.radius / 2,
-              },
-            ]}
-          >
-            <Text
+          {chips.map((chip) => (
+            <Pressable
+              key={chip.label}
+              onPress={chip.onPress}
               style={[
-                styles.chipText,
-                { color: openNow ? "#FFF" : colors.mutedForeground },
+                styles.chip,
+                {
+                  backgroundColor: chip.active ? colors.primary : colors.muted,
+                  borderRadius: colors.radius / 2,
+                },
               ]}
             >
-              Open Now
-            </Text>
-          </Pressable>
-          {CITIES.map((city) => {
-            const isSelected =
-              (city === "All" && !selectedCity) || selectedCity === city;
-            return (
-              <Pressable
-                key={city}
-                onPress={() =>
-                  setSelectedCity(city === "All" ? null : city)
-                }
+              <Text
                 style={[
-                  styles.chip,
-                  {
-                    backgroundColor: isSelected
-                      ? colors.foreground
-                      : colors.muted,
-                    borderRadius: colors.radius / 2,
-                  },
+                  styles.chipText,
+                  { color: chip.active ? "#FFF" : colors.mutedForeground },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    {
-                      color: isSelected
-                        ? colors.background
-                        : colors.mutedForeground,
-                    },
-                  ]}
-                >
-                  {city}
-                </Text>
-              </Pressable>
-            );
-          })}
+                {chip.label}
+              </Text>
+            </Pressable>
+          ))}
         </ScrollView>
       </View>
 
@@ -130,7 +123,7 @@ export default function BrowseScreen() {
         </View>
       ) : (
         <FlatList
-          data={trucks ?? []}
+          data={sortedTrucks}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => <TruckCard truck={item} />}
           contentContainerStyle={[
@@ -140,13 +133,23 @@ export default function BrowseScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
-          scrollEnabled={!!(trucks && trucks.length > 0)}
+          scrollEnabled={sortedTrucks.length > 0}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />
+          }
+          ListHeaderComponent={
+            sortedTrucks.length > 0
+              ? () => (
+                  <Text style={[styles.resultCount, { color: colors.mutedForeground }]}>
+                    {sortedTrucks.length} truck{sortedTrucks.length !== 1 ? "s" : ""}
+                    {openNow ? " open now" : " in Central Oklahoma"}
+                  </Text>
+                )
+              : null
           }
           ListEmptyComponent={() => (
             <View style={styles.emptyState}>
@@ -190,7 +193,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  listContent: { paddingHorizontal: 16, paddingTop: 12 },
+  listContent: { paddingHorizontal: 16, paddingTop: 8 },
+  resultCount: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 8,
+  },
   emptyState: {
     paddingTop: 60,
     alignItems: "center",

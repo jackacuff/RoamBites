@@ -188,8 +188,13 @@ export const GetTruckResponse = zod.object({
       endDateTime: zod.date(),
       organizerUserId: zod.number(),
       confirmedTruckCount: zod.number(),
+      isFeatured: zod.boolean(),
+      featuredUntil: zod.date().nullish(),
     }),
   ),
+  avgRating: zod.number().nullish(),
+  reviewCount: zod.number().optional(),
+  favoritesCount: zod.number().optional(),
   activeSchedule: zod
     .object({
       id: zod.number(),
@@ -282,8 +287,13 @@ export const UpdateTruckResponse = zod.object({
       endDateTime: zod.date(),
       organizerUserId: zod.number(),
       confirmedTruckCount: zod.number(),
+      isFeatured: zod.boolean(),
+      featuredUntil: zod.date().nullish(),
     }),
   ),
+  avgRating: zod.number().nullish(),
+  reviewCount: zod.number().optional(),
+  favoritesCount: zod.number().optional(),
   activeSchedule: zod
     .object({
       id: zod.number(),
@@ -522,6 +532,8 @@ export const ListEventsResponseItem = zod.object({
   endDateTime: zod.date(),
   organizerUserId: zod.number(),
   confirmedTruckCount: zod.number(),
+  isFeatured: zod.boolean(),
+  featuredUntil: zod.date().nullish(),
 });
 export const ListEventsResponse = zod.array(ListEventsResponseItem);
 

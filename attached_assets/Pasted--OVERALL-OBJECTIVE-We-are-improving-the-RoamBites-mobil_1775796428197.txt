@@ -1,0 +1,400 @@
+🎯 OVERALL OBJECTIVE
+
+We are improving the RoamBites mobile app (ExpoGo) to feel:
+	•	clean and intuitive
+	•	location-driven
+	•	visually engaging
+	•	monetization-ready
+
+This is an iteration, NOT a rebuild.
+
+⚠️ Important:
+	•	Do NOT redesign everything from scratch
+	•	Do NOT overcomplicate UI
+	•	Maintain current design language
+	•	Focus on UX improvements and feature additions
+
+⸻
+
+🔐 1. AUTH + ACCOUNT SYNC (CRITICAL)
+
+Fix Signup
+	•	Signup must work end-to-end
+	•	Auto-login after signup
+	•	Show proper error messages
+	•	Add loading state (prevent double submit)
+
+Sync with Website
+	•	Use SAME backend auth system
+	•	Same users, same login credentials
+	•	No duplicate mobile-only auth system
+
+⸻
+
+💳 2. PRICING + MONETIZATION SYNC
+
+Vendor Plans
+	•	Vendor Base = $29/month
+	•	Vendor Pro = $59/month
+
+Must match website exactly:
+	•	features
+	•	permissions
+	•	trials
+
+⸻
+
+Event Organizer Model
+	•	FREE account
+	•	charge per event
+	•	optional Featured Event upgrade
+
+⸻
+
+⚠️ Do NOT:
+	•	hardcode pricing differently in app
+	•	create mismatched plans
+
+⸻
+
+⭐ 3. FEATURED EVENTS (MONETIZATION ENGINE)
+
+Add Full Support
+
+Use backend flag:
+	•	isFeatured
+
+⸻
+
+Where Featured Events Appear
+
+Home
+	•	Featured section OR top placement
+
+Events Page
+	•	always at top
+
+Event Page
+	•	show “⭐ Featured Event” badge
+
+⸻
+
+Visual Treatment
+	•	badge (⭐ Featured)
+	•	slightly elevated styling
+	•	subtle highlight (NOT flashy)
+
+⸻
+
+Featured Event Benefits (Visible to Organizers)
+	•	homepage exposure
+	•	top of event list
+	•	increased visibility
+
+⸻
+
+🏠 4. HOME SCREEN IMPROVEMENTS
+
+Header
+
+Replace:
+	•	“Welcome to RoamBites”
+
+With:
+	•	“Find food trucks near you”
+OR
+	•	time-based greeting
+
+⸻
+
+Remove “Sign In” Button (Top Right)
+	•	move to Account tab
+
+⸻
+
+Top Actions (Fix Redundancy)
+
+Change:
+	•	“Live Map / Browse / Events”
+
+To:
+	•	“Find Trucks Near Me”
+	•	“Browse All Trucks”
+	•	“Explore Events”
+
+⸻
+
+Add Location Context
+
+Display:
+	•	“📍 Edmond, OK” or “Near you”
+
+⸻
+
+Improve Open Now Cards
+
+Add:
+	•	distance (e.g. “0.8 miles away”)
+
+⸻
+
+Events Section
+
+Add:
+	•	badges (“Featured”, “Popular”, “This Weekend”)
+
+⸻
+
+🎉 5. EVENTS PAGE REVAMP
+
+Add Featured Section (Top)
+	•	horizontal scroll
+	•	includes images
+
+⸻
+
+Add Images to Events
+	•	every event must have:
+	•	image OR fallback
+
+⸻
+
+Improve Event Cards
+
+Add:
+	•	better spacing
+	•	clearer hierarchy
+	•	optional badges
+
+⸻
+
+Add Event Badges
+	•	⭐ Featured
+	•	🔥 Popular
+	•	📅 This Weekend
+
+⸻
+
+Improve Tabs
+
+Replace:
+	•	Upcoming / All
+
+With:
+	•	Upcoming
+	•	Featured
+	•	All
+
+⸻
+
+Add Filters
+	•	This Weekend
+	•	Nearby
+	•	Free
+	•	Family Friendly
+
+⸻
+
+Improve Header
+
+Replace:
+	•	“Events”
+
+With:
+	•	“Events near you”
+
+⸻
+
+Add Empty State
+	•	friendly message if no events
+
+⸻
+
+📄 6. EVENT DETAIL PAGE REVAMP
+
+Replace Date Banner
+	•	use event image hero
+
+⸻
+
+Add Action Buttons
+	•	Directions
+	•	Save
+	•	Share
+
+⸻
+
+Add Event Map
+	•	show trucks on map
+
+⸻
+
+Improve Layout Sections
+	•	About Event
+	•	What to Expect
+	•	Details
+
+⸻
+
+Improve Truck List
+	•	add images
+	•	cleaner layout
+	•	optional badges
+
+⸻
+
+🍔 7. BROWSE PAGE REVAMP
+
+Remove City Filters
+
+Delete:
+	•	OKC
+	•	Edmond
+	•	Norman
+
+⸻
+
+Add Filters Button
+
+Top right → opens modal with:
+	•	distance slider (critical)
+	•	cuisine
+	•	rating
+	•	open now toggle
+
+⸻
+
+Add Distance to Cards
+
+Example:
+	•	“0.8 miles • Open”
+
+⸻
+
+Sorting Logic
+
+Default:
+	1.	Open now
+	2.	Distance
+	3.	Rating
+
+⸻
+
+Replace Filter Chips
+
+Use:
+	•	Open Now
+	•	Nearby
+	•	Top Rated
+	•	Cuisine
+
+⸻
+
+Update Header
+	•	“Browse Trucks Near You”
+
+⸻
+
+(Optional Future)
+	•	add “Map View” toggle
+
+⸻
+
+🏅 8. BADGE SYSTEM (TWO TYPES)
+
+⸻
+
+A. Decision Badges (Cards)
+
+Shown on:
+	•	truck cards
+	•	event listings
+
+Examples:
+	•	⭐ Top Rated
+	•	🔥 Popular This Week
+
+Rules:
+	•	max 1–2 badges
+	•	small + subtle
+
+⸻
+
+B. Prestige Badges (Truck Profile Only)
+
+Add “Achievements” Section
+
+Categories:
+
+Reputation
+	•	Top Rated
+	•	Customer Favorite
+
+Reviews
+	•	50 Reviews
+	•	100 Reviews
+
+Events
+	•	Event Regular
+	•	50+ Events
+
+Longevity
+	•	1 Year on RoamBites
+	•	Established Vendor
+
+Elite
+	•	Top 5% Vendor
+	•	RoamBites Elite
+
+⸻
+
+Rules
+	•	show max 3–5 badges
+	•	clean pill style
+	•	subtle colors
+
+⸻
+
+🧠 9. SYSTEM DESIGN RULES
+
+DO:
+	•	keep UI clean
+	•	prioritize location-based UX
+	•	keep interactions fast
+	•	use backend-driven logic
+
+⸻
+
+DO NOT:
+	•	overdesign
+	•	clutter screens
+	•	duplicate backend systems
+	•	hardcode monetization logic
+
+⸻
+
+🎯 FINAL GOAL
+
+Turn RoamBites into:
+
+👉 a daily-use food discovery app
+👉 not just a listing platform
+
+Focus on:
+	•	speed
+	•	clarity
+	•	relevance
+	•	monetization visibility
+
+⸻
+
+⚠️ FINAL NOTE TO REPLIT
+
+Keep changes:
+	•	incremental
+	•	clean
+	•	mobile-first
+
+Avoid:
+	•	unnecessary redesigns
+	•	adding too many features at once
