@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, useMap, CircleMarker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -90,28 +90,51 @@ interface PinEntry {
   isLiveGps: boolean;
   isFavorite: boolean;
   locationLabel: string;
+  distanceKm?: number;
 }
 
-function buildPins(trucks: TruckSummary[], favIds: Set<number>): PinEntry[] {
+export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function buildPins(trucks: TruckSummary[], favIds: Set<number>, userLoc?: { lat: number; lng: number }): PinEntry[] {
   const pins: PinEntry[] = [];
   for (const truck of trucks) {
     const isFavorite = favIds.has(truck.id);
     const lat = truck.currentLatitude;
     const lng = truck.currentLongitude;
     if (truck.isLive && typeof lat === "number" && typeof lng === "number") {
-      pins.push({ truck, lat, lng, isLiveGps: true, isFavorite, locationLabel: truck.currentLocation || "Live now" });
+      const distanceKm = userLoc ? haversineKm(userLoc.lat, userLoc.lng, lat, lng) : undefined;
+      pins.push({ truck, lat, lng, isLiveGps: true, isFavorite, locationLabel: truck.currentLocation || "Live now", distanceKm });
     } else if (truck.activeSchedule?.latitude && truck.activeSchedule?.longitude) {
+      const sLat = truck.activeSchedule.latitude;
+      const sLng = truck.activeSchedule.longitude;
+      const distanceKm = userLoc ? haversineKm(userLoc.lat, userLoc.lng, sLat, sLng) : undefined;
       pins.push({
         truck,
-        lat: truck.activeSchedule.latitude,
-        lng: truck.activeSchedule.longitude,
+        lat: sLat,
+        lng: sLng,
         isLiveGps: false,
         isFavorite,
         locationLabel: truck.activeSchedule.venueName ?? "Scheduled stop",
+        distanceKm,
       });
     }
   }
   return pins;
+}
+
+function formatDistance(km: number): string {
+  const miles = km * 0.621371;
+  if (miles < 0.1) return "< 0.1 mi";
+  if (miles < 10) return `${miles.toFixed(1)} mi`;
+  return `${Math.round(miles)} mi`;
 }
 
 function popupHtml(pin: PinEntry): string {
@@ -124,6 +147,12 @@ function popupHtml(pin: PinEntry): string {
   const liveBadge = pin.isLiveGps
     ? `<span style="background:#dcfce7;color:#15803d;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap;">Live</span>`
     : `<span style="background:#ffedd5;color:#c2410c;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;white-space:nowrap;">Scheduled</span>`;
+  const distanceLine = pin.distanceKm !== undefined
+    ? `<div style="font-size:11px;color:#6b7280;margin-bottom:5px;display:flex;align-items:center;gap:4px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        ${formatDistance(pin.distanceKm)} away
+      </div>`
+    : "";
   const slug = (pin.truck as any).slug ?? pin.truck.id;
   return `
     <style>@keyframes lp2{0%,100%{opacity:1}50%{opacity:0.4}}</style>
@@ -135,7 +164,8 @@ function popupHtml(pin: PinEntry): string {
         <span style="font-size:11px;color:#6b7280;">${pin.truck.cuisine}</span>
         ${liveBadge}
       </div>
-      <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">@ ${pin.locationLabel}</div>
+      <div style="font-size:11px;color:#9ca3af;margin-bottom:5px;">@ ${pin.locationLabel}</div>
+      ${distanceLine}
       <div style="display:flex;gap:6px;">
         <a href="/trucks/${slug}"
           style="flex:1;text-align:center;background:#f97316;color:white;padding:6px 0;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none;">
@@ -197,12 +227,21 @@ function ClusteredMarkers({ pins }: { pins: PinEntry[] }) {
   return null;
 }
 
+function FlyToUser({ userLocation }: { userLocation: { lat: number; lng: number } }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo([userLocation.lat, userLocation.lng], 13, { duration: 1.2 });
+  }, [map, userLocation.lat, userLocation.lng]);
+  return null;
+}
+
 interface MapViewProps {
   trucks: TruckSummary[];
   favoriteTruckIds?: Set<number>;
   center?: [number, number];
   zoom?: number;
   height?: string;
+  userLocation?: { lat: number; lng: number };
 }
 
 export function MapView({
@@ -211,17 +250,26 @@ export function MapView({
   center = [35.4676, -97.5164],
   zoom = 11,
   height = "500px",
+  userLocation,
 }: MapViewProps) {
-  const pins = buildPins(trucks, favoriteTruckIds);
+  const pins = buildPins(trucks, favoriteTruckIds, userLocation);
 
   return (
-    <div style={{ height }} className="w-full rounded-2xl overflow-hidden shadow-lg border border-border/50">
-      <MapContainer center={center} zoom={zoom} scrollWheelZoom={false} className="w-full h-full">
+    <div style={{ height }} className="w-full rounded-2xl overflow-hidden shadow-lg border border-border/50 relative z-0">
+      <MapContainer center={center} zoom={zoom} scrollWheelZoom={false} className="w-full h-full" style={{ zIndex: 0 }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <ClusteredMarkers pins={pins} />
+        {userLocation && <FlyToUser userLocation={userLocation} />}
+        {userLocation && (
+          <CircleMarker
+            center={[userLocation.lat, userLocation.lng]}
+            radius={8}
+            pathOptions={{ color: "#2563eb", fillColor: "#3b82f6", fillOpacity: 0.9, weight: 2.5, opacity: 1 }}
+          />
+        )}
       </MapContainer>
     </div>
   );

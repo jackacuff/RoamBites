@@ -26,6 +26,8 @@ const OKC_REGION: Region = {
   longitudeDelta: 0.15,
 };
 
+const TAB_BAR_HEIGHT = Platform.OS === "web" ? 67 : 49;
+
 export default function MapScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -35,6 +37,7 @@ export default function MapScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [locationGranted, setLocationGranted] = useState(false);
   const isWeb = Platform.OS === "web";
 
   const { data: trucks, isLoading } = useListTrucks({ openNow: true });
@@ -49,21 +52,35 @@ export default function MapScreen() {
         const Location = await import("expo-location");
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === "granted") {
+          setLocationGranted(true);
           const loc = await Location.getCurrentPositionAsync({});
-          setUserLocation({
+          const coords = {
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
-          });
+          };
+          setUserLocation(coords);
+          // Auto-orient: fly to user location on first load
+          animateMapToRegion(
+            mapRef,
+            { ...coords, latitudeDelta: 0.08, longitudeDelta: 0.08 },
+            800
+          );
         }
       } catch {}
     } else {
       if (typeof navigator !== "undefined" && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-          setUserLocation({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          });
-        });
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const coords = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            };
+            setUserLocation(coords);
+            setLocationGranted(true);
+          },
+          () => {},
+          { timeout: 6000, maximumAge: 120000 }
+        );
       }
     }
   };
@@ -103,6 +120,10 @@ export default function MapScreen() {
     }
   };
 
+  // Bottom inset for the map: prevents native MapView from extending under the tab bar,
+  // which would cause the native touch handler to intercept tab bar taps.
+  const mapBottomInset = isWeb ? 0 : insets.bottom + TAB_BAR_HEIGHT;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -115,15 +136,33 @@ export default function MapScreen() {
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          Live Map
-        </Text>
+        <View>
+          <Text style={[styles.title, { color: colors.foreground }]}>
+            Live Map
+          </Text>
+          {locationGranted && (
+            <Text style={[styles.locationHint, { color: colors.mutedForeground }]}>
+              Centered on your location
+            </Text>
+          )}
+        </View>
         {!isWeb && (
           <Pressable
             onPress={centerOnUser}
-            style={[styles.locationBtn, { backgroundColor: colors.muted }]}
+            style={[
+              styles.locationBtn,
+              {
+                backgroundColor: locationGranted ? colors.primary + "18" : colors.muted,
+                borderWidth: locationGranted ? 1 : 0,
+                borderColor: locationGranted ? colors.primary + "40" : "transparent",
+              },
+            ]}
           >
-            <Feather name="navigation" size={18} color={colors.primary} />
+            <Feather
+              name="navigation"
+              size={18}
+              color={locationGranted ? colors.primary : colors.mutedForeground}
+            />
           </Pressable>
         )}
       </View>
@@ -133,14 +172,16 @@ export default function MapScreen() {
           <ActivityIndicator color={colors.primary} size="large" />
         </View>
       ) : (
-        <MapViewWrapper
-          initialRegion={OKC_REGION}
-          showsUserLocation={!!userLocation}
-          markers={markers}
-          onMarkerPress={handleMarkerPress}
-          mapRef={mapRef}
-          trucks={trucks}
-        />
+        <View style={[styles.mapContainer, { marginBottom: mapBottomInset }]}>
+          <MapViewWrapper
+            initialRegion={OKC_REGION}
+            showsUserLocation={locationGranted}
+            markers={markers}
+            onMarkerPress={handleMarkerPress}
+            mapRef={mapRef}
+            trucks={trucks}
+          />
+        </View>
       )}
 
       {/* No trucks message (native only) */}
@@ -152,7 +193,7 @@ export default function MapScreen() {
               backgroundColor: colors.card,
               borderRadius: colors.radius,
               borderColor: colors.border,
-              bottom: insets.bottom + 90,
+              bottom: insets.bottom + TAB_BAR_HEIGHT + 12,
             },
           ]}
         >
@@ -173,7 +214,7 @@ export default function MapScreen() {
               backgroundColor: colors.card,
               borderColor: colors.border,
               borderRadius: colors.radius,
-              bottom: insets.bottom + 90,
+              bottom: insets.bottom + TAB_BAR_HEIGHT + 12,
             },
           ]}
         >
@@ -230,6 +271,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   title: { fontSize: 22, fontFamily: "Inter_700Bold" },
+  locationHint: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 },
   locationBtn: {
     width: 40,
     height: 40,
@@ -241,6 +283,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  mapContainer: {
+    flex: 1,
   },
   noTrucksCard: {
     position: "absolute",

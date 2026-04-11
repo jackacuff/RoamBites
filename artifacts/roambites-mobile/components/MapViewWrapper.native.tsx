@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet } from "react-native";
 import MapView, { Marker, type Region } from "react-native-maps";
+import type { TruckSummary } from "@workspace/api-client-react";
 
 export type { Region };
 
@@ -17,6 +18,7 @@ interface MapViewWrapperProps {
   markers: MapMarker[];
   onMarkerPress: (id: number) => void;
   mapRef?: React.RefObject<MapView | null>;
+  trucks?: TruckSummary[];
 }
 
 export function MapViewWrapper({
