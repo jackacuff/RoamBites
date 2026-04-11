@@ -57,29 +57,24 @@ export function TruckCard({ truck, distanceKm }: TruckCardProps) {
         
         <div className="mt-auto pt-2 sm:mt-6 sm:pt-4 sm:border-t sm:border-border/50 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center text-xs sm:text-sm text-muted-foreground min-w-0">
-              <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-1.5 text-primary shrink-0" />
-              <span className="truncate max-w-[100px] sm:max-w-[120px]">
-                {truck.currentCity || truck.activeSchedule?.city || "Various"}
+            {truck.isLive && showDistance ? (
+              <span className="flex items-center text-xs sm:text-sm font-semibold text-primary shrink-0">
+                <Navigation className="w-3 h-3 sm:w-4 sm:h-4 mr-1 shrink-0" />
+                {formatDistance(distanceKm!)} away
               </span>
-            </div>
-            {showDistance && (
-              <span className="hidden sm:flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">
-                <Navigation className="w-3 h-3" />
-                {formatDistance(distanceKm!)}
+            ) : truck.isLive && (truck.currentCity || truck.activeSchedule?.city) ? (
+              <span className="flex items-center text-xs sm:text-sm text-muted-foreground min-w-0">
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-primary shrink-0" />
+                <span className="truncate max-w-[100px] sm:max-w-[140px]">
+                  {truck.currentCity || truck.activeSchedule?.city}
+                </span>
               </span>
-            )}
+            ) : null}
           </div>
           <div className="hidden sm:flex items-center text-sm font-semibold text-primary shrink-0">
             View Truck <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
-        {showDistance && (
-          <div className="sm:hidden flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
-            <Navigation className="w-3 h-3" />
-            {formatDistance(distanceKm!)} away
-          </div>
-        )}
       </div>
     </Link>
   );
