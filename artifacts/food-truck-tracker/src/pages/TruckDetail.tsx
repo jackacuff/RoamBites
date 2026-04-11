@@ -2,13 +2,167 @@ import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { MapView } from "@/components/MapView";
 import { StatusBadge } from "@/components/StatusBadge";
-import { MapPin, Globe, Phone, Calendar, Clock, ChevronLeft, Heart, Star, Bell, Send, Loader2, CalendarCheck, Share2 } from "lucide-react";
+import { MapPin, Globe, Phone, Calendar, Clock, ChevronLeft, ChevronRight, X, Heart, Star, Bell, Send, Loader2, CalendarCheck, Share2 } from "lucide-react";
 import { SocialShareButton } from "@/components/SocialShare";
 import { useGetTruck } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getApiUrl } from "@/lib/api";
+
+function PhotoLightbox({
+  images,
+  startIndex,
+  onClose,
+}: {
+  images: { url: string; altText?: string | null }[];
+  startIndex: number;
+  onClose: () => void;
+}) {
+  const [current, setCurrent] = useState(startIndex);
+  const [visible, setVisible] = useState(false);
+  const [imgKey, setImgKey] = useState(0);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  const close = useCallback(() => {
+    setVisible(false);
+    setTimeout(onClose, 200);
+  }, [onClose]);
+
+  const go = useCallback((idx: number) => {
+    setCurrent((idx + images.length) % images.length);
+    setImgKey(k => k + 1);
+  }, [images.length]);
+
+  const prev = useCallback(() => go(current - 1), [current, go]);
+  const next = useCallback(() => go(current + 1), [current, go]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [close, prev, next]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart.current) return;
+    const dx = e.changedTouches[0].clientX - touchStart.current.x;
+    const dy = e.changedTouches[0].clientY - touchStart.current.y;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 44) {
+      if (dx < 0) next(); else prev();
+    } else if (dy > 90 && Math.abs(dy) > Math.abs(dx)) {
+      close();
+    }
+    touchStart.current = null;
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{
+        background: `rgba(0,0,0,${visible ? 0.92 : 0})`,
+        backdropFilter: visible ? "blur(6px)" : "none",
+        transition: "background 200ms ease, backdrop-filter 200ms ease",
+      }}
+      onClick={close}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Close */}
+      <button
+        onClick={close}
+        className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+        aria-label="Close"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
+      {/* Counter */}
+      {images.length > 1 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/60 text-sm font-medium tabular-nums select-none pointer-events-none">
+          {current + 1} / {images.length}
+        </div>
+      )}
+
+      {/* Image */}
+      <div
+        className="relative flex items-center justify-center"
+        style={{
+          maxWidth: "90vw",
+          maxHeight: "85vh",
+          transform: visible ? "scale(1)" : "scale(0.94)",
+          opacity: visible ? 1 : 0,
+          transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), opacity 200ms ease",
+        }}
+        onClick={e => e.stopPropagation()}
+        onTouchStart={e => e.stopPropagation()}
+        onTouchEnd={e => e.stopPropagation()}
+      >
+        <img
+          key={imgKey}
+          src={images[current].url}
+          alt={images[current].altText || `Photo ${current + 1}`}
+          draggable={false}
+          className="max-w-[90vw] max-h-[85vh] w-auto h-auto object-contain rounded-xl shadow-2xl select-none"
+          style={{ animation: "lightboxImg 180ms ease both" }}
+        />
+      </div>
+
+      {/* Arrows */}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={e => { e.stopPropagation(); prev(); }}
+            className="absolute left-3 sm:left-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+            aria-label="Previous photo"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); next(); }}
+            className="absolute right-3 sm:right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors"
+            aria-label="Next photo"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </>
+      )}
+
+      {/* Dot indicators */}
+      {images.length > 1 && images.length <= 12 && (
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={e => { e.stopPropagation(); go(i); }}
+              className="rounded-full transition-all duration-200"
+              style={{
+                width: i === current ? 20 : 7,
+                height: 7,
+                background: i === current ? "white" : "rgba(255,255,255,0.35)",
+              }}
+              aria-label={`Go to photo ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
+
+      <style>{`@keyframes lightboxImg { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }`}</style>
+    </div>
+  );
+}
 
 function StarRating({ rating, max = 5 }: { rating: number; max?: number }) {
   return (
@@ -72,7 +226,7 @@ export default function TruckDetail() {
   const [resError, setResError] = useState("");
 
   const [media, setMedia] = useState<any[]>([]);
-  const [galleryIdx, setGalleryIdx] = useState(0);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
   const token = localStorage.getItem("token");
 
@@ -383,18 +537,25 @@ export default function TruckDetail() {
               return (
                 <section>
                   <h2 className="text-2xl font-display font-bold text-foreground mb-4">Photos</h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                     {gallery.map((m, i) => (
-                      <button key={m.id} type="button" onClick={() => setGalleryIdx(i)}
-                        className={`rounded-xl overflow-hidden border-2 transition ${galleryIdx === i ? "border-primary" : "border-transparent hover:border-primary/40"} aspect-square`}>
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setLightboxIdx(i)}
+                        className="rounded-xl overflow-hidden aspect-square hover:opacity-90 active:scale-[0.97] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        aria-label={`View photo ${i + 1}`}
+                      >
                         <img src={m.url} alt={m.altText || `Photo ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
-                  {gallery.length > 0 && (
-                    <div className="mt-4 rounded-2xl overflow-hidden border border-border shadow-sm aspect-video">
-                      <img src={gallery[galleryIdx]?.url} alt={gallery[galleryIdx]?.altText || "Selected photo"} className="w-full h-full object-cover" />
-                    </div>
+                  {lightboxIdx !== null && (
+                    <PhotoLightbox
+                      images={gallery}
+                      startIndex={lightboxIdx}
+                      onClose={() => setLightboxIdx(null)}
+                    />
                   )}
                 </section>
               );
