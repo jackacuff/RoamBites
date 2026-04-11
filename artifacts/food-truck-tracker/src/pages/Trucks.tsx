@@ -2,8 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
 import { TruckCard } from "@/components/TruckCard";
-import { MapView } from "@/components/MapView";
-import { Search, Map as MapIcon, List, Filter, SlidersHorizontal } from "lucide-react";
+import { MapView, haversineKm } from "@/components/MapView";
+import { Search, Map as MapIcon, List, Filter, SlidersHorizontal, Navigation } from "lucide-react";
 import { useListTrucks } from "@workspace/api-client-react";
 import { useAuth } from "@/hooks/use-auth";
 import { getApiUrl, authHeaders } from "@/lib/api";
@@ -23,6 +23,7 @@ export default function Trucks() {
   );
   const [showFilters, setShowFilters] = useState(false);
   const [favoriteTruckIds, setFavoriteTruckIds] = useState<Set<number>>(new Set());
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) { setFavoriteTruckIds(new Set()); return; }
@@ -36,7 +37,17 @@ export default function Trucks() {
       .catch(() => {});
   }, [isAuthenticated]);
 
-  // Debounced or direct fetch. Orval hook reacts to param changes.
+  useEffect(() => {
+    if (!navigator?.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {},
+      { timeout: 6000, maximumAge: 120000 }
+    );
+  }, []);
+
   const { data: trucks, isLoading } = useListTrucks({
     city: city || undefined,
     cuisine: cuisine || undefined,
@@ -45,7 +56,6 @@ export default function Trucks() {
   });
 
   const uniqueCities = useMemo(() => {
-    // In a real app, this would be an API call or aggregated. We mock a few static ones + whatever is in data
     const set = new Set(['Oklahoma City', 'Edmond', 'Norman', 'Moore']);
     trucks?.forEach(t => t.currentCity && set.add(t.currentCity));
     return Array.from(set).sort();
@@ -57,16 +67,37 @@ export default function Trucks() {
     return Array.from(set).sort();
   }, [trucks]);
 
+  const trucksWithDistance = useMemo(() => {
+    if (!trucks) return [];
+    return trucks.map(t => {
+      let distanceKm: number | undefined;
+      if (userLocation) {
+        const lat = t.isLive && t.currentLatitude != null ? t.currentLatitude : t.activeSchedule?.latitude;
+        const lng = t.isLive && t.currentLongitude != null ? t.currentLongitude : t.activeSchedule?.longitude;
+        if (lat != null && lng != null) {
+          distanceKm = haversineKm(userLocation.lat, userLocation.lng, lat, lng);
+        }
+      }
+      return { ...t, distanceKm };
+    });
+  }, [trucks, userLocation]);
+
   const activeFilterCount = [city, cuisine, openNow].filter(Boolean).length;
 
   return (
     <Layout>
-      <div className="bg-card border-b border-border/50 pt-6 pb-4 sticky top-20 z-40">
+      {/* z-[1200] ensures this header stays above Leaflet's internal z-indices (up to 1000) */}
+      <div className="bg-card border-b border-border/50 pt-6 pb-4 sticky top-20 z-[1200]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Top row: title + view toggle */}
           <div className="flex items-center justify-between gap-4 mb-4">
             <h1 className="text-2xl font-display font-bold text-foreground">Browse Trucks</h1>
             <div className="flex items-center gap-2">
+              {userLocation && (
+                <span className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold border border-green-500/20">
+                  <Navigation className="w-3 h-3" /> Distances shown
+                </span>
+              )}
               <div className="bg-muted p-1 rounded-xl flex">
                 <button 
                   onClick={() => setViewMode('list')}
@@ -155,15 +186,15 @@ export default function Trucks() {
           <div className="flex justify-center items-center py-20">
             <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
-        ) : trucks && trucks.length > 0 ? (
+        ) : trucksWithDistance.length > 0 ? (
           viewMode === 'list' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {trucks.map(truck => (
-                <TruckCard key={truck.id} truck={truck} />
+              {trucksWithDistance.map(truck => (
+                <TruckCard key={truck.id} truck={truck} distanceKm={truck.distanceKm} />
               ))}
             </div>
           ) : (
-            <MapView trucks={trucks} favoriteTruckIds={favoriteTruckIds} height="70vh" />
+            <MapView trucks={trucks!} favoriteTruckIds={favoriteTruckIds} height="70vh" userLocation={userLocation ?? undefined} />
           )
         ) : (
           <div className="text-center py-24 bg-card rounded-3xl border border-dashed border-border">

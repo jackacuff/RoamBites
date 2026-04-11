@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,18 @@ import { useColors } from "@/hooks/useColors";
 
 type SortMode = "default" | "topRated";
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function BrowseScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -25,25 +37,65 @@ export default function BrowseScreen() {
 
   const [search, setSearch] = useState("");
   const [openNow, setOpenNow] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>("default");
+  const [sortMode] = useState<SortMode>("default");
   const [refreshing, setRefreshing] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const { data: trucks, isLoading, refetch } = useListTrucks({
     search: search || undefined,
     openNow: openNow || undefined,
   });
 
+  useEffect(() => {
+    requestLocation();
+  }, []);
+
+  const requestLocation = async () => {
+    if (Platform.OS !== "web") {
+      try {
+        const Location = await import("expo-location");
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const loc = await Location.getCurrentPositionAsync({});
+          setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        }
+      } catch {}
+    } else {
+      if (typeof navigator !== "undefined" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          },
+          () => {},
+          { timeout: 6000, maximumAge: 120000 }
+        );
+      }
+    }
+  };
+
   const sortedTrucks = useMemo(() => {
     if (!trucks) return [];
+    const withDist = trucks.map((t) => {
+      let distanceKm: number | undefined;
+      if (userLocation) {
+        const lat = t.isLive && t.currentLatitude != null ? t.currentLatitude : t.activeSchedule?.latitude;
+        const lng = t.isLive && t.currentLongitude != null ? t.currentLongitude : t.activeSchedule?.longitude;
+        if (lat != null && lng != null) {
+          distanceKm = haversineKm(userLocation.lat, userLocation.lng, lat, lng);
+        }
+      }
+      return { ...t, distanceKm };
+    });
+
     if (sortMode === "default") {
-      return [...trucks].sort((a, b) => {
+      return [...withDist].sort((a, b) => {
         const aOpen = a.status === "open" ? 1 : 0;
         const bOpen = b.status === "open" ? 1 : 0;
         return bOpen - aOpen;
       });
     }
-    return trucks;
-  }, [trucks, sortMode]);
+    return withDist;
+  }, [trucks, sortMode, userLocation]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -60,7 +112,7 @@ export default function BrowseScreen() {
     {
       label: "All Trucks",
       active: !openNow && sortMode === "default",
-      onPress: () => { setOpenNow(false); setSortMode("default"); },
+      onPress: () => setOpenNow(false),
     },
   ];
 
@@ -75,9 +127,16 @@ export default function BrowseScreen() {
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          Browse Trucks Near You
-        </Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: colors.foreground }]}>
+            Browse Trucks
+          </Text>
+          {userLocation && (
+            <View style={[styles.locationBadge, { backgroundColor: "#dcfce7" }]}>
+              <Text style={styles.locationBadgeText}>📍 Distances on</Text>
+            </View>
+          )}
+        </View>
         <View style={styles.searchWrap}>
           <SearchBar
             value={search}
@@ -125,7 +184,9 @@ export default function BrowseScreen() {
         <FlatList
           data={sortedTrucks}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <TruckCard truck={item} />}
+          renderItem={({ item }) => (
+            <TruckCard truck={item} distanceKm={item.distanceKm} />
+          )}
           contentContainerStyle={[
             styles.listContent,
             {
@@ -175,10 +236,25 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 16, paddingBottom: 8 },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   title: {
     fontSize: 22,
     fontFamily: "Inter_700Bold",
-    marginBottom: 12,
+  },
+  locationBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  locationBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: "#15803d",
   },
   searchWrap: { marginBottom: 10 },
   filtersRow: { marginBottom: 4 },

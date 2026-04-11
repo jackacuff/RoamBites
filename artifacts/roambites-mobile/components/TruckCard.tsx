@@ -10,10 +10,19 @@ import { StatusBadge } from "./StatusBadge";
 interface TruckCardProps {
   truck: TruckSummary;
   compact?: boolean;
+  distanceKm?: number;
 }
 
-export function TruckCard({ truck, compact = false }: TruckCardProps) {
+function formatDistance(km: number): string {
+  const miles = km * 0.621371;
+  if (miles < 0.1) return "< 0.1 mi";
+  if (miles < 10) return `${miles.toFixed(1)} mi`;
+  return `${Math.round(miles)} mi`;
+}
+
+export function TruckCard({ truck, compact = false, distanceKm }: TruckCardProps) {
   const colors = useColors();
+  const showDistance = distanceKm !== undefined && distanceKm < 130;
 
   return (
     <Pressable
@@ -60,15 +69,28 @@ export function TruckCard({ truck, compact = false }: TruckCardProps) {
         <Text style={[styles.cuisine, { color: colors.mutedForeground }]}>
           {truck.cuisine}
         </Text>
-        {!compact && truck.currentLocation && (
+        {!compact && (truck.currentLocation || showDistance) && (
           <View style={styles.locationRow}>
             <Feather name="map-pin" size={12} color={colors.mutedForeground} />
-            <Text
-              style={[styles.locationText, { color: colors.mutedForeground }]}
-              numberOfLines={1}
-            >
-              {truck.currentLocation}
-            </Text>
+            {truck.currentLocation ? (
+              <Text
+                style={[styles.locationText, { color: colors.mutedForeground }]}
+                numberOfLines={1}
+              >
+                {truck.currentLocation}
+              </Text>
+            ) : null}
+            {showDistance && (
+              <>
+                {truck.currentLocation ? (
+                  <Text style={[styles.locationSep, { color: colors.mutedForeground }]}>·</Text>
+                ) : null}
+                <Feather name="navigation" size={11} color="#3b82f6" />
+                <Text style={styles.distanceText}>
+                  {formatDistance(distanceKm!)}
+                </Text>
+              </>
+            )}
           </View>
         )}
       </View>
@@ -130,10 +152,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     marginTop: 2,
+    flexWrap: "wrap",
   },
   locationText: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     flex: 1,
+  },
+  locationSep: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  distanceText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: "#3b82f6",
   },
 });

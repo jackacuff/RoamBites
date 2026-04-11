@@ -1,14 +1,23 @@
 import { Link } from "wouter";
-import { MapPin, ArrowRight, Star } from "lucide-react";
+import { MapPin, ArrowRight, Navigation } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { TruckSummary } from "@workspace/api-client-react";
 
 interface TruckCardProps {
   truck: TruckSummary;
+  distanceKm?: number;
 }
 
-export function TruckCard({ truck }: TruckCardProps) {
+function formatDistance(km: number): string {
+  const miles = km * 0.621371;
+  if (miles < 0.1) return "< 0.1 mi";
+  if (miles < 10) return `${miles.toFixed(1)} mi`;
+  return `${Math.round(miles)} mi`;
+}
+
+export function TruckCard({ truck, distanceKm }: TruckCardProps) {
   const fallbackImg = `${import.meta.env.BASE_URL}images/truck-placeholder.png`;
+  const showDistance = distanceKm !== undefined && distanceKm < 80;
 
   return (
     <Link 
@@ -46,17 +55,31 @@ export function TruckCard({ truck }: TruckCardProps) {
           {truck.description || `Delicious ${truck.cuisine} food truck serving the local area.`}
         </p>
         
-        <div className="mt-auto pt-2 sm:mt-6 sm:pt-4 sm:border-t sm:border-border/50 flex items-center justify-between">
-          <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-1.5 text-primary shrink-0" />
-            <span className="truncate max-w-[100px] sm:max-w-[120px]">
-              {truck.currentCity || truck.activeSchedule?.city || "Various"}
-            </span>
+        <div className="mt-auto pt-2 sm:mt-6 sm:pt-4 sm:border-t sm:border-border/50 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center text-xs sm:text-sm text-muted-foreground min-w-0">
+              <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-1.5 text-primary shrink-0" />
+              <span className="truncate max-w-[100px] sm:max-w-[120px]">
+                {truck.currentCity || truck.activeSchedule?.city || "Various"}
+              </span>
+            </div>
+            {showDistance && (
+              <span className="hidden sm:flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium shrink-0">
+                <Navigation className="w-3 h-3" />
+                {formatDistance(distanceKm!)}
+              </span>
+            )}
           </div>
-          <div className="hidden sm:flex items-center text-sm font-semibold text-primary">
+          <div className="hidden sm:flex items-center text-sm font-semibold text-primary shrink-0">
             View Truck <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
+        {showDistance && (
+          <div className="sm:hidden flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
+            <Navigation className="w-3 h-3" />
+            {formatDistance(distanceKm!)} away
+          </div>
+        )}
       </div>
     </Link>
   );
