@@ -71,12 +71,8 @@ export default function Trucks() {
     if (!trucks) return [];
     return trucks.map(t => {
       let distanceKm: number | undefined;
-      if (userLocation) {
-        const lat = t.isLive && t.currentLatitude != null ? t.currentLatitude : t.activeSchedule?.latitude;
-        const lng = t.isLive && t.currentLongitude != null ? t.currentLongitude : t.activeSchedule?.longitude;
-        if (lat != null && lng != null) {
-          distanceKm = haversineKm(userLocation.lat, userLocation.lng, lat, lng);
-        }
+      if (userLocation && t.isLive && t.currentLatitude != null && t.currentLongitude != null) {
+        distanceKm = haversineKm(userLocation.lat, userLocation.lng, t.currentLatitude, t.currentLongitude);
       }
       return { ...t, distanceKm };
     });
