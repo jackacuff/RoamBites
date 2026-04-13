@@ -1,0 +1,136 @@
+Improve the event detail page to make it more interactive, more useful, and easier to explore. Do NOT redesign the entire app. This is a refinement of the current event page.
+
+GOAL
+Make the event page feel more premium and interactive, especially around the map and truck lineup. The page should help users quickly understand the event, explore truck locations, and take action.
+
+PRIORITY 1: EXPANDABLE MAP
+
+1. Add expandable map behavior to the “Location & Trucks” section.
+- Users should be able to tap the map or tap an “Expand Map” button
+- This should open the map in a larger view, ideally a full-screen modal or large overlay
+- The expanded map should be much easier to read and allow users to clearly see:
+  - truck pins
+  - event location
+  - spacing between trucks
+
+2. Expanded map functionality must include:
+- zoom in / zoom out
+- pan freely
+- close button (X)
+- smooth open/close animation
+- clear truck pin visibility
+
+3. Truck interaction on the expanded map
+- When a user taps a truck pin, show:
+  - truck name
+  - cuisine
+  - “View Truck” action
+
+4. Connect truck lineup and map interaction
+- When a user clicks a truck in the Food Truck Lineup, automatically highlight that truck on the map
+- Ideally also zoom or center the map on that truck
+- Remove reliance on users reading instructional text
+- Make the interaction feel obvious through behavior
+
+PRIORITY 2: EVENT PAGE ACTIONS
+
+5. Add action buttons near the top of the event page
+Add a clear action row near the event title/header with:
+- Directions
+- Save Event
+- Add to Calendar
+- Keep Share if it already exists
+
+These should be easy to access and visually clean.
+
+PRIORITY 3: IMPROVE HEADER / HERO FEEL
+
+6. Improve the event header visually
+The current header is too flat and static.
+
+Improve it by:
+- adding stronger visual hierarchy
+- optionally using an event image background or subtle overlay if available
+- supporting a “Featured Event” badge if the event is featured
+- supporting small context labels such as:
+  - Upcoming
+  - This Weekend
+  - Featured
+
+Do NOT make it flashy or overdesigned.
+
+PRIORITY 4: IMPROVE FOOD TRUCK LINEUP
+
+7. Make the truck lineup feel more engaging
+Current lineup is clean but a little flat.
+
+Improve the cards by:
+- optionally showing truck thumbnail/logo if available
+- improving spacing and hierarchy
+- keeping truck name prominent
+- keeping cuisine visible
+- retaining live/open status when relevant
+- allowing future support for badges like:
+  - Top Rated
+  - Popular
+  - Event Regular
+
+Do NOT clutter the cards.
+
+PRIORITY 5: IMPROVE EVENT INFORMATION READABILITY
+
+8. Improve the event details/info card
+The event details card is useful but feels dense.
+
+Refine it so the information is easier to scan. Organize content more clearly into sections such as:
+- Event Details
+- About
+- Notes / What to Expect
+
+Keep the same information, but improve hierarchy and readability.
+
+9. Add or improve “What to Expect” style presentation
+If appropriate, convert long descriptive text into a cleaner format using:
+- short paragraphs
+- bullets
+- labeled sections
+
+Examples:
+- Food trucks
+- Craft vendors
+- Family friendly
+- Fall activities
+
+PRIORITY 6: LOCATION / MAP USEFULNESS
+
+10. Make location actions clearer
+Ensure the venue/location area has a stronger action for opening directions/maps.
+
+This can be:
+- a clearer “Open in Maps” or “Directions” button
+- stronger visual treatment than just a small icon
+
+PRIORITY 7: FEATURED EVENT SUPPORT
+
+11. Support featured event styling on the event page
+If the event is featured:
+- show a “Featured Event” badge near the title
+- slightly elevate visual treatment in a tasteful way
+- do NOT make it tacky
+
+IMPORTANT UX RULES
+
+- Keep the layout clean
+- Do NOT overcomplicate the page
+- Do NOT remove existing useful content
+- Focus on:
+  - interaction
+  - actionability
+  - readability
+  - map usability
+
+AFTER IMPLEMENTING, PROVIDE
+1. Summary of all event page changes made
+2. How the expandable map works
+3. How truck lineup and map interaction were connected
+4. Any new actions added near the header
