@@ -8,12 +8,14 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
-  Users, Truck, Activity, CheckCircle, Package,
-  CreditCard, Plus, Edit2, Gift, Ban, TrendingUp, Clock, AlertCircle, Calendar, Zap,
+  Users, Truck, Activity, Package, CheckCircle, Ban,
+  CreditCard, Plus, Edit2, Gift, TrendingUp, Clock, AlertCircle, Calendar, Zap, Loader2, Shield,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import { format } from "date-fns";
 
 type Plan = {
@@ -71,10 +73,27 @@ function StatCard({
 
 const BLANK_PLAN = { name: "", description: "", monthlyPrice: "29.99", trialDays: "90", stripePriceId: "", featuresText: "", isRecommended: false };
 
+const ROLE_OPTIONS = ["customer", "vendor", "organizer", "admin"] as const;
+const ROLE_COLORS: Record<string, string> = {
+  superadmin: "bg-purple-100 text-purple-700",
+  admin: "bg-blue-100 text-blue-700",
+  vendor: "bg-orange-100 text-orange-700",
+  organizer: "bg-green-100 text-green-700",
+  customer: "bg-gray-100 text-gray-600",
+};
+
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"stats" | "trucks" | "users" | "plans" | "subscriptions" | "events">("stats");
+  const [changingRoleFor, setChangingRoleFor] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated) { navigate("/login"); return; }
+    if (user && user.role !== "admin" && user.role !== "superadmin") { navigate("/"); return; }
+  }, [isAuthenticated, user]);
 
   const { data: stats } = useAdminGetStats();
   const { data: trucks } = useAdminListTrucks();
@@ -101,20 +120,6 @@ export default function AdminDashboard() {
     enabled: activeTab === "events",
   });
 
-  async function toggleEventFeatured(event: AdminEvent) {
-    const body = event.isFeatured
-      ? { isFeatured: false, featuredUntil: null }
-      : { isFeatured: true, featuredUntil: new Date(Date.now() + 30 * 86400000).toISOString() };
-    const r = await fetch(getApiUrl(`/api/admin/events/${event.id}/feature`), {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) { toast({ title: "Failed to update feature status", variant: "destructive" }); return; }
-    toast({ title: event.isFeatured ? "Event unfeatured" : "Event featured for 30 days!" });
-    refetchEvents();
-  }
-
   const approveMutation = useAdminApproveTruck({
     mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin"] }) },
   });
@@ -126,6 +131,17 @@ export default function AdminDashboard() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [planForm, setPlanForm] = useState(BLANK_PLAN);
+
+  /* ─── Render guard ─── */
+  if (!user || (user.role !== "admin" && user.role !== "superadmin")) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   function openNewPlan() {
     setPlanForm(BLANK_PLAN);
@@ -209,6 +225,38 @@ export default function AdminDashboard() {
     if (!r.ok) { toast({ title: "Failed to cancel", variant: "destructive" }); return; }
     toast({ title: `Subscription canceled for ${sub.vendorName}` });
     refetchSubs();
+  }
+
+  async function toggleEventFeatured(event: AdminEvent) {
+    const body = event.isFeatured
+      ? { isFeatured: false, featuredUntil: null }
+      : { isFeatured: true, featuredUntil: new Date(Date.now() + 30 * 86400000).toISOString() };
+    const r = await fetch(getApiUrl(`/api/admin/events/${event.id}/feature`), {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) { toast({ title: "Failed to update feature status", variant: "destructive" }); return; }
+    toast({ title: event.isFeatured ? "Event unfeatured" : "Event featured for 30 days!" });
+    refetchEvents();
+  }
+
+  async function changeUserRole(userId: number, newRole: string, userName: string) {
+    setChangingRoleFor(userId);
+    const r = await fetch(getApiUrl(`/api/admin/users/${userId}/role`), {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ role: newRole }),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      toast({ title: "Failed to change role", description: (err as any).error ?? "Unknown error", variant: "destructive" });
+      setChangingRoleFor(null);
+      return;
+    }
+    toast({ title: `${userName}'s role updated to "${newRole}"` });
+    setChangingRoleFor(null);
+    queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
   }
 
   const tabs = [
@@ -310,42 +358,83 @@ export default function AdminDashboard() {
 
         {/* ── Users ── */}
         {activeTab === "users" && (
-          <div className="bg-card rounded-2xl border border-border overflow-x-auto shadow-sm">
-            <table className="w-full text-left border-collapse min-w-[600px]">
-              <thead>
-                <tr className="bg-muted/50 border-b border-border">
-                  <th className="p-4 text-sm font-semibold text-muted-foreground">Name</th>
-                  <th className="p-4 text-sm font-semibold text-muted-foreground">Email</th>
-                  <th className="p-4 text-sm font-semibold text-muted-foreground">Role</th>
-                  <th className="p-4 text-sm font-semibold text-muted-foreground">Status</th>
-                  <th className="p-4 text-sm font-semibold text-muted-foreground text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users?.map(u => (
-                  <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="p-4 font-medium">{u.name}</td>
-                    <td className="p-4 text-muted-foreground text-sm">{u.email}</td>
-                    <td className="p-4">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground capitalize">{u.role}</span>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${u.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                        {u.isActive ? "Active" : "Suspended"}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => statusMutation.mutate({ id: u.id, data: { isActive: !u.isActive } })}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${u.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-700 hover:bg-green-100"}`}
-                      >
-                        {u.isActive ? "Suspend" : "Reactivate"}
-                      </button>
-                    </td>
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-xl font-semibold">Users</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Manage user roles and account status. SuperAdmin accounts cannot be modified.</p>
+            </div>
+            <div className="bg-card rounded-2xl border border-border overflow-x-auto shadow-sm">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Name</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Email</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Role</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground">Status</th>
+                    <th className="p-4 text-sm font-semibold text-muted-foreground text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users?.map(u => {
+                    const isSelf = u.id === user.id;
+                    const isSuperAdmin = u.role === "superadmin";
+                    const canEdit = !isSelf && !isSuperAdmin;
+                    return (
+                      <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="p-4 font-medium">
+                          <div className="flex items-center gap-2">
+                            {isSelf && <span className="text-xs text-muted-foreground">(you)</span>}
+                            {u.name}
+                          </div>
+                        </td>
+                        <td className="p-4 text-muted-foreground text-sm">{u.email}</td>
+                        <td className="p-4">
+                          {canEdit ? (
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={u.role}
+                                disabled={changingRoleFor === u.id}
+                                onChange={e => changeUserRole(u.id, e.target.value, u.name)}
+                                className={`px-2 py-1 rounded-lg text-xs font-semibold border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer ${ROLE_COLORS[u.role] ?? "bg-muted text-muted-foreground"}`}
+                              >
+                                {ROLE_OPTIONS.map(r => (
+                                  <option key={r} value={r}>{r}</option>
+                                ))}
+                              </select>
+                              {changingRoleFor === u.id && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+                            </div>
+                          ) : (
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${ROLE_COLORS[u.role] ?? "bg-muted text-muted-foreground"}`}>
+                              {u.role}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${u.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {u.isActive ? "Active" : "Suspended"}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          {canEdit ? (
+                            <button
+                              onClick={() => statusMutation.mutate({ id: u.id, data: { isActive: !u.isActive } })}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${u.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-700 hover:bg-green-100"}`}
+                            >
+                              {u.isActive ? "Suspend" : "Reactivate"}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic flex items-center justify-end gap-1">
+                              <Shield className="w-3 h-3" />
+                              {isSuperAdmin ? "Protected" : "You"}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

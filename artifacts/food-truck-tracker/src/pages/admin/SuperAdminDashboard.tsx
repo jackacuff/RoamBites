@@ -33,6 +33,7 @@ export default function SuperAdminDashboard() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [impersonating, setImpersonating] = useState<number | null>(null);
+  const [changingRoleFor, setChangingRoleFor] = useState<number | null>(null);
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
@@ -83,6 +84,30 @@ export default function SuperAdminDashboard() {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     } finally {
       setImpersonating(null);
+    }
+  };
+
+  const handleRoleChange = async (target: UserRow, newRole: string) => {
+    if (target.role === newRole) return;
+    setChangingRoleFor(target.id);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(getApiUrl(`/api/admin/users/${target.id}/role`), {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: "Role change failed", description: err.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: `${target.name}'s role updated to "${newRole}"` });
+      setUsers(prev => prev.map(u => u.id === target.id ? { ...u, role: newRole } : u));
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setChangingRoleFor(null);
     }
   };
 
@@ -172,23 +197,41 @@ export default function SuperAdminDashboard() {
                     <th className="p-4 font-semibold text-muted-foreground">Email</th>
                     <th className="p-4 font-semibold text-muted-foreground">Role</th>
                     <th className="p-4 font-semibold text-muted-foreground">Status</th>
-                    <th className="p-4 font-semibold text-muted-foreground text-right">Impersonate</th>
+                    <th className="p-4 font-semibold text-muted-foreground text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(u => (
+                  {filtered.map(u => {
+                    const isSuperAdmin = u.role === "superadmin";
+                    return (
                     <tr key={u.id} className="border-b border-border last:border-0 hover:bg-muted/20">
                       <td className="p-4 font-medium">
                         <div className="flex items-center gap-2">
-                          {u.role === "superadmin" && <Crown className="w-3.5 h-3.5 text-purple-500 shrink-0" />}
+                          {isSuperAdmin && <Crown className="w-3.5 h-3.5 text-purple-500 shrink-0" />}
                           {u.name}
                         </div>
                       </td>
                       <td className="p-4 text-muted-foreground">{u.email}</td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${ROLE_COLORS[u.role] ?? ROLE_COLORS.customer}`}>
-                          {u.role}
-                        </span>
+                        {!isSuperAdmin ? (
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={u.role}
+                              disabled={changingRoleFor === u.id}
+                              onChange={e => handleRoleChange(u, e.target.value)}
+                              className={`px-2 py-0.5 rounded text-xs font-semibold uppercase border border-transparent focus:outline-none focus:border-purple-400 cursor-pointer ${ROLE_COLORS[u.role] ?? ROLE_COLORS.customer}`}
+                            >
+                              {["customer", "vendor", "organizer", "admin"].map(r => (
+                                <option key={r} value={r} className="normal-case">{r}</option>
+                              ))}
+                            </select>
+                            {changingRoleFor === u.id && <Loader2 className="w-3 h-3 animate-spin text-purple-400" />}
+                          </div>
+                        ) : (
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${ROLE_COLORS[u.role] ?? ROLE_COLORS.customer}`}>
+                            {u.role}
+                          </span>
+                        )}
                       </td>
                       <td className="p-4">
                         {u.isActive ? (
@@ -202,8 +245,10 @@ export default function SuperAdminDashboard() {
                         )}
                       </td>
                       <td className="p-4 text-right">
-                        {u.role === "superadmin" ? (
-                          <span className="text-xs text-muted-foreground italic">N/A</span>
+                        {isSuperAdmin ? (
+                          <span className="text-xs text-muted-foreground italic flex items-center justify-end gap-1">
+                            <Shield className="w-3 h-3" /> Protected
+                          </span>
                         ) : !u.isActive ? (
                           <span className="text-xs text-muted-foreground italic">Disabled</span>
                         ) : (
@@ -222,7 +267,8 @@ export default function SuperAdminDashboard() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {filtered.length === 0 && (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-muted-foreground text-sm">
