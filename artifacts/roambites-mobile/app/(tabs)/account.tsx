@@ -232,6 +232,19 @@ export default function AccountScreen() {
           ]}
         >
           <Pressable
+            onPress={() => router.push("/auth/change-password")}
+            style={({ pressed }) => [
+              styles.menuItem,
+              { borderBottomWidth: 1, borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: colors.primary + "18" }]}>
+              <Feather name="lock" size={18} color={colors.primary} />
+            </View>
+            <Text style={[styles.menuLabel, { color: colors.foreground }]}>Change Password</Text>
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+          </Pressable>
+          <Pressable
             onPress={logout}
             style={({ pressed }) => [
               styles.menuItem,

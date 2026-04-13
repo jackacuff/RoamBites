@@ -5,11 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Layout } from "@/components/Layout";
-import { UtensilsCrossed, AlertCircle } from "lucide-react";
+import { UtensilsCrossed, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -17,6 +17,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function Login() {
   const { login, isLoggingIn } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema)
@@ -27,7 +28,7 @@ export default function Login() {
       setServerError(null);
       await login({ data });
     } catch (err: any) {
-      setServerError(err?.message || "Invalid email or password");
+      setServerError(err?.message || "Invalid email or password. Please try again.");
     }
   };
 
@@ -41,7 +42,7 @@ export default function Login() {
                 <UtensilsCrossed className="w-6 h-6" />
               </div>
               <h2 className="text-3xl font-display font-bold text-foreground">Welcome back</h2>
-              <p className="mt-2 text-muted-foreground">Sign in to your account</p>
+              <p className="mt-2 text-muted-foreground text-sm">Sign in to your RoamBites account</p>
             </div>
 
             {serverError && (
@@ -51,12 +52,13 @@ export default function Login() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Email address</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Email address</label>
                 <input
                   {...register("email")}
                   type="email"
+                  autoComplete="email"
                   className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                   placeholder="you@example.com"
                 />
@@ -64,34 +66,49 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Password</label>
-                <input
-                  {...register("password")}
-                  type="password"
-                  className="w-full px-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  placeholder="••••••••"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-foreground">Password</label>
+                  <Link href="/forgot-password" className="text-xs text-primary font-medium hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <input
+                    {...register("password")}
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    className="w-full px-4 py-3 pr-11 rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
                 {errors.password && <p className="mt-1.5 text-sm text-destructive">{errors.password.message}</p>}
               </div>
 
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-2"
               >
-                {isLoggingIn ? "Signing in..." : "Sign in"}
+                {isLoggingIn ? "Signing in…" : "Sign in"}
               </button>
             </form>
 
-            <div className="mt-8 text-center">
+            <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Don't have an account?{' '}
                 <Link href="/signup" className="font-semibold text-primary hover:underline">
-                  Sign up
+                  Sign up free
                 </Link>
               </p>
             </div>
-            
+
             <div className="mt-6 p-4 bg-muted rounded-xl text-xs text-muted-foreground text-center">
               <p className="font-semibold mb-1">Demo Accounts</p>
               <p>vendor1@okfoodtrucks.com / password123</p>
