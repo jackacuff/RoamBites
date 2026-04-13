@@ -1,6 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
-import { User, Mail, Shield, Heart, Star, Bell, LogOut, Loader2, Save, Edit2, X, Check, Lock, Unlock, MapPin, BellOff, ExternalLink, Calendar, ChevronRight } from "lucide-react";
+import { User, Mail, Shield, Heart, Star, Bell, LogOut, Loader2, Save, Edit2, X, Check, Lock, Unlock, MapPin, BellOff, ExternalLink, Calendar, ChevronRight, ShieldCheck, ShieldAlert, KeyRound, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
@@ -164,6 +164,14 @@ export default function Profile() {
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradingRole, setUpgradingRole] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: "", next: "", confirm: "" });
+  const [showPw, setShowPw] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [resendingVerif, setResendingVerif] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) { setDataLoading(false); return; }
@@ -239,6 +247,45 @@ export default function Profile() {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pwForm.current) { setPwError("Current password is required."); return; }
+    if (pwForm.next.length < 6) { setPwError("New password must be at least 6 characters."); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwError("Passwords do not match."); return; }
+    setPwLoading(true);
+    setPwError(null);
+    try {
+      const res = await fetch(getApiUrl("/api/auth/change-password"), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to change password.");
+      setPwSuccess(true);
+      setPwForm({ current: "", next: "", confirm: "" });
+      toast({ title: "Password changed successfully!" });
+    } catch (err: any) {
+      setPwError(err?.message ?? "Something went wrong.");
+    } finally { setPwLoading(false); }
+  };
+
+  const handleResendVerification = async () => {
+    setResendingVerif(true);
+    try {
+      const res = await fetch(getApiUrl("/api/auth/resend-verification"), {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to send verification email.");
+      setResendDone(true);
+      toast({ title: "Verification email sent!", description: "Check your inbox." });
+    } catch (err: any) {
+      toast({ title: err?.message ?? "Error sending email", variant: "destructive" });
+    } finally { setResendingVerif(false); }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -297,9 +344,18 @@ export default function Profile() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <Mail className="w-4 h-4 text-muted-foreground" />
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground text-sm">{user.email}</span>
+              {(profile?.emailVerified ?? user.emailVerified) ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/15 text-accent text-xs font-medium">
+                  <ShieldCheck className="w-3 h-3" /> Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-xs font-medium">
+                  <ShieldAlert className="w-3 h-3" /> Unverified
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-1">
               <Shield className="w-4 h-4 text-muted-foreground" />
@@ -429,6 +485,116 @@ export default function Profile() {
             </div>
           </div>
         )}
+
+        {/* Account Security */}
+        <div className="mb-10 bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              <h2 className="text-base font-bold text-foreground">Account Security</h2>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Email verification status */}
+            {!(profile?.emailVerified ?? user.emailVerified) && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-start gap-3 flex-1">
+                  <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-900">Email not verified</p>
+                    <p className="text-xs text-amber-700 mt-0.5">Verify your email to unlock full account access and important actions.</p>
+                  </div>
+                </div>
+                {resendDone ? (
+                  <span className="flex items-center gap-1.5 text-xs text-accent font-medium shrink-0">
+                    <Check className="w-3.5 h-3.5" /> Sent! Check your inbox
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleResendVerification}
+                    disabled={resendingVerif}
+                    className="flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                  >
+                    {resendingVerif ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    Resend verification email
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Change Password */}
+            <div>
+              <button
+                onClick={() => { setShowChangePassword(!showChangePassword); setPwError(null); setPwSuccess(false); }}
+                className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:text-primary transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                  Change password
+                </span>
+                <span className="text-xs text-muted-foreground">{showChangePassword ? "Cancel" : "Update →"}</span>
+              </button>
+
+              {showChangePassword && (
+                <form onSubmit={handleChangePassword} className="mt-4 space-y-3">
+                  {pwError && (
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 shrink-0" />
+                      {pwError}
+                    </div>
+                  )}
+                  {pwSuccess && (
+                    <div className="p-3 bg-accent/10 border border-accent/20 rounded-lg text-accent text-sm flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 shrink-0" />
+                      Password changed successfully!
+                    </div>
+                  )}
+                  {[
+                    { key: "current" as const, label: "Current password", placeholder: "Your current password" },
+                    { key: "next" as const, label: "New password", placeholder: "At least 6 characters" },
+                    { key: "confirm" as const, label: "Confirm new password", placeholder: "Repeat new password" },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">{f.label}</label>
+                      <div className="relative">
+                        <input
+                          type={showPw ? "text" : "password"}
+                          value={pwForm[f.key]}
+                          onChange={e => setPwForm(p => ({ ...p, [f.key]: e.target.value }))}
+                          placeholder={f.placeholder}
+                          className="w-full px-3 pr-10 py-2 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                        {f.key === "current" && (
+                          <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={pwLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all"
+                    >
+                      {pwLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      {pwLoading ? "Saving…" : "Save password"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowChangePassword(false)}
+                      className="px-4 py-2 border border-border rounded-lg text-sm text-muted-foreground hover:bg-muted transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">

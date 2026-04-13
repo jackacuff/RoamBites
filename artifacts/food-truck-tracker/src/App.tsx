@@ -12,6 +12,9 @@ import EventDetail from "./pages/EventDetail";
 
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
+import VerifyEmail from "./pages/auth/VerifyEmail";
 
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import VendorTruck from "./pages/vendor/VendorTruck";
@@ -61,6 +64,9 @@ function Router() {
       <Route path="/events/:id" component={EventDetail} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/verify-email" component={VerifyEmail} />
 
       <Route path="/vendor" component={VendorDashboard} />
       <Route path="/vendor/dashboard" component={VendorDashboard} />

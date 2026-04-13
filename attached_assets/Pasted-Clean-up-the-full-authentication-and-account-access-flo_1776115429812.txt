@@ -1,0 +1,201 @@
+Clean up the full authentication and account access flow in the RoamBites app and website. This is a refinement of the existing login/signup system, not a full rebuild.
+
+GOAL
+Make authentication feel polished, reliable, and production-ready across both the app and the website.
+
+IMPORTANT
+- Keep app and website connected to the same auth/backend system
+- Do NOT create separate auth systems
+- Do NOT break existing users
+- This work should apply to both the app and the website unless a platform-specific adjustment is necessary
+
+--------------------------------------------------
+1. CLEAN UP LOGIN / SIGNUP UX
+--------------------------------------------------
+
+Improve the full login and signup experience so it feels cleaner and more trustworthy.
+
+Requirements:
+- make login and signup screens more polished and easier to use
+- improve spacing, hierarchy, and clarity
+- make errors easy to understand
+- ensure loading states exist for submit actions
+- prevent double-submission on login/signup buttons
+- ensure login/signup flows are reliable and do not silently fail
+
+Error handling should clearly show messages such as:
+- invalid email or password
+- account already exists
+- password too short
+- network error, please try again
+
+After successful signup:
+- automatically log the user in OR clearly guide them into verification flow if email verification is required
+
+--------------------------------------------------
+2. ADD FORGOT PASSWORD FLOW
+--------------------------------------------------
+
+Add a complete “Forgot Password” flow.
+
+Requirements:
+- add a clear “Forgot Password?” link on login screen
+- tapping it should open a reset password flow
+- user enters email address
+- system sends password reset email
+- show confirmation state such as:
+  - “If an account exists for this email, a reset link has been sent”
+
+Also support:
+- reset token handling
+- new password entry screen
+- success state after password is changed
+
+This should work for both app and website.
+
+--------------------------------------------------
+3. EMAIL VERIFICATION SYSTEM
+--------------------------------------------------
+
+Set up email verification for new users.
+
+Requirements:
+- after signup, send verification email automatically
+- user should have a way to verify email through a link/code flow
+- user should be able to request “Resend Verification Email”
+- store verification status in the user/account record
+
+Define app behavior clearly:
+- whether unverified users can browse only
+- or whether certain actions are locked until verified
+
+Recommended:
+- allow limited access after signup
+- require verification for important account actions such as:
+  - posting as vendor
+  - organizer publishing
+  - account-sensitive actions
+
+Show clear messaging such as:
+- “Please verify your email to unlock full account access”
+
+--------------------------------------------------
+4. MAKE jracuff@gmail.com AN ADMIN
+--------------------------------------------------
+
+Ensure that the user account with this email:
+- jracuff@gmail.com
+
+has admin privileges.
+
+Requirements:
+- if the user already exists, assign/update admin role
+- if role system supports higher privilege, preserve logic accordingly
+- do not remove standard account access, just ensure admin permissions are present
+
+If applicable, ensure this user can still access:
+- customer features
+- organizer/vendor features if needed
+- admin tools
+
+--------------------------------------------------
+5. AUTH SYSTEM CONSISTENCY
+--------------------------------------------------
+
+Make sure app and website use the same:
+- user accounts
+- login credentials
+- password reset flow
+- email verification status
+- roles and permissions
+
+A user should be able to:
+- sign up on website and log in on app
+- sign up on app and log in on website
+
+--------------------------------------------------
+6. ROLE / PERMISSION HANDLING
+--------------------------------------------------
+
+Ensure roles are handled clearly at auth/account level.
+
+Support at minimum:
+- customer
+- vendor
+- event organizer
+- admin
+
+If role-based signup already exists:
+- keep it clean and reliable
+
+If a user upgrades later:
+- do not break their login/account identity
+
+--------------------------------------------------
+7. ACCOUNT STATUS MESSAGING
+--------------------------------------------------
+
+Add clear account state messaging where appropriate:
+- email not verified
+- reset email sent
+- password reset successful
+- account created successfully
+- insufficient permissions
+- session expired, please log in again
+
+--------------------------------------------------
+8. SETTINGS / ACCOUNT AREA SUPPORT
+--------------------------------------------------
+
+In the account/settings area, add support for:
+- resend verification email
+- change password
+- logout
+- view email verification status
+
+Optional but preferred:
+- show “Verified” badge/status on account screen
+
+--------------------------------------------------
+9. SECURITY / RELIABILITY
+--------------------------------------------------
+
+Ensure:
+- password reset links/tokens are secure
+- verification links/tokens are secure
+- sessions remain stable
+- auth state persists correctly
+- app and website handle expired sessions gracefully
+
+--------------------------------------------------
+10. ADMIN / BACKEND SUPPORT
+--------------------------------------------------
+
+If needed, add admin/backend support for:
+- checking verification status
+- manually marking user as verified (admin only if necessary)
+- managing roles
+- confirming jracuff@gmail.com has admin role
+
+--------------------------------------------------
+11. UX PRIORITIES
+--------------------------------------------------
+
+The final auth experience should feel:
+- simple
+- polished
+- trustworthy
+- production-ready
+- consistent between app and website
+
+Do NOT make it feel clunky or overly technical.
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of login/signup improvements
+2. How forgot password flow works
+3. How email verification works
+4. Confirmation of admin role setup for jracuff@gmail.com
+5. Any backend/auth changes required

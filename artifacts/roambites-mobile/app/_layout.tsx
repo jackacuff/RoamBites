@@ -37,6 +37,18 @@ function RootLayoutNav() {
         name="auth/signup"
         options={{ headerShown: false, presentation: "modal" }}
       />
+      <Stack.Screen
+        name="auth/forgot-password"
+        options={{ headerShown: false, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="auth/reset-password"
+        options={{ headerShown: false, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="auth/change-password"
+        options={{ headerShown: false, presentation: "modal" }}
+      />
       <Stack.Screen name="vendor/index" options={{ headerShown: false }} />
       <Stack.Screen name="organizer/index" options={{ headerShown: false }} />
     </Stack>
