@@ -272,7 +272,7 @@ function getRoleConfig(
           items: [
             { label: "Admin Panel", href: "/admin", icon: <ShieldCheck className="w-4 h-4" /> },
             { label: "Manage Users", href: "/admin", icon: <User className="w-4 h-4" /> },
-            { label: "Plans & Pricing", href: "/admin/plans", icon: <CreditCard className="w-4 h-4" /> },
+            { label: "Plans & Pricing", href: "/admin", icon: <CreditCard className="w-4 h-4" /> },
           ],
         },
         {

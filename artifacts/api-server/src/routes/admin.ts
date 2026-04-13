@@ -64,6 +64,59 @@ router.post("/admin/users/:id/status", requireRole("admin"), async (req, res): P
   res.json({ message: "User status updated" });
 });
 
+const ASSIGNABLE_ROLES_ADMIN = ["customer", "vendor", "organizer", "admin"] as const;
+const ASSIGNABLE_ROLES_SUPERADMIN = ["customer", "vendor", "organizer", "admin"] as const;
+
+router.post("/admin/users/:id/role", requireRole("admin"), async (req, res): Promise<void> => {
+  const actor = (req as any).user as { id: number; role: string };
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  const { role: newRole } = req.body as { role?: string };
+
+  if (!newRole) {
+    res.status(400).json({ error: "role is required" });
+    return;
+  }
+
+  const allowedRoles = actor.role === "superadmin"
+    ? ASSIGNABLE_ROLES_SUPERADMIN
+    : ASSIGNABLE_ROLES_ADMIN;
+
+  if (!(allowedRoles as readonly string[]).includes(newRole)) {
+    res.status(403).json({ error: `Cannot assign role "${newRole}". Allowed: ${allowedRoles.join(", ")}` });
+    return;
+  }
+
+  const [target] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!target) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (target.role === "superadmin") {
+    res.status(403).json({ error: "Cannot change a SuperAdmin's role" });
+    return;
+  }
+
+  if (actor.id === id) {
+    res.status(400).json({ error: "Cannot change your own role" });
+    return;
+  }
+
+  await db.update(usersTable).set({ role: newRole }).where(eq(usersTable.id, id));
+
+  req.log.info({
+    action: "role_change",
+    actorId: actor.id,
+    actorRole: actor.role,
+    targetUserId: id,
+    oldRole: target.role,
+    newRole,
+  }, "User role changed by admin");
+
+  res.json({ message: "Role updated", oldRole: target.role, newRole });
+});
+
 router.get("/admin/stats", requireRole("admin"), async (_req, res): Promise<void> => {
   const [users] = await db.select({ count: count() }).from(usersTable);
   const [trucks] = await db.select({ count: count() }).from(trucksTable);
