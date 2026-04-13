@@ -1,36 +1,58 @@
 import nodemailer from "nodemailer";
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:21222";
-const FROM_EMAIL = process.env.FROM_EMAIL ?? "RoamBites <noreply@roambites.app>";
+const FROM_EMAIL = process.env.FROM_EMAIL ?? "RoamBites <onboarding@resend.dev>";
 
-function createTransport() {
-  if (process.env.SMTP_HOST) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+async function sendViaResend(to: string, subject: string, html: string): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return false;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`[mailer] Resend error ${res.status}: ${err}`);
+    return false;
   }
-  return null;
+  return true;
+}
+
+async function sendViaSMTP(to: string, subject: string, html: string): Promise<boolean> {
+  if (!process.env.SMTP_HOST) return false;
+
+  const transport = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  await transport.sendMail({ from: FROM_EMAIL, to, subject, html });
+  return true;
 }
 
 async function sendMail(to: string, subject: string, html: string): Promise<void> {
-  const transport = createTransport();
-  if (transport) {
-    await transport.sendMail({ from: FROM_EMAIL, to, subject, html });
-  } else {
-    console.log("\n═══════════════════════════════════════");
-    console.log(`📧 EMAIL (dev mode – not actually sent)`);
-    console.log(`To: ${to}`);
-    console.log(`Subject: ${subject}`);
-    const textContent = html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    console.log(`Body: ${textContent.slice(0, 400)}`);
-    console.log("═══════════════════════════════════════\n");
-  }
+  if (await sendViaResend(to, subject, html)) return;
+  if (await sendViaSMTP(to, subject, html)) return;
+
+  const linkMatch = html.match(/href="([^"]+)"/);
+  const link = linkMatch ? linkMatch[1] : "(no link found)";
+  console.log("\n═══════════════════════════════════════════════════════");
+  console.log(`📧  EMAIL — dev mode, not actually sent`);
+  console.log(`    To:      ${to}`);
+  console.log(`    Subject: ${subject}`);
+  console.log(`    Link:    ${link}`);
+  console.log("═══════════════════════════════════════════════════════\n");
 }
 
 function baseTemplate(body: string) {
