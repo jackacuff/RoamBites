@@ -1,27 +1,33 @@
 kind = "mobile"
-previewPath = "/mobile/"
-title = "RoamBites Mobile"
-version = "1.0.0"
-id = "artifacts/roambites-mobile"
-router = "expo-domain"
+  previewPath = "/mobile/"
+  title = "RoamBites Mobile"
+  version = "1.0.0"
+  id = "artifacts/roambites-mobile"
+  router = "expo-domain"
 
-[[integratedSkills]]
-name = "expo"
-version = "1.0.0"
+  [[integratedSkills]]
+  name = "expo"
+  version = "1.0.0"
 
-[[services]]
-ensurePreviewReachable = "/status"
-name = "expo"
-paths = [ "/mobile/" ]
-localPort = 19571
+  [[services]]
+  ensurePreviewReachable = "/status"
+  name = "expo"
+  paths = [ "/mobile/" ]
+  localPort = 19571
 
-[services.development]
-run = "pnpm --filter @workspace/roambites-mobile run dev"
+  [services.development]
+  run = "pnpm --filter @workspace/roambites-mobile run dev"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/roambites-mobile", "run", "build" ]
-run = [ "pnpm", "--filter", "@workspace/roambites-mobile", "run", "serve" ]
+  [services.production]
+  build = [ "pnpm", "--filter", "@workspace/roambites-mobile", "run", "build" ]
+  publicDir = "artifacts/roambites-mobile/dist"
+  serve = "static"
 
-[services.env]
-PORT = "19571"
-BASE_PATH = "/mobile/"
+  [[services.production.rewrites]]
+  from = "/*"
+  to = "/index.html"
+
+  [services.env]
+  PORT = "19571"
+  BASE_PATH = "/mobile/"
+  
