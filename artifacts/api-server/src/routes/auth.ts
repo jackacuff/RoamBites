@@ -210,9 +210,11 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     await db.update(usersTable)
       .set({ passwordResetToken: token, passwordResetExpires: expires })
       .where(eq(usersTable.id, user.id));
-    const origin = (req.headers.origin as string | undefined) ?? undefined;
+    const baseUrl = (typeof req.body.appUrl === "string" && req.body.appUrl.startsWith("http"))
+      ? req.body.appUrl
+      : (req.headers.origin as string | undefined) ?? undefined;
     try {
-      await sendPasswordResetEmail(user.email, token, origin);
+      await sendPasswordResetEmail(user.email, token, baseUrl);
     } catch (err) {
       console.error("Failed to send password reset email:", err);
     }
