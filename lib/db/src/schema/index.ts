@@ -17,6 +17,7 @@ export * from "./plans";
 export * from "./vendorSubscriptions";
 export * from "./parks";
 export * from "./parkApplications";
+export * from "./eventDays";
 export * from "./truckViews";
 export * from "./socialPosts";
 export * from "./platformSettings";
