@@ -198,7 +198,7 @@ Vendor Pro feature at `/vendor/marketing`. Backed by `GET/POST /api/vendor/marke
 - **T009** — Customer → Organizer upgrade: Profile page now shows "Host an Event" CTA for customer role. Clicking opens an upgrade modal listing benefits; confirm button calls `POST /api/auth/upgrade-to-organizer` and redirects to /organizer on success.
 - **T010** — Multi-photo upload in OrganizerNewEvent: Photo upload section added below banner image; supports multiple files. First photo auto-selected as thumbnail. `photoUrls` stored as JSON array in events table; `thumbnailUrl` set from first photo.
 
-## Park Spot Marketplace
+## Park Spot Marketplace (legacy)
 
 Full apply/waitlist workflow for truck parks.
 
@@ -207,22 +207,56 @@ Full apply/waitlist workflow for truck parks.
 - `park_waitlist_entries` — vendor waitlist entries when parks are full; status: waiting/contacted/approved/declined
 
 ### API Routes (`artifacts/api-server/src/routes/parks.ts`)
-- `POST /api/parks/:id/apply` — vendor applies for a spot (checks for existing active application)
-- `POST /api/parks/:id/waitlist` — vendor joins park waitlist (checks for existing active entry)
+- `POST /api/parks/:id/apply` — vendor applies for a spot
+- `POST /api/parks/:id/waitlist` — vendor joins park waitlist
 - `GET /api/vendor/park-applications` — vendor views all their own applications + waitlist entries
-- `GET /api/parks/:id/applications` — park host views all applications (with truck + vacancy details)
-- `PUT /api/park-applications/:id` — host approves/declines app, optional hostMessage
+- `GET /api/parks/:id/applications` — park host views all applications
+- `PUT /api/park-applications/:id` — host approves/declines app
 - `GET /api/parks/:id/waitlist-entries` — park host views waitlist
-- `PUT /api/park-waitlist/:id` — host updates waitlist entry status (waiting/contacted/approved/declined)
+- `PUT /api/park-waitlist/:id` — host updates waitlist entry status
 
 ### Frontend (`artifacts/food-truck-tracker/src/`)
-- `ParkDetail.tsx` — vendor-aware CTA banner: "Apply for a Spot" (when vacancies available) or "Join Waitlist" (when full); shows current application/waitlist status with inline badge; modal form with optional notes + vacancy selector; unauthenticated users see "Sign In" prompt
-- `ParkHostDashboard.tsx` — new "Spot Applications" and "Waitlist" sections with filter tabs, approve/decline actions, inline reply form with optional hostMessage; stats row expanded to 4 cards including pending app count
-- `VendorEventSpots.tsx` — "My Applications" tab now shows three sections: Event Spot Applications, Park Spot Applications, Waitlists; badge count includes all three
+- `ParkDetail.tsx` — vendor-aware CTA banner with apply/waitlist actions
+- `ParkHostDashboard.tsx` — applications and waitlist management
+- `VendorEventSpots.tsx` — "My Applications" tab with all application types
+
+## Spot Marketplace (unified)
+
+New unified marketplace for all hosting opportunities (truck parks, single spots, recurring hosts, pop-ups).
+
+### DB Tables (`lib/db/src/schema/spotMarketplace.ts`)
+- `spot_listings` — generic listing with `spotType`: `truck_park | single_spot | recurring_host | popup_opportunity`
+- `spot_listing_schedules` — recurring (day_of_week) or one_time (date) availability windows
+- `spot_listing_applications` — vendor applications; status: `pending | approved | declined | cancelled`
+- `spot_listing_waitlist` — waitlist entries for full listings
+
+### API Routes (`artifacts/api-server/src/routes/spots.ts`)
+- `GET /api/spots` — public browse with filters (spotType, scheduleType, search, maxPrice, isInstantBook, hasWaitlist, sortBy, lat/lng)
+- `GET /api/spots/:id` — public detail with schedules + host info
+- `POST /api/spots` — create listing (authenticated; auto-upgrades customer → spot_host)
+- `PUT /api/spots/:id` — update listing (host only)
+- `DELETE /api/spots/:id` — delete listing (host only)
+- `POST /api/spots/:id/apply` — vendor applies (with optional notes)
+- `POST /api/spots/:id/waitlist` — vendor joins waitlist
+- `GET /api/vendor/spot-applications` — vendor views their applications
+- `GET /api/host/spots` — host views their listings with application counts
+- `GET /api/host/spots/:id/applications` — host views applications for a listing
+- `GET /api/host/spots/:id/waitlist` — host views waitlist for a listing
+- `PATCH /api/host/spots/applications/:id` — host approves/declines with optional message
+
+### Frontend Pages (`artifacts/food-truck-tracker/src/pages/`)
+- `SpotMarketplace.tsx` — browse/filter all listings, grid/list toggle, spot-type filters, instant-book badge
+- `SpotDetail.tsx` — detail view + vendor apply (with note) / join waitlist CTAs
+- `ListASpot.tsx` — 5-step creation wizard: Type → Info → Availability → Spots & Pricing → Review
+- `SpotHostDashboard.tsx` — host dashboard: manage listings, view/approve/decline applications, waitlist
+
+### Roles
+- `spot_host` — new unified role auto-assigned when a customer creates their first listing
+- Vendors and organizers use `SpotMarketplace.tsx` to find and apply for spots
 
 ## Database Schema
 
-Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`, `plans`, `vendorSubscriptions`, `truckParks`, `parkVacancies`, `parkSpotApplications`, `parkWaitlistEntries`
+Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`, `plans`, `vendorSubscriptions`, `truckParks`, `parkVacancies`, `parkSpotApplications`, `parkWaitlistEntries`, `spotListings`, `spotListingSchedules`, `spotListingApplications`, `spotListingWaitlist`
 
 Key schema additions:
 - `plans.isRecommended` (boolean, default false) — marks plan for "Most Popular" badge on pricing page

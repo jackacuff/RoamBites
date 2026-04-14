@@ -44,6 +44,10 @@ import Parks from "./pages/Parks";
 import ParkDetail from "./pages/ParkDetail";
 import ParkHostDashboard from "./pages/park-host/ParkHostDashboard";
 import Pricing from "./pages/Pricing";
+import SpotMarketplace from "./pages/SpotMarketplace";
+import SpotDetail from "./pages/SpotDetail";
+import ListASpot from "./pages/ListASpot";
+import SpotHostDashboard from "./pages/SpotHostDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +96,11 @@ function Router() {
       <Route path="/parks" component={Parks} />
       <Route path="/parks/:id" component={ParkDetail} />
       <Route path="/park-host" component={ParkHostDashboard} />
+
+      <Route path="/spots" component={SpotMarketplace} />
+      <Route path="/spots/new" component={ListASpot} />
+      <Route path="/spots/:id" component={SpotDetail} />
+      <Route path="/host" component={SpotHostDashboard} />
 
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/superadmin" component={SuperAdminDashboard} />

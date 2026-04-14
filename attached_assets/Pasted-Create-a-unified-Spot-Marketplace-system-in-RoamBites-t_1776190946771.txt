@@ -1,0 +1,204 @@
+Create a unified “Spot Marketplace” system in RoamBites that expands beyond traditional truck parks while keeping the user experience simple and intuitive.
+
+GOAL
+Build a marketplace where food trucks can easily find places to operate, and where ANY user can list a spot, without overcomplicating roles or the UI.
+
+This should feel like:
+“The place food trucks go to find their next spot”
+
+--------------------------------------------------
+1. INTRODUCE “SPOT HOST” ROLE (SIMPLIFIED)
+--------------------------------------------------
+
+Create a single flexible role called:
+
+- Spot Host
+
+This replaces the need for:
+- separate truck park role
+- separate small host role
+
+Spot Hosts can be:
+- full truck parks (multiple spots, recurring)
+- single spot owners (gas station, business, land owner)
+- recurring hosts (brewery every Friday, office park, etc.)
+
+IMPORTANT:
+- Do NOT create multiple new roles
+- Keep ONE role that scales based on how the user uses it
+
+--------------------------------------------------
+2. ADD “LIST A SPOT” ENTRY POINT (SIMPLE UX)
+--------------------------------------------------
+
+Add a clear entry point in the app (top right menu or similar):
+
+- “List a Spot”
+
+This should be available to:
+- any logged-in user
+
+Flow:
+- user clicks “List a Spot”
+- guided into a simple creation flow
+- system automatically treats them as a Spot Host
+
+Do NOT force users to understand roles before starting
+
+--------------------------------------------------
+3. SPOT LISTING CREATION FLOW
+--------------------------------------------------
+
+Create a simple, guided flow for creating a spot listing.
+
+Required inputs:
+
+A. Spot Type
+- Truck Park (multiple spots)
+- Single Spot
+- Recurring Host
+- Pop-Up Opportunity
+
+B. Basic Info
+- name/title
+- description
+- location
+- host/business name
+
+C. Availability
+- one-time OR recurring
+- dates and times
+- ability to define schedule
+
+D. Spot Details
+- number of spots
+- price per spot (or free)
+- application vs instant reserve
+- waitlist option
+
+E. Requirements
+- simple text-based requirements
+- optional acknowledgement toggle
+
+Keep this clean and not overwhelming.
+
+--------------------------------------------------
+4. VENDOR “SPOT MARKETPLACE” EXPERIENCE
+--------------------------------------------------
+
+Upgrade the current truck park experience into a full marketplace.
+
+Rename/reframe experience as:
+- “Find a Spot”
+- “Spot Marketplace”
+
+Vendors should be able to browse by:
+- distance (HIGH PRIORITY)
+- date/time
+- price
+- spot type
+- availability
+- recurring vs one-time
+
+This should feel dynamic and opportunity-driven.
+
+--------------------------------------------------
+5. LISTING DISPLAY IMPROVEMENTS
+--------------------------------------------------
+
+Each spot listing should clearly show:
+
+- spot type (truck park, single spot, etc.)
+- number of available spots
+- price
+- schedule
+- location
+- host name
+- whether it is recurring
+- requirements preview
+
+Make listings easy to scan quickly.
+
+--------------------------------------------------
+6. HOST DASHBOARD (SCALABLE)
+--------------------------------------------------
+
+Spot Hosts should have a dashboard where they can:
+
+- view all their listings
+- manage spot availability
+- manage applications
+- manage waitlists
+- edit pricing
+- edit schedules
+
+IMPORTANT:
+- this dashboard should work for:
+  - 1 spot host
+  - 20+ spot truck park
+
+Do NOT create separate dashboards for different host types.
+
+--------------------------------------------------
+7. PRICING MODEL FOR SPOT HOSTS
+--------------------------------------------------
+
+Introduce monetization for Spot Hosts.
+
+Support:
+
+A. Subscription Model (Preferred)
+- basic tier (1–2 spots)
+- pro tier (multiple spots, recurring listings)
+
+B. Optional Add-On
+- per-listing fee for non-subscribers
+
+C. Transaction Fee
+- RoamBites takes a percentage of each spot booking/payment
+
+Ensure:
+- pricing is simple
+- value is clear (visibility + bookings)
+
+--------------------------------------------------
+8. KEEP UX SIMPLE (CRITICAL)
+--------------------------------------------------
+
+Do NOT:
+- create 5+ roles
+- require users to understand system complexity
+- overload forms with fields
+
+DO:
+- guide users step-by-step
+- keep flows clean
+- use smart defaults
+- make it easy to start listing quickly
+
+--------------------------------------------------
+9. PRODUCT PRINCIPLE
+--------------------------------------------------
+
+The system should feel like:
+
+NOT:
+- “truck park directory”
+
+BUT:
+- “marketplace of places to operate”
+
+Food trucks should open this and think:
+- “Where can I go this week?”
+- “What new spots can I get into?”
+- “What recurring locations can I lock in?”
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of Spot Host system
+2. How “List a Spot” flow works
+3. How vendor marketplace experience changed
+4. How pricing for hosts is structured
+5. Any backend/model changes made
