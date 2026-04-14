@@ -1,6 +1,17 @@
 import nodemailer from "nodemailer";
 
-const APP_URL = process.env.APP_URL ?? "http://localhost:21222";
+function getAppUrl(): string {
+  if (process.env.APP_URL) return process.env.APP_URL;
+  if (process.env.REPLIT_INTERNAL_APP_DOMAIN) {
+    const d = process.env.REPLIT_INTERNAL_APP_DOMAIN.replace(/^https?:\/\//, "");
+    return `https://${d}`;
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return "http://localhost:21222";
+}
+
 const FROM_EMAIL = process.env.FROM_EMAIL ?? "RoamBites <onboarding@resend.dev>";
 
 async function sendViaResend(to: string, subject: string, html: string): Promise<boolean> {
@@ -82,14 +93,14 @@ function baseTemplate(body: string) {
       <p>Central Oklahoma Food Truck Tracker</p>
     </div>
     <div class="body">${body}</div>
-    <div class="footer">RoamBites · Central Oklahoma · <a href="${APP_URL}" style="color:#F47825">roambites.app</a></div>
+    <div class="footer">RoamBites · Central Oklahoma · <a href="${getAppUrl()}" style="color:#F47825">roambites.app</a></div>
   </div>
 </body>
 </html>`;
 }
 
 export async function sendVerificationEmail(to: string, token: string): Promise<void> {
-  const link = `${APP_URL}/verify-email?token=${token}`;
+  const link = `${getAppUrl()}/verify-email?token=${token}`;
   await sendMail(
     to,
     "Verify your RoamBites email",
@@ -103,7 +114,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
-  const link = `${APP_URL}/reset-password?token=${token}`;
+  const link = `${getAppUrl()}/reset-password?token=${token}`;
   await sendMail(
     to,
     "Reset your RoamBites password",
