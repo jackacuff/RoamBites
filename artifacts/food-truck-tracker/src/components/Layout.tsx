@@ -96,7 +96,7 @@ function getRoleConfig(
           items: [
             { label: "Find Food", href: "/trucks", icon: <Search className="w-4 h-4" /> },
             { label: "Events Near Me", href: "/events", icon: <Calendar className="w-4 h-4" /> },
-            { label: "Food Truck Parks", href: "/parks", icon: <Building2 className="w-4 h-4" /> },
+            { label: "Spot Marketplace", href: "/spots", icon: <MapPin className="w-4 h-4" /> },
             { label: "Trending Now", href: "/trucks", icon: <Flame className="w-4 h-4" /> },
           ],
         },
@@ -148,7 +148,7 @@ function getRoleConfig(
           title: "Marketplace",
           items: [
             { label: "Find Gigs", href: "/vendor/event-spots", icon: <Briefcase className="w-4 h-4" /> },
-            { label: "Truck Parks", href: "/parks", icon: <Building2 className="w-4 h-4" /> },
+            { label: "Find a Spot", href: "/spots", icon: <MapPin className="w-4 h-4" /> },
             { label: "Events", href: "/events", icon: <Calendar className="w-4 h-4" /> },
           ],
         },
@@ -215,6 +215,49 @@ function getRoleConfig(
             },
             { label: "My Profile", href: "/profile", icon: <User className="w-4 h-4" /> },
             { label: "Plans & Billing", href: "/pricing", icon: <CreditCard className="w-4 h-4" /> },
+          ],
+        },
+      ],
+    },
+
+    // ── Spot Host ─────────────────────────────────────────────────────────────
+    spot_host: {
+      primaryCta: {
+        label: "My Listings",
+        href: "/host",
+        icon: <MapPin className="w-4 h-4" />,
+      },
+      summaryItems: [
+        { label: "Manage spot listings", icon: <MapPin className="w-3.5 h-3.5" />, color: "text-primary" },
+        { label: "Review vendor applications", icon: <Zap className="w-3.5 h-3.5" />, color: "text-orange-500" },
+        { label: "Track spot availability", icon: <BarChart2 className="w-3.5 h-3.5" />, color: "text-green-600" },
+      ],
+      sections: [
+        {
+          title: "My Spots",
+          items: [
+            { label: "Host Dashboard", href: "/host", icon: <LayoutDashboard className="w-4 h-4" /> },
+            { label: "List a Spot", href: "/spots/new", icon: <Plus className="w-4 h-4" /> },
+            { label: "Browse Marketplace", href: "/spots", icon: <Search className="w-4 h-4" /> },
+          ],
+        },
+        {
+          title: "Explore",
+          items: [
+            { label: "Find Vendors", href: "/trucks", icon: <Search className="w-4 h-4" /> },
+            { label: "Nearby Events", href: "/events", icon: <Calendar className="w-4 h-4" /> },
+          ],
+        },
+        {
+          title: "Account",
+          items: [
+            {
+              label: "Messages",
+              href: "/vendor/inbox",
+              icon: <Inbox className="w-4 h-4" />,
+              ...(unreadCount > 0 ? { badge: unreadCount, badgeColor: "red" as BadgeColor } : {}),
+            },
+            { label: "My Profile", href: "/profile", icon: <User className="w-4 h-4" /> },
           ],
         },
       ],
@@ -335,6 +378,7 @@ function getRoleLabel(role: string): string {
     vendor: "Food Truck Vendor",
     organizer: "Event Organizer",
     park_host: "Park Host",
+    spot_host: "Spot Host",
     admin: "Administrator",
     superadmin: "SuperAdmin",
   };
@@ -347,6 +391,7 @@ function getRoleAccentClass(role: string): string {
     vendor: "from-orange-500/15 to-orange-300/10 border-orange-300/30",
     organizer: "from-blue-500/15 to-blue-300/10 border-blue-300/30",
     park_host: "from-green-500/15 to-green-300/10 border-green-300/30",
+    spot_host: "from-teal-500/15 to-teal-300/10 border-teal-300/30",
     admin: "from-slate-500/15 to-slate-300/10 border-slate-300/30",
     superadmin: "from-purple-500/15 to-purple-300/10 border-purple-300/30",
   };
@@ -359,6 +404,7 @@ function getRoleIconBg(role: string): string {
     vendor: "bg-orange-100",
     organizer: "bg-blue-100",
     park_host: "bg-green-100",
+    spot_host: "bg-teal-100",
     admin: "bg-slate-100",
     superadmin: "bg-purple-100",
   };
@@ -371,6 +417,7 @@ function getRoleIconColor(role: string): string {
     vendor: "text-orange-600",
     organizer: "text-blue-600",
     park_host: "text-green-600",
+    spot_host: "text-teal-600",
     admin: "text-slate-600",
     superadmin: "text-purple-600",
   };
@@ -605,7 +652,7 @@ function MobileDrawer({
                     { label: "Live Map", href: "/trucks?view=map", icon: <Map className="w-4 h-4" />, highlight: true },
                     { label: "Find Food", href: "/trucks", icon: <Search className="w-4 h-4" /> },
                     { label: "Events Near Me", href: "/events", icon: <Calendar className="w-4 h-4" /> },
-                    { label: "Food Truck Parks", href: "/parks", icon: <Building2 className="w-4 h-4" /> },
+                    { label: "Spot Marketplace", href: "/spots", icon: <MapPin className="w-4 h-4" /> },
                   ].map((item) => (
                     <Link key={item.href} href={item.href} onClick={onClose}>
                       <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
@@ -650,6 +697,12 @@ function MobileDrawer({
                       <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-foreground hover:bg-muted transition-colors">
                         <Star className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Host an Event</span>
+                      </div>
+                    </Link>
+                    <Link href="/spots/new" onClick={onClose}>
+                      <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-foreground hover:bg-muted transition-colors">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">List a Spot</span>
                       </div>
                     </Link>
                   </div>
@@ -708,7 +761,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
       return [
         { name: "Schedule", path: "/vendor/schedule" },
         { name: "Find Gigs", path: "/vendor/event-spots" },
-        { name: "Truck Parks", path: "/parks" },
+        { name: "Find a Spot", path: "/spots" },
+      ];
+    }
+    if (user.role === "spot_host") {
+      return [
+        { name: "My Listings", path: "/host" },
+        { name: "Spot Marketplace", path: "/spots" },
+        { name: "Find Vendors", path: "/trucks" },
       ];
     }
     if (user.role === "organizer") {
@@ -741,6 +801,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (user.role === "organizer") return { href: "/organizer", label: "Organizer Dashboard" };
     if (user.role === "admin") return { href: "/admin", label: "Admin Panel" };
     if (user.role === "park_host") return { href: "/park-host", label: "Park Dashboard" };
+    if (user.role === "spot_host") return { href: "/host", label: "Host Dashboard" };
     return null;
   };
 

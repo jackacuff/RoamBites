@@ -21,6 +21,7 @@ import marketingRouter from "./marketing";
 import parksRouter from "./parks";
 import organizerConnectRouter from "./organizerConnect";
 import analyticsRouter from "./analytics";
+import spotsRouter from "./spots";
 
 const router: IRouter = Router();
 
@@ -47,5 +48,6 @@ router.use(marketingRouter);
 router.use(parksRouter);
 router.use(organizerConnectRouter);
 router.use(analyticsRouter);
+router.use(spotsRouter);
 
 export default router;
