@@ -350,7 +350,7 @@ router.post("/spots/:id/apply", requireAuth, async (req, res) => {
     const [truck] = await db
       .select({ id: trucksTable.id })
       .from(trucksTable)
-      .where(and(eq(trucksTable.userId, userId), eq(trucksTable.isApproved, true)))
+      .where(and(eq(trucksTable.vendorUserId, userId), eq(trucksTable.isApproved, true)))
       .limit(1);
 
     const { notes } = req.body;
@@ -410,7 +410,7 @@ router.post("/spots/:id/waitlist", requireAuth, async (req, res) => {
     const [truck] = await db
       .select({ id: trucksTable.id })
       .from(trucksTable)
-      .where(and(eq(trucksTable.userId, userId), eq(trucksTable.isApproved, true)))
+      .where(and(eq(trucksTable.vendorUserId, userId), eq(trucksTable.isApproved, true)))
       .limit(1);
 
     const [entry] = await db
