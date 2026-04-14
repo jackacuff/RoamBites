@@ -49,6 +49,7 @@ import SpotDetail from "./pages/SpotDetail";
 import ListASpot from "./pages/ListASpot";
 import SpotHostDashboard from "./pages/SpotHostDashboard";
 import VendorSpotRequests from "./pages/vendor/VendorSpotRequests";
+import VendorOpportunities from "./pages/vendor/VendorOpportunities";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ function Router() {
       <Route path="/vendor/branding" component={VendorBranding} />
       <Route path="/vendor/specials" component={VendorSpecials} />
       <Route path="/vendor/event-spots" component={VendorEventSpots} />
+      <Route path="/vendor/opportunities" component={VendorOpportunities} />
       <Route path="/vendor/inbox" component={VendorInbox} />
       <Route path="/vendor/marketing" component={VendorMarketing} />
       <Route path="/vendor/analytics" component={VendorAnalytics} />

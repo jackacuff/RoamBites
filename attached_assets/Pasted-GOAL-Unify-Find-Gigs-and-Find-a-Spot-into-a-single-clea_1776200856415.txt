@@ -1,0 +1,379 @@
+GOAL
+Unify “Find Gigs” and “Find a Spot” into a single, clearer marketplace experience for vendors, and improve the current “Schedule” tab so it delivers real value instead of feeling like a weak standalone page.
+
+The product should feel like:
+“The marketplace where food trucks find their next place to operate”
+
+NOT:
+- one page for gigs
+- one page for spots
+- two separate systems that feel repetitive
+- a schedule tab that does not meaningfully help the vendor run their business
+
+This is a UX/product restructuring task, not a full backend rebuild. Reuse the existing events and spot marketplace systems where possible, but unify the experience on the frontend and align the workflows.
+
+--------------------------------------------------
+1. REPLACE THE CURRENT SPLIT WITH A UNIFIED EXPERIENCE
+--------------------------------------------------
+
+Current issue:
+- “Find Gigs” and “Find a Spot” feel repetitive
+- both are essentially opportunity discovery flows
+- vendors have to decide too early where to look
+
+Required change:
+Create a primary vendor-facing marketplace experience called something like:
+
+- Find Opportunities
+OR
+- Opportunities
+
+This should become the main place where vendors look for:
+- event vendor opportunities
+- truck parks
+- single rentable spots
+- recurring host locations
+- pop-up opportunities
+
+Do NOT make vendors mentally split these too early.
+
+--------------------------------------------------
+2. KEEP EVENTS AND SPOTS AS TYPES, NOT SEPARATE PRIMARY DESTINATIONS
+--------------------------------------------------
+
+Do NOT delete the underlying event or spot systems.
+
+Instead, treat them as opportunity types within one marketplace.
+
+Support opportunity types such as:
+- Event
+- Truck Park
+- Single Spot
+- Recurring Host
+- Pop-Up
+
+These can be used in:
+- filters
+- labels
+- card styles
+
+But the top-level vendor experience should feel unified.
+
+--------------------------------------------------
+3. CREATE A SINGLE “FIND OPPORTUNITIES” PAGE
+--------------------------------------------------
+
+Build a unified page with:
+
+A. Header
+Use stronger positioning such as:
+- “Find your next spot”
+- “Events, recurring locations, and pop-ups — all in one place”
+
+B. Unified search
+Search across:
+- spots
+- events
+- hosts
+- neighborhoods
+- listing names
+
+C. Unified filters
+Include filters such as:
+- Distance
+- Date
+- Price
+- Type
+- Availability
+- Recurring vs one-time
+
+D. Unified results feed
+Show both:
+- event opportunities
+- spot opportunities
+
+in a single browse experience
+
+--------------------------------------------------
+4. UNIFIED RESULTS FEED WITH DISTINCT BUT CONSISTENT CARD TYPES
+--------------------------------------------------
+
+The feed should contain both event cards and spot cards.
+
+They should:
+- feel like part of the same marketplace
+- use consistent layout rules
+- still visually indicate what type of opportunity they are
+
+--------------------------------------------------
+5. EVENT CARD REQUIREMENTS
+--------------------------------------------------
+
+For event opportunities, cards should include:
+- event name
+- date badge
+- location
+- number of truck spots / trucks confirmed if appropriate
+- fee if applicable
+- distance if available
+- key badge if relevant (Featured, This Weekend, etc.)
+- CTA:
+  - Apply to Event
+  - Request Spot
+  depending on actual workflow
+
+Event cards should feel more compelling than the current basic event list.
+
+--------------------------------------------------
+6. SPOT CARD REQUIREMENTS
+--------------------------------------------------
+
+For spot opportunities, cards should include:
+- spot type badge:
+  - Truck Park
+  - Single Spot
+  - Recurring Host
+  - Pop-Up
+- listing name
+- location
+- distance
+- price
+- recurring vs one-time indicator
+- spots left / urgency if available
+- CTA:
+  - Request Spot
+  - Apply for Spot
+
+Do NOT use “Book” or “Reserve” unless truly auto-confirmed, which should not be the default.
+
+--------------------------------------------------
+7. ADD URGENCY + MARKETPLACE SIGNALS
+--------------------------------------------------
+
+Add useful marketplace signals where data exists, such as:
+- 2 spots left
+- Filling fast
+- 3 trucks already applied
+- Free
+- This week
+- Recurring
+
+These should help vendors quickly understand which opportunities matter.
+
+Keep these subtle and useful, not noisy.
+
+--------------------------------------------------
+8. DEFAULT SORTING SHOULD MATCH VENDOR INTENT
+--------------------------------------------------
+
+Default sorting should prioritize relevance, such as:
+1. distance
+2. availability/open opportunities
+3. date relevance
+4. rating/popularity if later supported
+
+Allow sort options such as:
+- Closest first
+- Soonest first
+- Lowest fee
+- Newest
+
+--------------------------------------------------
+9. MOVE “MY APPLICATIONS” INTO THE SAME OPPORTUNITY ECOSYSTEM
+--------------------------------------------------
+
+Instead of making “My Applications” feel disconnected, integrate it into the unified opportunities experience.
+
+This can be:
+- a tab inside Find Opportunities
+- a sub-tab or segmented control
+- a clean linked section
+
+The goal is for vendors to think:
+- browse opportunities
+- apply/request
+- track applications
+
+all within one connected system
+
+--------------------------------------------------
+10. IMPROVE TOP NAV / INFORMATION ARCHITECTURE
+--------------------------------------------------
+
+Update vendor-facing navigation so the marketplace is positioned clearly.
+
+Recommended direction:
+- Find Opportunities (primary)
+- Schedule
+- Map
+- Account
+
+If “Find Gigs” and “Find a Spot” both still exist temporarily in backend/routes, reframe the visible UX so the vendor sees one marketplace concept first.
+
+--------------------------------------------------
+11. FIX THE SCHEDULE TAB SO IT ADDS REAL VALUE
+--------------------------------------------------
+
+Current issue:
+- the current Schedule tab does not appear to provide much value
+- it feels weak compared with the rest of the vendor experience
+
+Required change:
+Rework the Schedule tab so it becomes a true operational planning screen for vendors.
+
+The Schedule tab should help a vendor understand:
+- where they are going
+- when they are going there
+- what status each opportunity has
+- what is upcoming
+- what is pending
+- what is confirmed
+
+This should feel like an operational calendar / timeline, not a placeholder page.
+
+--------------------------------------------------
+12. SCHEDULE TAB CORE FEATURES
+--------------------------------------------------
+
+The Schedule tab should include a useful view of:
+
+A. Confirmed upcoming spots/events
+- confirmed event bookings
+- confirmed spot reservations
+- recurring host commitments
+
+B. Pending requests
+- pending event applications
+- pending spot requests
+- waitlisted items if useful
+
+C. Past activity (optional but useful)
+- completed events/spots
+- historical placements
+
+This can be organized using:
+- segmented tabs
+- calendar/list toggle
+- upcoming / pending / past sections
+
+Keep it simple but actually useful.
+
+--------------------------------------------------
+13. SCHEDULE TAB SHOULD CONNECT TO THE MARKETPLACE
+--------------------------------------------------
+
+The Schedule tab should feel like the natural follow-up to Find Opportunities.
+
+Vendor flow should feel like:
+1. Find opportunity
+2. Apply / request
+3. Get approved / confirmed
+4. See it reflected in Schedule
+
+This means:
+- approved event opportunities should appear in Schedule
+- approved spot opportunities should appear in Schedule
+- pending requests should also be visible in a separate status section if appropriate
+
+The Schedule tab should not be disconnected from marketplace actions.
+
+--------------------------------------------------
+14. SCHEDULE TAB UX REQUIREMENTS
+--------------------------------------------------
+
+Add practical information such as:
+- date
+- time
+- location
+- opportunity type
+- status
+- host/organizer name if useful
+
+Possible actions from Schedule:
+- View details
+- Open map / directions
+- Message host/organizer
+- Check in / update location if relevant later
+
+Do NOT overbuild this into a full dispatch system.
+Make it practical, clear, and useful.
+
+--------------------------------------------------
+15. KEEP THE SYSTEM SIMPLE
+--------------------------------------------------
+
+Important:
+Do NOT overcomplicate this.
+
+The point is not to build a giant enterprise marketplace in one pass.
+The point is to create the cleanest, strongest end-state direction using the systems already present.
+
+Reuse:
+- event opportunities
+- spot marketplace
+- applications
+- request workflows
+- schedule data that already exists
+
+But unify the experience so it feels intentional.
+
+--------------------------------------------------
+16. DESIGN / UX RULES
+--------------------------------------------------
+
+The final experience should feel:
+- clean
+- opportunity-driven
+- modern
+- vendor-focused
+- easy to scan
+
+Do NOT:
+- make the page feel like a directory
+- make events and spots feel like totally separate products
+- force users to choose the wrong category first
+- leave Schedule as a low-value page
+
+The user should feel:
+“Here are the best places I can go operate”
+and
+“Here is exactly where I’m going next”
+
+--------------------------------------------------
+17. BACKEND / DATA ALIGNMENT
+--------------------------------------------------
+
+Use existing backend systems where possible.
+
+If needed, create a normalized frontend transformation layer that maps:
+- events
+- spot listings
+
+into one opportunity feed model for display.
+
+Also ensure confirmed/pending opportunity data can feed the Schedule tab cleanly.
+
+This can include fields like:
+- type
+- title
+- location
+- distance
+- price
+- availability
+- status
+- CTA type
+- confirmed date/time
+- host/organizer
+
+Do this in the cleanest way possible without unnecessary backend duplication.
+
+--------------------------------------------------
+18. FINAL PRODUCT PRINCIPLE
+--------------------------------------------------
+
+RoamBites should feel like:
+- the place food trucks go to find work
+- the place food trucks find their next location
+- the place food trucks manage what they’ve already booked
+
+These vendor pages are core marketplace screens and should reflect that level of importance.

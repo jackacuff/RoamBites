@@ -277,6 +277,59 @@ All requests go through host review — no instant-booking auto-approval:
 - Vendors use `SpotMarketplace.tsx` to find spots and `VendorSpotRequests.tsx` to track their requests
 - Vendor nav includes "My Spot Requests" link under Marketplace section
 
+## Vendor Marketplace Experience (Unified)
+
+### Navigation IA (vendor role)
+- Primary CTA: **"Find Opportunities"** → `/vendor/opportunities`
+- Operations: Vendor Dashboard, My Business, Schedule & Commitments
+- Marketplace: Find Opportunities, Events, List a Spot
+- Growth: Marketing Studio, Analytics
+- Account: Messages, Profile, Plans & Billing
+
+### `VendorOpportunities.tsx` (route: `/vendor/opportunities`)
+Single unified page replacing the old "Find Gigs" (`VendorEventSpots`) and "Find a Spot" (`SpotMarketplace`) split.
+
+**Browse tab:**
+- Unified feed of events + spot listings with consistent card design
+- Type filters: All | Events | Truck Parks | Single Spots | Recurring Host | Pop-Ups
+- Search across name/location/city
+- Sort: Soonest first | Newest | Lowest fee | Most spots open
+- Urgency signals: "X spots left", "Free", "Recurring", "This week"
+- Event cards CTA: "Apply to Event" → links to `/events/:id`
+- Spot cards CTA: "Request Spot" → links to `/spots/:id`
+
+**My Applications tab:**
+- Unified view of both spot requests (`/api/vendor/spot-applications`) and event reservations (`/api/vendor/spot-reservations`)
+- Summary stats: Total | Pending | Confirmed
+- Status filters: All | Pending | Confirmed | Declined
+- Combined rows normalized to common format
+
+### `VendorSchedule.tsx` (route: `/vendor/schedule`) — Reworked
+Now a true operational planning screen with three sections:
+
+**Section 1 — Marketplace Commitments:**
+- Toggle: Confirmed / Pending
+- Confirmed: shows confirmed spot applications + approved event reservations
+- Pending: shows `pending_host_approval` spot requests + pending event applications
+- Each shows type badge, status, location, date, CTA link
+- Empty states link to "Find Opportunities"
+
+**Section 2 — Today's Operations:**
+- Live status banner (same as before: Go Live / End Live Now)
+- Today's scheduled stops context
+
+**Section 3 — Upcoming Stops:**
+- Manual schedule entries (same as before: add/remove stops, frequent spots, Set Live button)
+
+Data sources for commitments:
+- `/api/vendor/spot-applications` — spot marketplace requests
+- `/api/vendor/spot-reservations` — event spot reservations
+
+### Legacy pages (still routed, not in main nav):
+- `/vendor/event-spots` — `VendorEventSpots.tsx` (old "Find Gigs", still accessible via direct URL)
+- `/spots` — `SpotMarketplace.tsx` (public spot browse, still accessible)
+- `/my-spots` — `VendorSpotRequests.tsx` (spot request history, still accessible)
+
 ## Database Schema
 
 Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`, `plans`, `vendorSubscriptions`, `truckParks`, `parkVacancies`, `parkSpotApplications`, `parkWaitlistEntries`, `spotListings`, `spotListingSchedules`, `spotListingApplications`, `spotListingWaitlist`
