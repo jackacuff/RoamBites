@@ -1,11 +1,21 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable, messagesTable, eventDaysTable, eventSpotsTable } from "@workspace/db";
+import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable, messagesTable, eventDaysTable, eventSpotsTable, platformSettingsTable, SETTINGS_KEYS, DEFAULT_SETTINGS } from "@workspace/db";
 import { eq, and, gt, inArray } from "drizzle-orm";
+
 import { InviteTruckToEventBody, RespondToEventInviteBody } from "@workspace/api-zod";
 import { requireRole, requireAuth, optionalAuth } from "../lib/auth";
 import { slugify, computeTruckStatus } from "../lib/truckStatus";
 import { getUncachableStripeClient } from "../lib/stripeClient";
+
 import { z } from "zod";
+
+async function getEventsPlatformFeePercent(): Promise<number> {
+  try {
+    const rows = await db.select().from(platformSettingsTable).where(eq(platformSettingsTable.key, SETTINGS_KEYS.TRANSACTION_FEE_PERCENT));
+    if (rows.length > 0) return parseFloat(rows[0].value) || 10;
+  } catch {}
+  return parseFloat(DEFAULT_SETTINGS[SETTINGS_KEYS.TRANSACTION_FEE_PERCENT]) || 10;
+}
 
 const EventWriteSchema = z.object({
   name: z.string(),
@@ -274,17 +284,20 @@ router.post("/events", requireRole("organizer", "admin"), async (req, res): Prom
   // Insert event spot if provided
   let insertedSpot: any = null;
   if (spot) {
+    const feePercent = await getEventsPlatformFeePercent();
+    const platformFeeInCents = spot.priceInCents > 0 ? Math.round(spot.priceInCents * feePercent / 100) : 0;
     const [s] = await db.insert(eventSpotsTable).values({
       eventId: event.id,
       name: spot.name ?? "Vendor Spot",
       totalSlots: spot.totalSlots,
       priceInCents: spot.priceInCents,
+      platformFeeInCents,
       isInstantBook: spot.isInstantBook ?? false,
       requirements: spot.requirements ?? null,
       vendorRules: spot.vendorRules ?? null,
       isActive: true,
     }).returning();
-    insertedSpot = s;
+    insertedSpot = { ...s, platformFeePercent: feePercent };
   }
 
   res.status(201).json({ ...event, trucks: [], days: insertedDays, spot: insertedSpot });

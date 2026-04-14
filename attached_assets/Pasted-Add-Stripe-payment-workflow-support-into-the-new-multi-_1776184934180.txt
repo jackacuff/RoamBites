@@ -1,0 +1,177 @@
+Add Stripe payment workflow support into the new multi-step “Create New Event” flow so Event Organizers can charge for food truck spots, Vendors can pay through the app, and RoamBites can take a platform percentage.
+
+GOAL
+Make sure the event creation + spot reservation workflow is connected to the Stripe payment system and supports a real marketplace payment flow.
+
+This must work cleanly within the app and align with the event setup flow that was just created.
+
+IMPORTANT
+- This should integrate with the existing Stripe/payment setup already in RoamBites
+- Do NOT create a disconnected payment system
+- Keep this practical and workflow-driven
+- Ensure the system supports:
+  - organizer setting spot pricing
+  - vendor paying for spots
+  - RoamBites taking a percentage/platform fee
+
+--------------------------------------------------
+1. EVENT CREATION FLOW MUST INCLUDE PAYMENT SETUP
+--------------------------------------------------
+
+In the “Food Truck Spots” step of Create New Event, ensure the organizer can define:
+
+- number of truck spots
+- price per spot
+- whether spots are free or paid
+- whether payment is required immediately upon reservation
+- whether approval is required before payment or before final reservation
+- whether a waitlist is enabled if spots are full
+
+If the event has paid spots:
+- the organizer must be able to clearly see that Stripe/payment handling is tied to the event
+
+--------------------------------------------------
+2. STRIPE PAYMENT SUPPORT FOR EVENT ORGANIZERS
+--------------------------------------------------
+
+Ensure Event Organizers can create paid event spots through the workflow.
+
+This means:
+- spot price is stored correctly
+- payment settings are tied to the event
+- organizer understands how payment will work
+
+At minimum, the workflow should support:
+- paid spots
+- free spots
+- application/approval flow before payment if applicable
+- instant reserve + pay flow if applicable
+
+--------------------------------------------------
+3. VENDOR PAYMENT FLOW
+--------------------------------------------------
+
+When a vendor reserves or is approved for a paid event spot:
+
+- they should be able to pay through the app
+- the payment flow should use the Stripe system already in place
+- payment should feel like part of the event/spot reservation experience, not a disconnected process
+
+Vendor should clearly see:
+- spot price
+- any platform/service fee if shown separately
+- total they are paying
+- payment status after checkout
+
+--------------------------------------------------
+4. PLATFORM FEE / REVENUE SHARE
+--------------------------------------------------
+
+RoamBites must be able to take a percentage of the event spot payment.
+
+Support:
+- configurable platform percentage fee
+- organizer payout amount vs RoamBites fee amount
+- backend tracking of:
+  - gross payment
+  - platform fee
+  - organizer amount/net amount
+  - payment status
+
+This should be implemented in a way that matches the existing Stripe architecture.
+
+--------------------------------------------------
+5. PAYMENT WORKFLOW LOGIC
+--------------------------------------------------
+
+Support realistic workflow options such as:
+
+A. Instant Reserve + Pay
+- vendor selects spot
+- vendor pays immediately
+- spot is reserved
+
+B. Apply First, Pay After Approval
+- vendor applies
+- organizer approves
+- vendor is prompted to pay
+- spot becomes reserved after payment
+
+At minimum, the backend/workflow should support whichever of these models RoamBites currently uses or plans to prioritize.
+
+--------------------------------------------------
+6. REVIEW & PUBLISH STEP MUST REFLECT PAYMENT SETTINGS
+--------------------------------------------------
+
+In the final Review & Publish step for organizers, show payment-related event spot summary such as:
+
+- number of spots
+- price per spot
+- whether spots are paid or free
+- whether vendors pay immediately or after approval
+- whether platform fee applies
+
+This should reassure the organizer that payment setup is complete before publishing.
+
+--------------------------------------------------
+7. BACKEND / STRIPE SANITY CHECK
+--------------------------------------------------
+
+Do a full backend/payment workflow check to ensure:
+
+- event spot pricing is stored correctly
+- vendor payment requests are tied to the right event/spot
+- organizer can receive payment correctly through Stripe setup
+- RoamBites platform fee is calculated correctly
+- payment status updates properly
+- spot availability updates after payment/reservation
+- no dead ends exist in the app workflow
+
+This is a workflow integrity check, not just a UI update.
+
+--------------------------------------------------
+8. ADMIN / CONFIG SUPPORT
+--------------------------------------------------
+
+Ensure admin can configure if needed:
+- default platform percentage
+- payment behavior settings
+- whether platform fee is visible or hidden in UI
+- any fallback states if organizer payment setup is incomplete
+
+--------------------------------------------------
+9. USER EXPERIENCE REQUIREMENTS
+--------------------------------------------------
+
+Keep the payment flow:
+- clear
+- trustworthy
+- simple
+- mobile-friendly
+
+Organizers should understand what they are charging.
+Vendors should understand what they are paying.
+RoamBites should be able to track its percentage cleanly.
+
+--------------------------------------------------
+10. IMPORTANT
+--------------------------------------------------
+
+This should be fully considered in the event workflow just created.
+
+Do NOT leave a situation where:
+- event organizer creates paid spots but no payment flow exists
+- vendor sees a paid spot but cannot complete payment
+- RoamBites fee is not accounted for
+- organizer workflow and vendor workflow are disconnected
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. How Stripe is now integrated into the event creation workflow
+2. How organizers configure paid spots
+3. How vendors pay for spots
+4. How the RoamBites percentage/platform fee is handled
+5. Any backend/payment logic changes made
+6. Confirmation that the full organizer → vendor → payment workflow was checked end-to-end

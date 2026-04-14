@@ -399,7 +399,21 @@ export default function SpotMarketplace() {
         toast({ title: "Error", description: err.error, variant: "destructive" });
         return;
       }
-      toast({ title: spot.isInstantBook ? "Booked instantly!" : "Application submitted!", description: spot.isInstantBook ? "Your spot is confirmed." : "The organizer will review your request." });
+      const data = await res.json();
+      // Instant book + paid: redirect immediately to Stripe checkout
+      if (data.checkoutUrl) {
+        toast({ title: "Spot reserved! Redirecting to payment…", description: "Complete your payment to confirm the spot." });
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+      toast({
+        title: spot.isInstantBook ? "Spot booked!" : "Application submitted!",
+        description: spot.isInstantBook && spot.priceInCents === 0
+          ? "Your free spot is confirmed."
+          : spot.isInstantBook
+          ? "Redirecting to payment to confirm your spot."
+          : "The organizer will review your request and notify you.",
+      });
       loadSpots(spot.eventId);
       loadMyReservations();
       setTab("my-applications");
@@ -509,7 +523,10 @@ export default function SpotMarketplace() {
                   {spots.map((spot) => {
                     const alreadyApplied = appliedSpotIds.has(spot.id);
                     const isFull = spot.availableSlots <= 0;
-                    const total = (spot.priceInCents + spot.platformFeeInCents) / 100;
+                    const price = spot.priceInCents / 100;
+                    const platformFee = spot.platformFeeInCents / 100;
+                    const isFreeSpot = spot.priceInCents === 0;
+                    const isPaidInstantBook = spot.isInstantBook && !isFreeSpot;
                     return (
                       <div key={spot.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm">
                         <div className="flex items-start justify-between gap-3 mb-3">
@@ -518,10 +535,36 @@ export default function SpotMarketplace() {
                             {spot.description && <p className="text-sm text-muted-foreground mt-0.5">{spot.description}</p>}
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-lg font-bold text-foreground">${total.toFixed(2)}</p>
+                            {isFreeSpot ? (
+                              <p className="text-lg font-bold text-green-600">Free</p>
+                            ) : (
+                              <p className="text-lg font-bold text-foreground">${price.toFixed(2)}</p>
+                            )}
                             <p className="text-xs text-muted-foreground">{spot.availableSlots}/{spot.totalSlots} open</p>
                           </div>
                         </div>
+
+                        {/* Paid spot pricing breakdown */}
+                        {!isFreeSpot && platformFee > 0 && (
+                          <div className="bg-muted/40 rounded-xl p-3 mb-3 space-y-1">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>Spot price</span><span>${price.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground border-t border-border/50 pt-1">
+                              <span className="font-medium text-foreground">You pay</span>
+                              <span className="font-semibold text-foreground">${price.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Payment timing notice */}
+                        {isPaidInstantBook && (
+                          <div className="bg-primary/5 border border-primary/15 rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
+                            <CreditCard className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <p className="text-xs text-foreground font-medium">Payment required immediately — you'll be sent to checkout after booking.</p>
+                          </div>
+                        )}
+
                         {spot.requirements && (
                           <div className="bg-muted/50 rounded-xl p-3 mb-3">
                             <p className="text-xs font-semibold text-muted-foreground mb-1">Requirements</p>
@@ -533,6 +576,11 @@ export default function SpotMarketplace() {
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Instant Book</span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Approval Required</span>
+                          )}
+                          {!isFreeSpot && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />Paid
+                            </span>
                           )}
                           <div className="ml-auto">
                             {alreadyApplied ? (
@@ -546,7 +594,7 @@ export default function SpotMarketplace() {
                                 className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
                               >
                                 {applying === spot.id && <Loader2 className="w-3 h-3 animate-spin" />}
-                                {spot.isInstantBook ? "Book Now" : "Apply"}
+                                {isPaidInstantBook ? <><CreditCard className="w-3.5 h-3.5" />Book & Pay</> : spot.isInstantBook ? "Book Now" : "Apply"}
                               </button>
                             )}
                           </div>

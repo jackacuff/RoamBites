@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,7 +8,7 @@ import {
   Calendar, MapPin, Clock, Truck, ClipboardList, Eye,
   ArrowLeft, ArrowRight, Plus, Trash2, CheckCircle, X,
   ImageIcon, DollarSign, Users, Zap, ChevronRight, Info,
-  Copy,
+  Copy, AlertTriangle, ExternalLink, ShieldCheck,
 } from "lucide-react";
 
 // ── Shared styles ─────────────────────────────────────────────────────────
@@ -375,11 +375,13 @@ function Step2({ days, onChange, onBack, onNext }: {
 }
 
 // ── Step 3: Food Truck Spots ───────────────────────────────────────────────
-function Step3({ spot, onChange, onBack, onNext }: {
+function Step3({ spot, onChange, onBack, onNext, platformFeePercent, connectStatus }: {
   spot: SpotConfig;
   onChange: (s: Partial<SpotConfig>) => void;
   onBack: () => void;
   onNext: () => void;
+  platformFeePercent: number;
+  connectStatus: { onboardingComplete: boolean; connected: boolean } | null;
 }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -395,6 +397,9 @@ function Step3({ spot, onChange, onBack, onNext }: {
 
   const priceVal = spot.priceInDollars === "" ? 0 : parseFloat(spot.priceInDollars) || 0;
   const isFree = priceVal === 0;
+  const platformFeeAmt = priceVal > 0 ? priceVal * platformFeePercent / 100 : 0;
+  const organizerReceives = priceVal - platformFeeAmt;
+  const stripeNotReady = priceVal > 0 && connectStatus !== null && !connectStatus.onboardingComplete;
 
   return (
     <StepCard title="Food Truck Spots" icon={<Truck className="w-5 h-5" />}>
@@ -415,6 +420,47 @@ function Step3({ spot, onChange, onBack, onNext }: {
           </div>
         </Field>
       </div>
+
+      {/* Payment breakdown */}
+      {!isFree && priceVal > 0 && (
+        <div className="bg-primary/5 border border-primary/15 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+            <p className="text-sm font-semibold text-foreground">Payment breakdown (per spot)</p>
+          </div>
+          <div className="space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Vendor pays</span>
+              <span className="font-medium text-foreground">${priceVal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">RoamBites platform fee ({platformFeePercent}%)</span>
+              <span className="text-muted-foreground">−${platformFeeAmt.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between border-t border-primary/15 pt-1.5">
+              <span className="font-semibold text-foreground">You receive</span>
+              <span className="font-bold text-primary">${organizerReceives.toFixed(2)}</span>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Payments are processed by Stripe and deposited directly to your connected bank account.</p>
+        </div>
+      )}
+
+      {/* Stripe Connect warning */}
+      {stripeNotReady && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Stripe account required for paid spots</p>
+            <p className="text-xs text-amber-700 mt-0.5">You've set a spot price but haven't connected your Stripe account yet. Vendors won't be able to pay until your account is set up.</p>
+            <Link href="/organizer/connect">
+              <button className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 underline underline-offset-2 hover:text-amber-900">
+                <ExternalLink className="w-3 h-3" />Connect Stripe account
+              </button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Booking type */}
       <Field label="How can vendors book a spot?">
@@ -552,7 +598,7 @@ function Step4({ data, onChange, onBack, onNext }: {
 }
 
 // ── Step 5: Review & Publish ───────────────────────────────────────────────
-function Step5({ step1, days, spot, step4, onBack, onSubmit, loading }: {
+function Step5({ step1, days, spot, step4, onBack, onSubmit, loading, platformFeePercent, connectStatus }: {
   step1: Step1Data;
   days: EventDay[];
   spot: SpotConfig;
@@ -560,6 +606,8 @@ function Step5({ step1, days, spot, step4, onBack, onSubmit, loading }: {
   onBack: () => void;
   onSubmit: (publish: boolean) => void;
   loading: boolean;
+  platformFeePercent: number;
+  connectStatus: { onboardingComplete: boolean; connected: boolean } | null;
 }) {
   const priceVal = parseFloat(spot.priceInDollars) || 0;
 
@@ -638,10 +686,35 @@ function Step5({ step1, days, spot, step4, onBack, onSubmit, loading }: {
       <Section title="Food Truck Spots">
         <ReviewRow label="Spot Name" value={spot.name || "Vendor Spot"} />
         <ReviewRow label="Available Spots" value={<span className="font-semibold text-primary">{spot.totalSlots}</span>} />
-        <ReviewRow label="Price" value={priceVal > 0 ? `$${priceVal.toFixed(2)} per spot` : "Free"} />
+        <ReviewRow label="Price" value={priceVal > 0 ? `$${priceVal.toFixed(2)} per spot` : <span className="text-green-600 font-medium">Free</span>} />
         <ReviewRow label="Booking Method" value={spot.isInstantBook ? "Reserve instantly" : "Application-based"} />
+        <ReviewRow label="Payment timing" value={spot.isInstantBook ? "Vendors pay immediately on booking" : "Vendors pay after you approve their application"} />
         {spot.requirements && <ReviewRow label="Requirements" value={spot.requirements} />}
       </Section>
+
+      {/* Payment breakdown */}
+      {priceVal > 0 && (
+        <Section title="Payment & Payout Summary">
+          <ReviewRow label="Vendor pays" value={`$${priceVal.toFixed(2)} per spot`} />
+          <ReviewRow label={`Platform fee (${platformFeePercent}%)`} value={<span className="text-muted-foreground">−${(priceVal * platformFeePercent / 100).toFixed(2)}</span>} />
+          <ReviewRow label="You receive" value={<span className="font-bold text-primary">${(priceVal * (1 - platformFeePercent / 100)).toFixed(2)} per spot</span>} />
+          <ReviewRow label="Max earnings" value={<span className="font-semibold">${(priceVal * (1 - platformFeePercent / 100) * spot.totalSlots).toFixed(2)} (if all {spot.totalSlots} spots filled)</span>} />
+          <ReviewRow label="Stripe Connect" value={
+            connectStatus?.onboardingComplete
+              ? <span className="inline-flex items-center gap-1 text-green-600 font-medium"><CheckCircle className="w-3.5 h-3.5" />Connected — payouts enabled</span>
+              : <span className="inline-flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="w-3.5 h-3.5" />Not connected — vendors can't pay yet</span>
+          } />
+          {!connectStatus?.onboardingComplete && (
+            <div className="py-2">
+              <Link href="/organizer/connect">
+                <button className="text-xs font-semibold text-primary underline underline-offset-2 flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" />Set up Stripe to receive payments
+                </button>
+              </Link>
+            </div>
+          )}
+        </Section>
+      )}
 
       {(step4.availableHookups !== "unknown" || step4.vendorFeeStructure !== "none" || step4.publicNotes || step4.contactEmail) && (
         <Section title="Logistics & Contact">
@@ -685,6 +758,21 @@ export default function OrganizerNewEvent() {
 
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+
+  // Platform fee and Stripe Connect status
+  const [platformFeePercent, setPlatformFeePercent] = useState(10);
+  const [connectStatus, setConnectStatus] = useState<{ onboardingComplete: boolean; connected: boolean } | null>(null);
+
+  useEffect(() => {
+    fetch(getApiUrl("/api/platform/fee"))
+      .then(r => r.json())
+      .then(d => { if (d.feePercent !== undefined) setPlatformFeePercent(d.feePercent); })
+      .catch(() => {});
+    fetch(getApiUrl("/api/organizer/connect/status"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(d => setConnectStatus({ onboardingComplete: d.onboardingComplete ?? false, connected: d.connected ?? false }))
+      .catch(() => setConnectStatus({ onboardingComplete: false, connected: false }));
+  }, []);
 
   // Upload state
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -839,13 +927,13 @@ export default function OrganizerNewEvent() {
           <Step2 days={days} onChange={setDays} onBack={() => goNext(1)} onNext={() => goNext(3)} />
         )}
         {step === 3 && (
-          <Step3 spot={spot} onChange={p => setSpot(s => ({ ...s, ...p }))} onBack={() => goNext(2)} onNext={() => goNext(4)} />
+          <Step3 spot={spot} onChange={p => setSpot(s => ({ ...s, ...p }))} onBack={() => goNext(2)} onNext={() => goNext(4)} platformFeePercent={platformFeePercent} connectStatus={connectStatus} />
         )}
         {step === 4 && (
           <Step4 data={step4} onChange={d => setStep4(s => ({ ...s, ...d }))} onBack={() => goNext(3)} onNext={() => goNext(5)} />
         )}
         {step === 5 && (
-          <Step5 step1={step1} days={days} spot={spot} step4={step4} onBack={() => goNext(4)} onSubmit={handleSubmit} loading={submitting} />
+          <Step5 step1={step1} days={days} spot={spot} step4={step4} onBack={() => goNext(4)} onSubmit={handleSubmit} loading={submitting} platformFeePercent={platformFeePercent} connectStatus={connectStatus} />
         )}
       </div>
     </Layout>

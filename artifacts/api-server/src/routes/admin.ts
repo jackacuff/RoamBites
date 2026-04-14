@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, trucksTable, eventsTable, menuItemsTable, scheduleEntriesTable, eventTrucksTable, plansTable, vendorSubscriptionsTable } from "@workspace/db";
+import { db, usersTable, trucksTable, eventsTable, menuItemsTable, scheduleEntriesTable, eventTrucksTable, plansTable, vendorSubscriptionsTable, platformSettingsTable, SETTINGS_KEYS, DEFAULT_SETTINGS } from "@workspace/db";
 import { eq, count, desc } from "drizzle-orm";
 import { AdminApproveTruckBody, AdminUpdateUserStatusBody } from "@workspace/api-zod";
 import { requireRole } from "../lib/auth";
@@ -559,5 +559,32 @@ export async function seedDatabase() {
     { eventId: mooreFest.id, truckId: boomtown.id, status: "pending" },
   ]);
 }
+
+// ── Platform settings ─────────────────────────────────────────────────────
+
+router.get("/admin/settings", requireRole("admin"), async (_req, res): Promise<void> => {
+  const rows = await db.select().from(platformSettingsTable);
+  // Merge with defaults so all keys are always present
+  const map: Record<string, string> = { ...DEFAULT_SETTINGS };
+  for (const row of rows) map[row.key] = row.value;
+  res.json(Object.entries(map).map(([key, value]) => ({ key, value })));
+});
+
+router.put("/admin/settings/:key", requireRole("admin"), async (req, res): Promise<void> => {
+  const { key } = req.params;
+  const { value } = req.body as { value?: string };
+  if (!value && value !== "0") {
+    res.status(400).json({ error: "value is required" });
+    return;
+  }
+  // Upsert
+  const existing = await db.select().from(platformSettingsTable).where(eq(platformSettingsTable.key, key));
+  if (existing.length > 0) {
+    await db.update(platformSettingsTable).set({ value, updatedAt: new Date() }).where(eq(platformSettingsTable.key, key));
+  } else {
+    await db.insert(platformSettingsTable).values({ key, value });
+  }
+  res.json({ key, value });
+});
 
 export default router;
