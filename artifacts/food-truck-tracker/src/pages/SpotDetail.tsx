@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import {
-  MapPin, Clock, Users, Zap, Repeat, Calendar, Building2, Home, Store,
-  ChevronLeft, CheckCircle, AlertCircle, MessageSquare, Share2,
-  DollarSign, Info, Star,
+  MapPin, Clock, Users, Repeat, Calendar, CheckCircle, AlertCircle,
+  MessageSquare, ChevronLeft, DollarSign, Info, Send,
 } from "lucide-react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,8 +66,8 @@ export default function SpotDetail() {
   const [applying, setApplying] = useState(false);
   const [waitlisting, setWaitlisting] = useState(false);
   const [applicationNote, setApplicationNote] = useState("");
-  const [showApplyForm, setShowApplyForm] = useState(false);
-  const [userStatus, setUserStatus] = useState<"none" | "applied" | "approved" | "waitlisted">("none");
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [userStatus, setUserStatus] = useState<"none" | "pending" | "confirmed" | "waitlisted">("none");
 
   useEffect(() => {
     fetchListing();
@@ -87,7 +86,7 @@ export default function SpotDetail() {
     }
   }
 
-  async function handleApply() {
+  async function handleRequest() {
     if (!isAuthenticated) { navigate("/login"); return; }
     setApplying(true);
     try {
@@ -96,17 +95,20 @@ export default function SpotDetail() {
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ notes: applicationNote }),
       });
-      if (res.status === 409) { toast({ title: "Already applied", description: "You've already applied for this spot." }); return; }
+      if (res.status === 409) {
+        toast({ title: "Already requested", description: "You already have an active request for this spot." });
+        setUserStatus("pending");
+        return;
+      }
       if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
-      setUserStatus(listing.isInstantBook ? "approved" : "applied");
-      setShowApplyForm(false);
+      setUserStatus("pending");
+      setShowRequestForm(false);
       toast({
-        title: listing.isInstantBook ? "Spot reserved!" : "Application sent!",
-        description: listing.isInstantBook ? "Your spot has been instantly reserved." : "The host will review your application.",
+        title: "Request submitted!",
+        description: "The host will review your request. You'll be notified of their decision.",
       });
     } catch {
-      toast({ title: "Error", description: "Failed to apply. Please try again.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to submit request. Please try again.", variant: "destructive" });
     } finally {
       setApplying(false);
     }
@@ -121,7 +123,7 @@ export default function SpotDetail() {
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
-      if (res.status === 409) { toast({ title: "Already on waitlist" }); return; }
+      if (res.status === 409) { toast({ title: "Already on waitlist" }); setUserStatus("waitlisted"); return; }
       if (!res.ok) throw new Error("Failed");
       setUserStatus("waitlisted");
       toast({ title: "Added to waitlist", description: "You'll be notified if a spot opens up." });
@@ -152,14 +154,12 @@ export default function SpotDetail() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto px-4 py-8">
-        {/* Back */}
         <Link href="/spots">
           <button className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
             <ChevronLeft className="w-4 h-4" /> Back to Spot Marketplace
           </button>
         </Link>
 
-        {/* Hero image */}
         <div className="w-full h-52 rounded-3xl overflow-hidden mb-6 bg-gradient-to-br from-primary/10 to-secondary/10">
           {listing.imageUrl ? (
             <img src={listing.imageUrl} alt={listing.title} className="w-full h-full object-cover" />
@@ -171,9 +171,7 @@ export default function SpotDetail() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Header */}
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-primary">
@@ -193,7 +191,6 @@ export default function SpotDetail() {
               </p>
             </div>
 
-            {/* Description */}
             {listing.description && (
               <div>
                 <h2 className="font-semibold text-foreground mb-2">About this spot</h2>
@@ -201,7 +198,6 @@ export default function SpotDetail() {
               </div>
             )}
 
-            {/* Schedule */}
             {listing.schedules?.length > 0 && (
               <div>
                 <h2 className="font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -211,7 +207,6 @@ export default function SpotDetail() {
               </div>
             )}
 
-            {/* Requirements */}
             {listing.requirements && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
                 <h2 className="font-semibold text-amber-900 mb-2 flex items-center gap-2 text-sm">
@@ -219,12 +214,11 @@ export default function SpotDetail() {
                 </h2>
                 <p className="text-amber-800 text-sm leading-relaxed">{listing.requirements}</p>
                 {listing.requiresAcknowledgement && (
-                  <p className="text-xs text-amber-700 mt-2 font-medium">* You must acknowledge these requirements when applying.</p>
+                  <p className="text-xs text-amber-700 mt-2 font-medium">* You must acknowledge these requirements when requesting this spot.</p>
                 )}
               </div>
             )}
 
-            {/* Amenities */}
             {listing.amenities?.length > 0 && (
               <div>
                 <h2 className="font-semibold text-foreground mb-3">Amenities</h2>
@@ -237,31 +231,34 @@ export default function SpotDetail() {
                 </div>
               </div>
             )}
+
+            {/* How it works */}
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+              <h2 className="font-semibold text-blue-900 mb-3 text-sm flex items-center gap-2">
+                <Info className="w-4 h-4" /> How spot requests work
+              </h2>
+              <ol className="space-y-1.5 text-xs text-blue-800">
+                <li className="flex gap-2"><span className="font-bold shrink-0">1.</span>Submit your request with a note about your truck.</li>
+                <li className="flex gap-2"><span className="font-bold shrink-0">2.</span>The host reviews and confirms, declines, or waitlists your request.</li>
+                <li className="flex gap-2"><span className="font-bold shrink-0">3.</span>On confirmation, both parties receive contact details to coordinate.</li>
+              </ol>
+            </div>
           </div>
 
           {/* Sidebar / Action card */}
           <div className="space-y-4">
             <div className="bg-card border border-border rounded-2xl p-5 sticky top-24">
-              {/* Price */}
               <div className="text-center mb-4">
                 <p className="text-3xl font-extrabold text-primary">{formatPrice(listing.priceInCents)}</p>
                 {listing.priceInCents > 0 && <p className="text-xs text-muted-foreground mt-0.5">per reservation</p>}
               </div>
 
-              {/* Spots available */}
               <div className={`flex items-center justify-center gap-2 mb-4 py-2.5 rounded-xl text-sm font-semibold ${isFull ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
                 <Users className="w-4 h-4" />
-                {isFull ? "No spots available" : `${listing.spotsAvailable} of ${listing.spotsTotal} spots open`}
+                {isFull ? "No spots available" : `${listing.spotsAvailable} of ${listing.spotsTotal} spot${listing.spotsTotal !== 1 ? "s" : ""} open`}
               </div>
 
-              {/* Features */}
               <div className="space-y-2 mb-5 text-sm">
-                {listing.isInstantBook && (
-                  <div className="flex items-center gap-2 text-primary">
-                    <Zap className="w-4 h-4 shrink-0" />
-                    <span className="font-medium">Instant book</span>
-                  </div>
-                )}
                 {listing.hasWaitlist && (
                   <div className="flex items-center gap-2 text-amber-600">
                     <Clock className="w-4 h-4 shrink-0" />
@@ -271,25 +268,31 @@ export default function SpotDetail() {
                 {listing.pendingApplications > 0 && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MessageSquare className="w-4 h-4 shrink-0" />
-                    <span>{listing.pendingApplications} pending application{listing.pendingApplications !== 1 ? "s" : ""}</span>
+                    <span>{listing.pendingApplications} pending request{listing.pendingApplications !== 1 ? "s" : ""}</span>
                   </div>
                 )}
               </div>
 
-              {/* CTA */}
               {isOwner ? (
                 <Link href="/host">
                   <button className="w-full py-3 bg-muted text-foreground rounded-2xl text-sm font-semibold hover:bg-muted/80 transition-colors">
                     Manage This Listing
                   </button>
                 </Link>
-              ) : userStatus === "applied" ? (
-                <div className="w-full py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold text-center flex items-center justify-center gap-2">
-                  <CheckCircle className="w-4 h-4" /> Application sent
+              ) : userStatus === "pending" ? (
+                <div className="space-y-2">
+                  <div className="w-full py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-2xl text-sm font-semibold text-center flex items-center justify-center gap-2">
+                    <Clock className="w-4 h-4" /> Pending host approval
+                  </div>
+                  <Link href="/my-spots">
+                    <button className="w-full py-2.5 border border-border rounded-2xl text-xs text-muted-foreground hover:bg-muted transition-colors">
+                      View my spot requests
+                    </button>
+                  </Link>
                 </div>
-              ) : userStatus === "approved" ? (
-                <div className="w-full py-3 bg-emerald-50 text-emerald-700 rounded-2xl text-sm font-semibold text-center flex items-center justify-center gap-2">
-                  <CheckCircle className="w-4 h-4" /> Spot reserved!
+              ) : userStatus === "confirmed" ? (
+                <div className="w-full py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-2xl text-sm font-semibold text-center flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> Request confirmed!
                 </div>
               ) : userStatus === "waitlisted" ? (
                 <div className="w-full py-3 bg-amber-50 text-amber-700 rounded-2xl text-sm font-semibold text-center flex items-center justify-center gap-2">
@@ -297,12 +300,12 @@ export default function SpotDetail() {
                 </div>
               ) : !isFull ? (
                 <>
-                  {!showApplyForm ? (
+                  {!showRequestForm ? (
                     <button
-                      onClick={() => isAuthenticated ? setShowApplyForm(true) : navigate("/login")}
-                      className="w-full py-3 bg-primary text-primary-foreground rounded-2xl text-sm font-bold hover:opacity-90 transition-opacity"
+                      onClick={() => isAuthenticated ? setShowRequestForm(true) : navigate("/login")}
+                      className="w-full py-3 bg-primary text-primary-foreground rounded-2xl text-sm font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                     >
-                      {listing.isInstantBook ? "⚡ Reserve Instantly" : "Apply for this spot"}
+                      <Send className="w-4 h-4" /> Request This Spot
                     </button>
                   ) : (
                     <div className="space-y-3">
@@ -310,22 +313,22 @@ export default function SpotDetail() {
                         value={applicationNote}
                         onChange={e => setApplicationNote(e.target.value)}
                         placeholder="Tell the host about your truck, cuisine type, and why you'd be a great fit…"
-                        rows={3}
+                        rows={4}
                         className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
                       />
                       {listing.requiresAcknowledgement && listing.requirements && (
                         <p className="text-xs text-amber-700 bg-amber-50 rounded-xl p-2">
-                          By applying, you acknowledge the host's requirements.
+                          By requesting, you acknowledge the host's requirements.
                         </p>
                       )}
                       <button
-                        onClick={handleApply}
+                        onClick={handleRequest}
                         disabled={applying}
                         className="w-full py-2.5 bg-primary text-primary-foreground rounded-2xl text-sm font-bold hover:opacity-90 disabled:opacity-60 transition-opacity"
                       >
-                        {applying ? "Submitting…" : listing.isInstantBook ? "Confirm Reservation" : "Submit Application"}
+                        {applying ? "Submitting…" : "Submit Request"}
                       </button>
-                      <button onClick={() => setShowApplyForm(false)} className="w-full py-2.5 border border-border rounded-2xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+                      <button onClick={() => setShowRequestForm(false)} className="w-full py-2.5 border border-border rounded-2xl text-sm text-muted-foreground hover:bg-muted transition-colors">
                         Cancel
                       </button>
                     </div>
@@ -345,7 +348,6 @@ export default function SpotDetail() {
                 </div>
               )}
 
-              {/* Host */}
               {listing.host && (
                 <div className="mt-5 pt-5 border-t border-border">
                   <p className="text-xs text-muted-foreground mb-1">Hosted by</p>

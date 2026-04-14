@@ -1,0 +1,250 @@
+Update the Spot Marketplace booking workflow to remove any misleading “instant book” behavior and replace it with a request/confirmation workflow that is clear for both vendors and Spot Hosts.
+
+GOAL
+Ensure a vendor never believes they have a confirmed spot until the Spot Host has explicitly approved it. Also create a receipt/history area and use the EXISTING message system for communication. When a user gets a new in-app message, send them an email notification.
+
+IMPORTANT
+- Use the EXISTING messaging/chat system already in RoamBites
+- Do NOT build a separate new messaging system
+- Do NOT allow the UI to imply a booking is fully confirmed before host approval
+- Do NOT label anything as confirmed unless the Spot Host has approved it
+- This is not just a wording change. Build this around a clear status model.
+- Keep this consistent across the app and website if the workflow is shared
+
+--------------------------------------------------
+1. USE A CLEAR STATUS MODEL
+--------------------------------------------------
+
+Build the workflow around these statuses:
+
+- Requested
+- Pending Host Approval
+- Confirmed by Host
+- Declined
+- Waitlisted
+- Cancelled
+
+This status flow should be the backbone of the experience.
+
+Important:
+- “Confirmed by Host” should only happen after explicit host approval
+- payment alone must not move a request to confirmed
+- UI, backend, messaging, and receipts should all reflect this same status logic
+
+--------------------------------------------------
+2. REMOVE MISLEADING “INSTANT BOOK” BEHAVIOR
+--------------------------------------------------
+
+Replace any misleading instant-book style flow with a request/approval flow.
+
+Do NOT use wording that implies certainty too early.
+
+Only show “Confirmed” after host approval.
+
+--------------------------------------------------
+3. CTA WORDING MUST BE SAFE
+--------------------------------------------------
+
+Use safer action wording on vendor-facing spot listings.
+
+Default CTA language should be:
+- Request Spot
+- Apply for Spot
+
+Avoid:
+- Reserve Spot
+- Book Spot
+- Secure Spot
+
+unless there is a truly host-enabled and clearly defined auto-confirmed workflow in the future.
+
+For now, default to request/application language so users are not confused.
+
+--------------------------------------------------
+4. REQUEST FLOW
+--------------------------------------------------
+
+Vendor submits request → status = Pending Host Approval
+
+Host can:
+- Confirm
+- Decline
+- Waitlist
+- Message vendor
+
+--------------------------------------------------
+5. VENDOR UX CLARITY
+--------------------------------------------------
+
+After request submission:
+- show “Request submitted”
+- show “Pending host approval”
+- clearly state the spot is NOT confirmed yet
+
+This should appear in:
+- confirmation state after submission
+- vendor dashboard
+- request/receipt area
+- listing detail where relevant
+
+--------------------------------------------------
+6. HOST REVIEW DASHBOARD
+--------------------------------------------------
+
+Show:
+- vendor name
+- listing
+- requested timing
+- fee
+- status
+- message thread preview if available
+
+Actions:
+- Confirm
+- Decline
+- Waitlist
+- Message
+
+--------------------------------------------------
+7. RECEIPT / HISTORY SECTION
+--------------------------------------------------
+
+Create a section for vendors (and ideally hosts):
+
+Include:
+- listing name
+- host name
+- request date
+- amount
+- status
+- timestamps
+- link to the existing message thread
+
+This should help users track what happened and avoid confusion.
+
+--------------------------------------------------
+8. USE THE EXISTING MESSAGE SYSTEM
+--------------------------------------------------
+
+When a request is submitted:
+- automatically create or attach to a conversation using the EXISTING RoamBites message system
+- tie that conversation to the specific spot request/listing
+
+Do NOT build a second messaging product.
+
+The message thread should allow vendor and host to communicate about:
+- approval
+- questions
+- timing
+- logistics
+
+--------------------------------------------------
+9. AUTOMATIC CONTACT INFO SHARING ON APPROVAL
+--------------------------------------------------
+
+When a Spot Host CONFIRMS a request:
+
+- automatically send a SYSTEM MESSAGE inside the EXISTING message thread
+- this message should include contact information for BOTH parties
+
+Include:
+- vendor name
+- vendor phone number (if available)
+- vendor email
+
+AND
+
+- host name
+- host phone number (if available)
+- host email
+
+Example:
+“You’ve been approved for this spot. Here is contact information to coordinate:
+Vendor: [Name, Phone, Email]
+Host: [Name, Phone, Email]”
+
+IMPORTANT:
+- this should use the existing messaging system
+- this message should be auto-generated
+- it should appear immediately after confirmation
+- it should not require manual input
+
+--------------------------------------------------
+10. EMAIL NOTIFICATIONS FOR NEW MESSAGES
+--------------------------------------------------
+
+Whenever a user receives a new in-app message in the EXISTING message system:
+- send an email notification to that user
+
+Include:
+- sender name
+- context if possible (spot request / listing name)
+- prompt to return to RoamBites to reply
+
+--------------------------------------------------
+11. PAYMENT LOGIC ALIGNMENT
+--------------------------------------------------
+
+Ensure:
+- payment does NOT imply confirmation
+- status remains Pending Host Approval until host confirms
+- confirmed status is tied to host action, not payment
+
+If payment is collected before host approval:
+- the UI must still clearly show Pending Host Approval
+
+If payment happens after approval:
+- the workflow should still preserve the same status model
+
+--------------------------------------------------
+12. BACKEND SUPPORT
+--------------------------------------------------
+
+Ensure backend supports:
+- request statuses
+- approval timestamp
+- linkage between spot request and existing message thread
+- receipt/history records
+- email notification triggers
+- access to both users’ contact info for the system message
+
+--------------------------------------------------
+13. UX WORDING RULES
+--------------------------------------------------
+
+Use:
+- Request Submitted
+- Pending Host Approval
+- Waiting for Host
+- Confirmed by Host
+
+Avoid:
+- Booked
+- Secured
+- Reserved
+
+until confirmation is truly granted by the host.
+
+--------------------------------------------------
+14. FULL WORKFLOW CHECK
+--------------------------------------------------
+
+Validate:
+- vendor knows status clearly
+- host has clear actions
+- request is tied into the existing message system
+- contact info is shared automatically on approval
+- email notifications work off the existing message system
+- no confusion exists around booking state
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of request/confirmation workflow
+2. Status flow explanation
+3. How receipt/history works
+4. How the existing message system is being used in this flow
+5. How contact info is shared automatically on approval
+6. How email notifications are triggered
+7. Confirmation that spots are NOT confirmed until host approval

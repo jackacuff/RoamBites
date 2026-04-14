@@ -149,6 +149,7 @@ function getRoleConfig(
           items: [
             { label: "Find Gigs", href: "/vendor/event-spots", icon: <Briefcase className="w-4 h-4" /> },
             { label: "Find a Spot", href: "/spots", icon: <MapPin className="w-4 h-4" /> },
+            { label: "My Spot Requests", href: "/my-spots", icon: <Zap className="w-4 h-4" /> },
             { label: "Events", href: "/events", icon: <Calendar className="w-4 h-4" /> },
           ],
         },

@@ -1,15 +1,22 @@
 import { Router } from "express";
 import {
-  db, usersTable, trucksTable,
+  db, usersTable, trucksTable, messagesTable,
   spotListingsTable, spotListingSchedulesTable,
   spotListingApplicationsTable, spotListingWaitlistTable,
 } from "@workspace/db";
 import { eq, and, desc, asc, ilike, or, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { sendNewMessageEmail } from "../lib/email";
 
 const router = Router();
 
-// ── helpers ────────────────────────────────────────────────────────────────
+// ── Status model ────────────────────────────────────────────────────────────
+// pending_host_approval  → vendor submitted, awaiting host decision
+// confirmed              → host approved
+// declined               → host declined
+// waitlisted             → host moved to waitlist
+// cancelled              → vendor cancelled
+
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -41,12 +48,39 @@ async function attachSchedules(listingIds: number[]) {
   return map;
 }
 
+async function createSystemMessage({
+  fromUserId, toUserId, spotApplicationId, subject, body, type = "spot_request",
+}: {
+  fromUserId: number; toUserId: number; spotApplicationId: number;
+  subject: string; body: string; type?: string;
+}) {
+  const [msg] = await db.insert(messagesTable).values({
+    fromUserId,
+    toUserId,
+    spotApplicationId,
+    subject,
+    body,
+    type,
+  }).returning();
+  return msg;
+}
+
+async function notifyByEmail(userId: number, fromName: string, subject: string, body: string, context?: string) {
+  try {
+    const [recipient] = await db.select({ name: usersTable.name, email: usersTable.email })
+      .from(usersTable).where(eq(usersTable.id, userId));
+    if (recipient?.email) {
+      sendNewMessageEmail({ toEmail: recipient.email, toName: recipient.name, fromName, subject, preview: body, context });
+    }
+  } catch { /* non-critical */ }
+}
+
 // ── PUBLIC: browse spot listings ────────────────────────────────────────────
 router.get("/spots", async (req, res) => {
   try {
     const {
       city, spotType, scheduleType, minPrice, maxPrice,
-      isInstantBook, hasWaitlist, search,
+      hasWaitlist, search,
       lat, lng, radiusKm = "50",
       sortBy = "newest",
       limit = "30", offset = "0",
@@ -67,7 +101,6 @@ router.get("/spots", async (req, res) => {
         spotsTotal: spotListingsTable.spotsTotal,
         spotsAvailable: spotListingsTable.spotsAvailable,
         priceInCents: spotListingsTable.priceInCents,
-        isInstantBook: spotListingsTable.isInstantBook,
         hasWaitlist: spotListingsTable.hasWaitlist,
         scheduleType: spotListingsTable.scheduleType,
         requirements: spotListingsTable.requirements,
@@ -88,13 +121,11 @@ router.get("/spots", async (req, res) => {
       )
       .orderBy(desc(spotListingsTable.createdAt));
 
-    // filters
     if (city) rows = rows.filter(r => r.city?.toLowerCase().includes(city.toLowerCase()));
     if (spotType) rows = rows.filter(r => r.spotType === spotType);
     if (scheduleType) rows = rows.filter(r => r.scheduleType === scheduleType);
     if (minPrice) rows = rows.filter(r => r.priceInCents >= parseInt(minPrice) * 100);
     if (maxPrice && maxPrice !== "") rows = rows.filter(r => r.priceInCents <= parseInt(maxPrice) * 100);
-    if (isInstantBook === "true") rows = rows.filter(r => r.isInstantBook);
     if (hasWaitlist === "true") rows = rows.filter(r => r.hasWaitlist);
     if (search) {
       const q = search.toLowerCase();
@@ -106,7 +137,6 @@ router.get("/spots", async (req, res) => {
       );
     }
 
-    // distance filter & sort
     let withDistance = rows.map(r => ({
       ...r,
       distanceKm: lat && lng && r.latitude && r.longitude
@@ -129,11 +159,8 @@ router.get("/spots", async (req, res) => {
       withDistance.sort((a, b) => b.spotsAvailable - a.spotsAvailable);
     }
 
-    // pagination
     const total = withDistance.length;
     const paginated = withDistance.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
-
-    // attach schedules
     const scheduleMap = await attachSchedules(paginated.map(r => r.id));
     const result = paginated.map(r => ({ ...r, schedules: scheduleMap[r.id] ?? [] }));
 
@@ -173,7 +200,7 @@ router.get("/spots/:id", async (req, res) => {
       .from(spotListingApplicationsTable)
       .where(and(
         eq(spotListingApplicationsTable.listingId, id),
-        eq(spotListingApplicationsTable.status, "pending")
+        eq(spotListingApplicationsTable.status, "pending_host_approval")
       ));
 
     res.json({ ...listing, host, schedules, pendingApplications: applicationCount[0]?.count ?? 0 });
@@ -182,14 +209,14 @@ router.get("/spots/:id", async (req, res) => {
   }
 });
 
-// ── AUTH: create a spot listing (any logged-in user) ────────────────────────
+// ── AUTH: create a spot listing ─────────────────────────────────────────────
 router.post("/spots", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const {
       title, description, hostName, address, city,
       latitude, longitude, spotType, spotsTotal, priceInCents,
-      isInstantBook, hasWaitlist, scheduleType, requirements,
+      hasWaitlist, scheduleType, requirements,
       requiresAcknowledgement, tags, amenities, imageUrl,
       schedules = [],
     } = req.body;
@@ -211,7 +238,7 @@ router.post("/spots", requireAuth, async (req, res) => {
         spotsTotal: spotsTotal ?? 1,
         spotsAvailable: spotsTotal ?? 1,
         priceInCents: priceInCents ?? 0,
-        isInstantBook: isInstantBook ?? false,
+        isInstantBook: false,
         hasWaitlist: hasWaitlist ?? false,
         scheduleType: scheduleType ?? "one_time",
         requirements: requirements ?? null,
@@ -223,13 +250,11 @@ router.post("/spots", requireAuth, async (req, res) => {
       })
       .returning();
 
-    // auto-upgrade user to spot_host if they're a customer
-    const [user] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId));
-    if (user?.role === "customer") {
+    const [existingUser] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId));
+    if (existingUser?.role === "customer") {
       await db.update(usersTable).set({ role: "spot_host" }).where(eq(usersTable.id, userId));
     }
 
-    // insert schedules
     if (schedules.length > 0) {
       await db.insert(spotListingSchedulesTable).values(
         schedules.map((s: any) => ({
@@ -249,7 +274,7 @@ router.post("/spots", requireAuth, async (req, res) => {
   }
 });
 
-// ── AUTH: update a listing (host only) ─────────────────────────────────────
+// ── AUTH: update a listing ──────────────────────────────────────────────────
 router.put("/spots/:id", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
@@ -262,7 +287,7 @@ router.put("/spots/:id", requireAuth, async (req, res) => {
 
     const allowed = [
       "title","description","hostName","address","city","latitude","longitude",
-      "spotType","spotsTotal","spotsAvailable","priceInCents","isInstantBook",
+      "spotType","spotsTotal","spotsAvailable","priceInCents",
       "hasWaitlist","scheduleType","requirements","requiresAcknowledgement",
       "tags","amenities","imageUrl","isPublished","isActive",
     ] as const;
@@ -274,7 +299,6 @@ router.put("/spots/:id", requireAuth, async (req, res) => {
 
     const [updated] = await db.update(spotListingsTable).set(updates).where(eq(spotListingsTable.id, id)).returning();
 
-    // replace schedules if provided
     if (req.body.schedules) {
       await db.delete(spotListingSchedulesTable).where(eq(spotListingSchedulesTable.listingId, id));
       if (req.body.schedules.length > 0) {
@@ -296,7 +320,7 @@ router.put("/spots/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ── AUTH: delete / deactivate a listing ────────────────────────────────────
+// ── AUTH: delete / deactivate a listing ─────────────────────────────────────
 router.delete("/spots/:id", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
@@ -317,10 +341,11 @@ router.delete("/spots/:id", requireAuth, async (req, res) => {
   }
 });
 
-// ── AUTH: vendor apply for a spot ──────────────────────────────────────────
+// ── AUTH: vendor submit spot request ─────────────────────────────────────────
+// All requests go to pending_host_approval — no instant booking
 router.post("/spots/:id/apply", requireAuth, async (req, res) => {
   try {
-    const userId = (req as any).user.id;
+    const vendorUser = (req as any).user;
     const listingId = parseInt(req.params.id);
     if (isNaN(listingId)) return res.status(400).json({ error: "Invalid id" });
 
@@ -330,63 +355,76 @@ router.post("/spots/:id/apply", requireAuth, async (req, res) => {
       .where(and(eq(spotListingsTable.id, listingId), eq(spotListingsTable.isActive, true)));
     if (!listing) return res.status(404).json({ error: "Listing not found" });
 
-    // check no duplicate pending application
+    // no duplicate active requests
     const [existing] = await db
       .select()
       .from(spotListingApplicationsTable)
       .where(
         and(
           eq(spotListingApplicationsTable.listingId, listingId),
-          eq(spotListingApplicationsTable.vendorUserId, userId),
+          eq(spotListingApplicationsTable.vendorUserId, vendorUser.id),
           or(
-            eq(spotListingApplicationsTable.status, "pending"),
-            eq(spotListingApplicationsTable.status, "approved")
+            eq(spotListingApplicationsTable.status, "pending_host_approval"),
+            eq(spotListingApplicationsTable.status, "confirmed")
           )
         )
       );
-    if (existing) return res.status(409).json({ error: "Already applied" });
+    if (existing) return res.status(409).json({ error: "Already requested" });
 
-    // get vendor's truck (first active truck)
     const [truck] = await db
-      .select({ id: trucksTable.id })
+      .select({ id: trucksTable.id, name: trucksTable.name })
       .from(trucksTable)
-      .where(and(eq(trucksTable.vendorUserId, userId), eq(trucksTable.isApproved, true)))
+      .where(and(eq(trucksTable.vendorUserId, vendorUser.id), eq(trucksTable.isApproved, true)))
       .limit(1);
 
     const { notes } = req.body;
-
-    const initialStatus = listing.isInstantBook ? "approved" : "pending";
 
     const [application] = await db
       .insert(spotListingApplicationsTable)
       .values({
         listingId,
         truckId: truck?.id ?? null,
-        vendorUserId: userId,
-        status: initialStatus,
+        vendorUserId: vendorUser.id,
+        status: "pending_host_approval",
         notes: notes ?? null,
       })
       .returning();
 
-    // decrement spots if instant book
-    if (listing.isInstantBook && listing.spotsAvailable > 0) {
-      await db
-        .update(spotListingsTable)
-        .set({ spotsAvailable: listing.spotsAvailable - 1 })
-        .where(eq(spotListingsTable.id, listingId));
-    }
+    // Auto-create opening message from vendor to host
+    const subject = `Spot Request: ${listing.title}`;
+    const truckLine = truck?.name ? ` My truck is **${truck.name}**.` : "";
+    const notesLine = notes ? `\n\n"${notes}"` : "";
+    const msgBody = `**${vendorUser.name}** has submitted a spot request for **${listing.title}**.${truckLine}${notesLine}\n\nThis request is **pending your review**. You can confirm, decline, or waitlist this request from your Host Dashboard.`;
+
+    await createSystemMessage({
+      fromUserId: vendorUser.id,
+      toUserId: listing.hostUserId,
+      spotApplicationId: application.id,
+      subject,
+      body: msgBody,
+      type: "spot_request",
+    });
+
+    // Notify host by email
+    notifyByEmail(
+      listing.hostUserId,
+      vendorUser.name,
+      subject,
+      msgBody,
+      `Spot request for: ${listing.title}`
+    );
 
     res.status(201).json(application);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to apply" });
+    res.status(500).json({ error: "Failed to submit request" });
   }
 });
 
 // ── AUTH: vendor join waitlist ──────────────────────────────────────────────
 router.post("/spots/:id/waitlist", requireAuth, async (req, res) => {
   try {
-    const userId = (req as any).user.id;
+    const vendorUser = (req as any).user;
     const listingId = parseInt(req.params.id);
     if (isNaN(listingId)) return res.status(400).json({ error: "Invalid id" });
 
@@ -402,7 +440,7 @@ router.post("/spots/:id/waitlist", requireAuth, async (req, res) => {
       .where(
         and(
           eq(spotListingWaitlistTable.listingId, listingId),
-          eq(spotListingWaitlistTable.vendorUserId, userId)
+          eq(spotListingWaitlistTable.vendorUserId, vendorUser.id)
         )
       );
     if (existing) return res.status(409).json({ error: "Already on waitlist" });
@@ -410,7 +448,7 @@ router.post("/spots/:id/waitlist", requireAuth, async (req, res) => {
     const [truck] = await db
       .select({ id: trucksTable.id })
       .from(trucksTable)
-      .where(and(eq(trucksTable.vendorUserId, userId), eq(trucksTable.isApproved, true)))
+      .where(and(eq(trucksTable.vendorUserId, vendorUser.id), eq(trucksTable.isApproved, true)))
       .limit(1);
 
     const [entry] = await db
@@ -418,7 +456,7 @@ router.post("/spots/:id/waitlist", requireAuth, async (req, res) => {
       .values({
         listingId,
         truckId: truck?.id ?? null,
-        vendorUserId: userId,
+        vendorUserId: vendorUser.id,
         notes: req.body.notes ?? null,
       })
       .returning();
@@ -429,7 +467,7 @@ router.post("/spots/:id/waitlist", requireAuth, async (req, res) => {
   }
 });
 
-// ── AUTH: vendor - get my applications ─────────────────────────────────────
+// ── AUTH: vendor - get my spot requests (receipt/history) ───────────────────
 router.get("/vendor/spot-applications", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
@@ -441,13 +479,18 @@ router.get("/vendor/spot-applications", requireAuth, async (req, res) => {
         status: spotListingApplicationsTable.status,
         notes: spotListingApplicationsTable.notes,
         hostMessage: spotListingApplicationsTable.hostMessage,
+        paymentStatus: spotListingApplicationsTable.paymentStatus,
+        confirmedAt: spotListingApplicationsTable.confirmedAt,
         createdAt: spotListingApplicationsTable.createdAt,
+        updatedAt: spotListingApplicationsTable.updatedAt,
         listing: {
           title: spotListingsTable.title,
           address: spotListingsTable.address,
           city: spotListingsTable.city,
           spotType: spotListingsTable.spotType,
           priceInCents: spotListingsTable.priceInCents,
+          hostName: spotListingsTable.hostName,
+          scheduleType: spotListingsTable.scheduleType,
         },
       })
       .from(spotListingApplicationsTable)
@@ -457,11 +500,11 @@ router.get("/vendor/spot-applications", requireAuth, async (req, res) => {
 
     res.json(applications);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch applications" });
+    res.status(500).json({ error: "Failed to fetch requests" });
   }
 });
 
-// ── AUTH: host - get my listings ────────────────────────────────────────────
+// ── AUTH: host - get my listings ─────────────────────────────────────────────
 router.get("/host/spots", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
@@ -481,7 +524,7 @@ router.get("/host/spots", requireAuth, async (req, res) => {
   }
 });
 
-// ── AUTH: host - get applications for a listing ─────────────────────────────
+// ── AUTH: host - get applications for a listing ──────────────────────────────
 router.get("/host/spots/:id/applications", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;
@@ -489,7 +532,7 @@ router.get("/host/spots/:id/applications", requireAuth, async (req, res) => {
     if (isNaN(listingId)) return res.status(400).json({ error: "Invalid id" });
 
     const [listing] = await db
-      .select({ hostUserId: spotListingsTable.hostUserId })
+      .select({ hostUserId: spotListingsTable.hostUserId, title: spotListingsTable.title })
       .from(spotListingsTable)
       .where(eq(spotListingsTable.id, listingId));
     if (!listing || listing.hostUserId !== userId) return res.status(403).json({ error: "Forbidden" });
@@ -500,6 +543,7 @@ router.get("/host/spots/:id/applications", requireAuth, async (req, res) => {
         status: spotListingApplicationsTable.status,
         notes: spotListingApplicationsTable.notes,
         hostMessage: spotListingApplicationsTable.hostMessage,
+        confirmedAt: spotListingApplicationsTable.confirmedAt,
         createdAt: spotListingApplicationsTable.createdAt,
         vendorUserId: spotListingApplicationsTable.vendorUserId,
         truckId: spotListingApplicationsTable.truckId,
@@ -518,10 +562,10 @@ router.get("/host/spots/:id/applications", requireAuth, async (req, res) => {
   }
 });
 
-// ── AUTH: host - update application status ──────────────────────────────────
+// ── AUTH: host - confirm / decline / waitlist a request ─────────────────────
 router.patch("/host/spots/applications/:applicationId", requireAuth, async (req, res) => {
   try {
-    const userId = (req as any).user.id;
+    const hostUser = (req as any).user;
     const appId = parseInt(req.params.applicationId);
     if (isNaN(appId)) return res.status(400).json({ error: "Invalid id" });
 
@@ -532,15 +576,18 @@ router.patch("/host/spots/applications/:applicationId", requireAuth, async (req,
     if (!app) return res.status(404).json({ error: "Not found" });
 
     const [listing] = await db
-      .select({ hostUserId: spotListingsTable.hostUserId, spotsAvailable: spotListingsTable.spotsAvailable })
+      .select({ hostUserId: spotListingsTable.hostUserId, spotsAvailable: spotListingsTable.spotsAvailable, title: spotListingsTable.title })
       .from(spotListingsTable)
       .where(eq(spotListingsTable.id, app.listingId));
-    if (!listing || listing.hostUserId !== userId) return res.status(403).json({ error: "Forbidden" });
+    if (!listing || listing.hostUserId !== hostUser.id) return res.status(403).json({ error: "Forbidden" });
 
     const { status, hostMessage } = req.body;
-    const updates: Record<string, any> = { updatedAt: new Date() };
-    if (status) updates.status = status;
+    const validStatuses = ["confirmed", "declined", "waitlisted", "cancelled"];
+    if (!validStatuses.includes(status)) return res.status(400).json({ error: `status must be one of: ${validStatuses.join(", ")}` });
+
+    const updates: Record<string, any> = { status, updatedAt: new Date() };
     if (hostMessage !== undefined) updates.hostMessage = hostMessage;
+    if (status === "confirmed") updates.confirmedAt = new Date();
 
     const [updated] = await db
       .update(spotListingApplicationsTable)
@@ -548,26 +595,88 @@ router.patch("/host/spots/applications/:applicationId", requireAuth, async (req,
       .where(eq(spotListingApplicationsTable.id, appId))
       .returning();
 
-    // adjust available spots
-    if (status === "approved" && app.status !== "approved" && listing.spotsAvailable > 0) {
-      await db
-        .update(spotListingsTable)
+    // Adjust available spots
+    if (status === "confirmed" && app.status !== "confirmed" && listing.spotsAvailable > 0) {
+      await db.update(spotListingsTable)
         .set({ spotsAvailable: listing.spotsAvailable - 1 })
         .where(eq(spotListingsTable.id, app.listingId));
-    } else if (status === "rejected" && app.status === "approved") {
-      await db
-        .update(spotListingsTable)
+    } else if (status === "declined" && app.status === "confirmed") {
+      await db.update(spotListingsTable)
         .set({ spotsAvailable: listing.spotsAvailable + 1 })
         .where(eq(spotListingsTable.id, app.listingId));
     }
 
+    // Get vendor info for messaging
+    const [vendor] = await db
+      .select({ name: usersTable.name, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, app.vendorUserId));
+
+    const subject = `Re: Spot Request — ${listing.title}`;
+
+    if (status === "confirmed") {
+      // Auto-send contact info system message to vendor
+      const contactMsg = `✅ **Your spot request has been confirmed by the host!**\n\n**${listing.title}** — you're all set.\n\n---\n**Contact information for both parties:**\n\n**Host:** ${hostUser.name} · ${hostUser.email}\n\n**Vendor:** ${vendor?.name ?? "—"} · ${vendor?.email ?? "—"}\n\n---\n\nPlease coordinate directly to finalize timing and logistics. Welcome aboard!`;
+
+      await createSystemMessage({
+        fromUserId: hostUser.id,
+        toUserId: app.vendorUserId,
+        spotApplicationId: appId,
+        subject: `✅ Confirmed: ${listing.title}`,
+        body: contactMsg,
+        type: "spot_request",
+      });
+
+      // Also send confirmation back to host (so host has the record in their inbox)
+      await createSystemMessage({
+        fromUserId: app.vendorUserId,
+        toUserId: hostUser.id,
+        spotApplicationId: appId,
+        subject: `✅ Request confirmed: ${listing.title}`,
+        body: `You confirmed the spot request from **${vendor?.name ?? "vendor"}** for **${listing.title}**.\n\n**Vendor contact:** ${vendor?.name ?? "—"} · ${vendor?.email ?? "—"}`,
+        type: "spot_request",
+      });
+
+      notifyByEmail(app.vendorUserId, hostUser.name, `✅ Confirmed: ${listing.title}`, contactMsg, `Spot: ${listing.title}`);
+
+    } else if (status === "declined") {
+      const reason = hostMessage ? `\n\nHost note: "${hostMessage}"` : "";
+      const body = `Your spot request for **${listing.title}** has been **declined** by the host.${reason}\n\nYou can browse other available spots in the marketplace.`;
+
+      await createSystemMessage({
+        fromUserId: hostUser.id,
+        toUserId: app.vendorUserId,
+        spotApplicationId: appId,
+        subject: `Request declined: ${listing.title}`,
+        body,
+        type: "spot_request",
+      });
+
+      notifyByEmail(app.vendorUserId, hostUser.name, `Request declined: ${listing.title}`, body, `Spot: ${listing.title}`);
+
+    } else if (status === "waitlisted") {
+      const body = `Your spot request for **${listing.title}** has been placed on the **waitlist**. The host will reach out if a spot opens up.`;
+
+      await createSystemMessage({
+        fromUserId: hostUser.id,
+        toUserId: app.vendorUserId,
+        spotApplicationId: appId,
+        subject: `Waitlisted: ${listing.title}`,
+        body,
+        type: "spot_request",
+      });
+
+      notifyByEmail(app.vendorUserId, hostUser.name, `Waitlisted: ${listing.title}`, body, `Spot: ${listing.title}`);
+    }
+
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update application" });
+    console.error(err);
+    res.status(500).json({ error: "Failed to update request" });
   }
 });
 
-// ── AUTH: host - get waitlist for a listing ─────────────────────────────────
+// ── AUTH: host - get waitlist for a listing ──────────────────────────────────
 router.get("/host/spots/:id/waitlist", requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user.id;

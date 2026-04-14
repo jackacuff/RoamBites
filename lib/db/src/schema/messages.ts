@@ -6,6 +6,7 @@ export const messagesTable = pgTable("messages", {
   toUserId: integer("to_user_id").notNull(),
   truckId: integer("truck_id"),
   eventId: integer("event_id"),
+  spotApplicationId: integer("spot_application_id"),
   subject: text("subject"),
   body: text("body").notNull(),
   type: text("type").notNull().default("message"),
