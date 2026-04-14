@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { getApiUrl } from "@/lib/api";
-import { MapPin, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Wifi, Zap, Droplets, Users, Globe, Phone, Save, X, DollarSign, Calendar, Truck, CheckCircle } from "lucide-react";
+import { MapPin, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Wifi, Zap, Droplets, Users, Globe, Phone, Save, X, DollarSign, Calendar, Truck, CheckCircle, ClipboardList, Clock, XCircle, MessageSquare, ChevronDown, ChevronUp, LayoutList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Vacancy {
@@ -294,6 +294,32 @@ function ParkProfileForm({ park, onSave }: { park?: Park; onSave: (p: Park) => v
   );
 }
 
+interface ParkApplication {
+  id: number;
+  parkId: number;
+  vacancyId: number | null;
+  truckId: number;
+  vendorUserId: number;
+  status: string;
+  notes: string | null;
+  hostMessage: string | null;
+  createdAt: string;
+  truck: { id: number; name: string; cuisine: string; logoUrl: string | null } | null;
+  vacancy: { id: number; title: string } | null;
+}
+
+interface WaitlistEntry {
+  id: number;
+  parkId: number;
+  truckId: number;
+  vendorUserId: number;
+  status: string;
+  notes: string | null;
+  hostMessage: string | null;
+  createdAt: string;
+  truck: { id: number; name: string; cuisine: string; logoUrl: string | null } | null;
+}
+
 export default function ParkHostDashboard() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -304,6 +330,14 @@ export default function ParkHostDashboard() {
   const [addingVacancy, setAddingVacancy] = useState(false);
   const [editingVacancy, setEditingVacancy] = useState<Vacancy | null>(null);
 
+  const [applications, setApplications] = useState<ParkApplication[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  const [appFilter, setAppFilter] = useState<"all" | "pending" | "approved" | "declined">("all");
+  const [wlFilter, setWlFilter] = useState<"all" | "waiting" | "contacted" | "approved" | "declined">("all");
+  const [replyingAppId, setReplyingAppId] = useState<number | null>(null);
+  const [replyingWlId, setReplyingWlId] = useState<number | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+
   useEffect(() => {
     if (!isAuthenticated) return;
     const token = localStorage.getItem("token");
@@ -311,11 +345,63 @@ export default function ParkHostDashboard() {
       .then(async (r) => {
         if (r.status === 404) { setNotFound(true); setLoading(false); return; }
         if (!r.ok) throw new Error();
-        setPark(await r.json());
+        const p = await r.json();
+        setPark(p);
         setLoading(false);
+        fetchApplicationsAndWaitlist(p.id);
       })
       .catch(() => setLoading(false));
   }, [isAuthenticated]);
+
+  const fetchApplicationsAndWaitlist = (parkId: number) => {
+    const token = localStorage.getItem("token");
+    const headers = { Authorization: `Bearer ${token}` };
+    Promise.all([
+      fetch(getApiUrl(`/api/parks/${parkId}/applications`), { headers }).then(r => r.ok ? r.json() : []),
+      fetch(getApiUrl(`/api/parks/${parkId}/waitlist-entries`), { headers }).then(r => r.ok ? r.json() : []),
+    ]).then(([apps, wl]) => {
+      setApplications(Array.isArray(apps) ? apps : []);
+      setWaitlist(Array.isArray(wl) ? wl : []);
+    }).catch(() => {});
+  };
+
+  const handleUpdateApplication = async (id: number, status: string, hostMessage?: string) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(getApiUrl(`/api/park-applications/${id}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status, hostMessage }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setApplications(apps => apps.map(a => a.id === id ? { ...a, ...updated } : a));
+      setReplyingAppId(null);
+      setReplyMessage("");
+      toast({ title: `Application ${status}` });
+    } catch {
+      toast({ title: "Failed to update application", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateWaitlist = async (id: number, status: string, hostMessage?: string) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(getApiUrl(`/api/park-waitlist/${id}`), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status, hostMessage }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setWaitlist(wl => wl.map(w => w.id === id ? { ...w, ...updated } : w));
+      setReplyingWlId(null);
+      setReplyMessage("");
+      toast({ title: `Waitlist entry updated` });
+    } catch {
+      toast({ title: "Failed to update waitlist entry", variant: "destructive" });
+    }
+  };
 
   if (!isAuthenticated || (user && user.role !== "park_host" && user.role !== "admin")) {
     return (
@@ -358,13 +444,29 @@ export default function ParkHostDashboard() {
 
   const activeVacancies = park?.vacancies.filter((v) => v.isActive) ?? [];
   const totalOpenSpots = activeVacancies.reduce((s, v) => s + v.spotsAvailable, 0);
+  const pendingApps = applications.filter(a => a.status === "pending");
+  const filteredApps = appFilter === "all" ? applications : applications.filter(a => a.status === appFilter);
+  const filteredWl = wlFilter === "all" ? waitlist : waitlist.filter(w => w.status === wlFilter);
+
+  const APP_STATUS = {
+    pending:  { color: "bg-amber-100 text-amber-700",  label: "Pending",   icon: <Clock className="w-3.5 h-3.5" /> },
+    approved: { color: "bg-green-100 text-green-700",  label: "Approved",  icon: <CheckCircle className="w-3.5 h-3.5" /> },
+    declined: { color: "bg-muted text-muted-foreground", label: "Declined", icon: <XCircle className="w-3.5 h-3.5" /> },
+  } as Record<string, { color: string; label: string; icon: React.ReactNode }>;
+
+  const WL_STATUS = {
+    waiting:   { color: "bg-blue-100 text-blue-700",      label: "Waiting",   icon: <Clock className="w-3.5 h-3.5" /> },
+    contacted: { color: "bg-violet-100 text-violet-700",  label: "Contacted", icon: <MessageSquare className="w-3.5 h-3.5" /> },
+    approved:  { color: "bg-green-100 text-green-700",    label: "Approved",  icon: <CheckCircle className="w-3.5 h-3.5" /> },
+    declined:  { color: "bg-muted text-muted-foreground", label: "Declined",  icon: <XCircle className="w-3.5 h-3.5" /> },
+  } as Record<string, { color: string; label: string; icon: React.ReactNode }>;
 
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8">
           <h1 className="text-3xl font-display font-bold text-foreground">Park Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Manage your truck park profile and vacancy listings.</p>
+          <p className="text-muted-foreground mt-1">Manage your truck park profile, vacancies, and applications.</p>
         </div>
 
         {loading ? (
@@ -387,7 +489,7 @@ export default function ParkHostDashboard() {
         ) : (
           <div className="space-y-6">
             {/* Stats */}
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-4 gap-4">
               <div className="bg-card border border-border rounded-2xl p-5 text-center">
                 <p className="text-3xl font-bold text-foreground">{totalOpenSpots}</p>
                 <p className="text-sm text-muted-foreground mt-1">Open spots</p>
@@ -396,9 +498,13 @@ export default function ParkHostDashboard() {
                 <p className="text-3xl font-bold text-foreground">{activeVacancies.length}</p>
                 <p className="text-sm text-muted-foreground mt-1">Active listings</p>
               </div>
+              <div className={`bg-card border rounded-2xl p-5 text-center ${pendingApps.length > 0 ? "border-amber-200 bg-amber-50" : "border-border"}`}>
+                <p className={`text-3xl font-bold ${pendingApps.length > 0 ? "text-amber-600" : "text-foreground"}`}>{pendingApps.length}</p>
+                <p className="text-sm text-muted-foreground mt-1">Pending apps</p>
+              </div>
               <div className="bg-card border border-border rounded-2xl p-5 text-center">
-                <p className="text-3xl font-bold text-foreground">{park.maxTrucks ?? "—"}</p>
-                <p className="text-sm text-muted-foreground mt-1">Max capacity</p>
+                <p className="text-3xl font-bold text-foreground">{waitlist.filter(w => w.status === "waiting").length}</p>
+                <p className="text-sm text-muted-foreground mt-1">On waitlist</p>
               </div>
             </div>
 
@@ -518,6 +624,176 @@ export default function ParkHostDashboard() {
                 )}
               </div>
             </div>
+
+            {/* Applications */}
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="w-5 h-5 text-primary" />
+                  <h2 className="font-semibold text-foreground">Spot Applications</h2>
+                  {pendingApps.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">{pendingApps.length} new</span>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  {(["all", "pending", "approved", "declined"] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setAppFilter(f)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors capitalize ${appFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="divide-y divide-border">
+                {filteredApps.length === 0 ? (
+                  <div className="p-10 text-center">
+                    <ClipboardList className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No {appFilter === "all" ? "" : appFilter} applications yet.</p>
+                  </div>
+                ) : filteredApps.map(app => {
+                  const statusInfo = APP_STATUS[app.status] ?? APP_STATUS.pending;
+                  return (
+                    <div key={app.id} className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                          {app.truck?.logoUrl
+                            ? <img src={app.truck.logoUrl} alt={app.truck.name} className="w-full h-full object-cover" />
+                            : <Truck className="w-5 h-5 text-muted-foreground" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-foreground text-sm">{app.truck?.name ?? "Unknown Truck"}</p>
+                            {app.truck?.cuisine && <span className="text-xs text-muted-foreground">· {app.truck.cuisine}</span>}
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                              {statusInfo.icon}{statusInfo.label}
+                            </span>
+                          </div>
+                          {app.vacancy && <p className="text-xs text-muted-foreground mt-0.5">For: {app.vacancy.title}</p>}
+                          {app.notes && <p className="text-xs text-muted-foreground mt-1.5 bg-muted/50 rounded-lg px-3 py-2 italic">"{app.notes}"</p>}
+                          {app.hostMessage && app.status !== "pending" && (
+                            <p className="text-xs text-muted-foreground mt-1.5 bg-muted/50 rounded-lg px-3 py-2">Your reply: {app.hostMessage}</p>
+                          )}
+                          {app.status === "pending" && (
+                            <div className="mt-3">
+                              {replyingAppId === app.id ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={replyMessage}
+                                    onChange={e => setReplyMessage(e.target.value)}
+                                    placeholder="Optional message to the vendor..."
+                                    rows={2}
+                                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button onClick={() => handleUpdateApplication(app.id, "approved", replyMessage || undefined)} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">Approve</button>
+                                    <button onClick={() => handleUpdateApplication(app.id, "declined", replyMessage || undefined)} className="px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition-colors">Decline</button>
+                                    <button onClick={() => { setReplyingAppId(null); setReplyMessage(""); }} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors">Cancel</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <button onClick={() => { setReplyingAppId(app.id); setReplyMessage(""); }} className="px-3 py-1.5 rounded-lg bg-green-100 text-green-700 text-xs font-semibold hover:bg-green-200 transition-colors flex items-center gap-1"><CheckCircle className="w-3 h-3" />Review</button>
+                                  <button onClick={() => handleUpdateApplication(app.id, "declined")} className="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-semibold hover:bg-red-100 transition-colors flex items-center gap-1"><XCircle className="w-3 h-3" />Decline</button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground shrink-0">{new Date(app.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Waitlist */}
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <LayoutList className="w-5 h-5 text-primary" />
+                  <h2 className="font-semibold text-foreground">Waitlist</h2>
+                  <span className="text-xs text-muted-foreground">{waitlist.filter(w => w.status === "waiting").length} waiting</span>
+                </div>
+                <div className="flex gap-1">
+                  {(["all", "waiting", "contacted", "approved", "declined"] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setWlFilter(f)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors capitalize ${wlFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="divide-y divide-border">
+                {filteredWl.length === 0 ? (
+                  <div className="p-10 text-center">
+                    <LayoutList className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Nobody on the {wlFilter === "all" ? "" : wlFilter} waitlist yet.</p>
+                  </div>
+                ) : filteredWl.map(entry => {
+                  const statusInfo = WL_STATUS[entry.status] ?? WL_STATUS.waiting;
+                  return (
+                    <div key={entry.id} className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                          {entry.truck?.logoUrl
+                            ? <img src={entry.truck.logoUrl} alt={entry.truck.name} className="w-full h-full object-cover" />
+                            : <Truck className="w-5 h-5 text-muted-foreground" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-foreground text-sm">{entry.truck?.name ?? "Unknown Truck"}</p>
+                            {entry.truck?.cuisine && <span className="text-xs text-muted-foreground">· {entry.truck.cuisine}</span>}
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                              {statusInfo.icon}{statusInfo.label}
+                            </span>
+                          </div>
+                          {entry.notes && <p className="text-xs text-muted-foreground mt-1.5 bg-muted/50 rounded-lg px-3 py-2 italic">"{entry.notes}"</p>}
+                          {entry.hostMessage && (
+                            <p className="text-xs text-muted-foreground mt-1.5 bg-muted/50 rounded-lg px-3 py-2">Your note: {entry.hostMessage}</p>
+                          )}
+                          {(entry.status === "waiting" || entry.status === "contacted") && (
+                            <div className="mt-3">
+                              {replyingWlId === entry.id ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    value={replyMessage}
+                                    onChange={e => setReplyMessage(e.target.value)}
+                                    placeholder="Message to the vendor (optional)..."
+                                    rows={2}
+                                    className="w-full px-3 py-2 rounded-xl border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                                  />
+                                  <div className="flex gap-2 flex-wrap">
+                                    <button onClick={() => handleUpdateWaitlist(entry.id, "contacted", replyMessage || undefined)} className="px-3 py-1.5 rounded-lg bg-violet-100 text-violet-700 text-xs font-semibold hover:bg-violet-200 transition-colors">Mark Contacted</button>
+                                    <button onClick={() => handleUpdateWaitlist(entry.id, "approved", replyMessage || undefined)} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">Approve</button>
+                                    <button onClick={() => handleUpdateWaitlist(entry.id, "declined", replyMessage || undefined)} className="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-semibold hover:bg-red-100 transition-colors">Decline</button>
+                                    <button onClick={() => { setReplyingWlId(null); setReplyMessage(""); }} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors">Cancel</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button onClick={() => { setReplyingWlId(entry.id); setReplyMessage(""); }} className="px-3 py-1.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors flex items-center gap-1">
+                                  <MessageSquare className="w-3 h-3" />Update Status
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground shrink-0">{new Date(entry.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
           </div>
         )}
       </div>

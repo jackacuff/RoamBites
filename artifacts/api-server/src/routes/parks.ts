@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, truckParksTable, parkVacanciesTable, usersTable, trucksTable } from "@workspace/db";
-import { eq, and, desc, gte, isNull, or } from "drizzle-orm";
+import { db, truckParksTable, parkVacanciesTable, usersTable, trucksTable, parkSpotApplicationsTable, parkWaitlistEntriesTable } from "@workspace/db";
+import { eq, and, desc, gte, isNull, or, inArray } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
 
 const router = Router();
@@ -409,6 +409,255 @@ router.delete("/vacancies/:id", requireAuth, requireRole("park_host", "admin"), 
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete vacancy" });
+  }
+});
+
+// ── Vendor: apply for a park spot ────────────────────────────────────────
+router.post("/parks/:id/apply", requireAuth, requireRole("vendor", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const parkId = parseInt(req.params.id);
+    if (isNaN(parkId)) return res.status(400).json({ error: "Invalid park id" });
+
+    const [park] = await db.select().from(truckParksTable).where(and(eq(truckParksTable.id, parkId), eq(truckParksTable.isActive, true)));
+    if (!park) return res.status(404).json({ error: "Park not found" });
+
+    const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.vendorUserId, user.id));
+    if (!truck) return res.status(400).json({ error: "No truck found for this vendor" });
+
+    const existing = await db.select().from(parkSpotApplicationsTable).where(
+      and(
+        eq(parkSpotApplicationsTable.parkId, parkId),
+        eq(parkSpotApplicationsTable.truckId, truck.id),
+        inArray(parkSpotApplicationsTable.status, ["pending", "approved"])
+      )
+    );
+    if (existing.length > 0) return res.status(409).json({ error: "You already have an active application for this park" });
+
+    const { vacancyId, notes } = req.body;
+
+    const [application] = await db.insert(parkSpotApplicationsTable).values({
+      parkId,
+      vacancyId: vacancyId ? parseInt(vacancyId) : null,
+      truckId: truck.id,
+      vendorUserId: user.id,
+      status: "pending",
+      notes: notes?.trim() ?? null,
+    }).returning();
+
+    res.status(201).json({ ...application, truck: { id: truck.id, name: truck.name }, park: { id: park.id, name: park.name } });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to submit application" });
+  }
+});
+
+// ── Vendor: join park waitlist ────────────────────────────────────────────
+router.post("/parks/:id/waitlist", requireAuth, requireRole("vendor", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const parkId = parseInt(req.params.id);
+    if (isNaN(parkId)) return res.status(400).json({ error: "Invalid park id" });
+
+    const [park] = await db.select().from(truckParksTable).where(and(eq(truckParksTable.id, parkId), eq(truckParksTable.isActive, true)));
+    if (!park) return res.status(404).json({ error: "Park not found" });
+
+    const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.vendorUserId, user.id));
+    if (!truck) return res.status(400).json({ error: "No truck found for this vendor" });
+
+    const existing = await db.select().from(parkWaitlistEntriesTable).where(
+      and(
+        eq(parkWaitlistEntriesTable.parkId, parkId),
+        eq(parkWaitlistEntriesTable.truckId, truck.id),
+        inArray(parkWaitlistEntriesTable.status, ["waiting", "contacted"])
+      )
+    );
+    if (existing.length > 0) return res.status(409).json({ error: "You are already on the waitlist for this park" });
+
+    const { notes } = req.body;
+
+    const [entry] = await db.insert(parkWaitlistEntriesTable).values({
+      parkId,
+      truckId: truck.id,
+      vendorUserId: user.id,
+      status: "waiting",
+      notes: notes?.trim() ?? null,
+    }).returning();
+
+    res.status(201).json({ ...entry, truck: { id: truck.id, name: truck.name }, park: { id: park.id, name: park.name } });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to join waitlist" });
+  }
+});
+
+// ── Vendor: get my park applications + waitlist entries ───────────────────
+router.get("/vendor/park-applications", requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+
+    const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.vendorUserId, user.id));
+    if (!truck) return res.json({ applications: [], waitlist: [] });
+
+    const applications = await db.select().from(parkSpotApplicationsTable)
+      .where(eq(parkSpotApplicationsTable.truckId, truck.id))
+      .orderBy(desc(parkSpotApplicationsTable.createdAt));
+
+    const waitlist = await db.select().from(parkWaitlistEntriesTable)
+      .where(eq(parkWaitlistEntriesTable.truckId, truck.id))
+      .orderBy(desc(parkWaitlistEntriesTable.createdAt));
+
+    const parkIds = [...new Set([
+      ...applications.map(a => a.parkId),
+      ...waitlist.map(w => w.parkId),
+    ])];
+
+    let parks: any[] = [];
+    if (parkIds.length > 0) {
+      parks = await db.select({ id: truckParksTable.id, name: truckParksTable.name, city: truckParksTable.city, address: truckParksTable.address })
+        .from(truckParksTable).where(inArray(truckParksTable.id, parkIds));
+    }
+    const parkMap = new Map(parks.map(p => [p.id, p]));
+
+    const vacancyIds = applications.map(a => a.vacancyId).filter(Boolean) as number[];
+    let vacancies: any[] = [];
+    if (vacancyIds.length > 0) {
+      vacancies = await db.select().from(parkVacanciesTable).where(inArray(parkVacanciesTable.id, vacancyIds));
+    }
+    const vacancyMap = new Map(vacancies.map(v => [v.id, v]));
+
+    res.json({
+      applications: applications.map(a => ({
+        ...a,
+        park: parkMap.get(a.parkId) ?? null,
+        vacancy: a.vacancyId ? vacancyMap.get(a.vacancyId) ?? null : null,
+      })),
+      waitlist: waitlist.map(w => ({
+        ...w,
+        park: parkMap.get(w.parkId) ?? null,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch applications" });
+  }
+});
+
+// ── Park host: get applications for my park ───────────────────────────────
+router.get("/parks/:id/applications", requireAuth, requireRole("park_host", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const parkId = parseInt(req.params.id);
+    if (isNaN(parkId)) return res.status(400).json({ error: "Invalid park id" });
+
+    const [park] = await db.select().from(truckParksTable).where(eq(truckParksTable.id, parkId));
+    if (!park) return res.status(404).json({ error: "Park not found" });
+    if (user.role !== "admin" && park.hostUserId !== user.id) return res.status(403).json({ error: "Forbidden" });
+
+    const applications = await db.select().from(parkSpotApplicationsTable)
+      .where(eq(parkSpotApplicationsTable.parkId, parkId))
+      .orderBy(desc(parkSpotApplicationsTable.createdAt));
+
+    const truckIds = [...new Set(applications.map(a => a.truckId))];
+    let trucks: any[] = [];
+    if (truckIds.length > 0) {
+      trucks = await db.select({ id: trucksTable.id, name: trucksTable.name, cuisine: trucksTable.cuisine, logoUrl: trucksTable.logoUrl })
+        .from(trucksTable).where(inArray(trucksTable.id, truckIds));
+    }
+    const truckMap = new Map(trucks.map(t => [t.id, t]));
+
+    const vacancyIds = applications.map(a => a.vacancyId).filter(Boolean) as number[];
+    let vacancies: any[] = [];
+    if (vacancyIds.length > 0) {
+      vacancies = await db.select().from(parkVacanciesTable).where(inArray(parkVacanciesTable.id, vacancyIds));
+    }
+    const vacancyMap = new Map(vacancies.map(v => [v.id, v]));
+
+    res.json(applications.map(a => ({
+      ...a,
+      truck: truckMap.get(a.truckId) ?? null,
+      vacancy: a.vacancyId ? vacancyMap.get(a.vacancyId) ?? null : null,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch applications" });
+  }
+});
+
+// ── Park host: update application ────────────────────────────────────────
+router.put("/park-applications/:id", requireAuth, requireRole("park_host", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+
+    const [application] = await db.select().from(parkSpotApplicationsTable).where(eq(parkSpotApplicationsTable.id, id));
+    if (!application) return res.status(404).json({ error: "Application not found" });
+
+    const [park] = await db.select().from(truckParksTable).where(eq(truckParksTable.id, application.parkId));
+    if (!park) return res.status(404).json({ error: "Park not found" });
+    if (user.role !== "admin" && park.hostUserId !== user.id) return res.status(403).json({ error: "Forbidden" });
+
+    const { status, hostMessage } = req.body;
+    const updates: any = { updatedAt: new Date() };
+    if (status) updates.status = status;
+    if (hostMessage !== undefined) updates.hostMessage = hostMessage;
+
+    const [updated] = await db.update(parkSpotApplicationsTable).set(updates).where(eq(parkSpotApplicationsTable.id, id)).returning();
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update application" });
+  }
+});
+
+// ── Park host: get waitlist for my park ──────────────────────────────────
+router.get("/parks/:id/waitlist-entries", requireAuth, requireRole("park_host", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const parkId = parseInt(req.params.id);
+    if (isNaN(parkId)) return res.status(400).json({ error: "Invalid park id" });
+
+    const [park] = await db.select().from(truckParksTable).where(eq(truckParksTable.id, parkId));
+    if (!park) return res.status(404).json({ error: "Park not found" });
+    if (user.role !== "admin" && park.hostUserId !== user.id) return res.status(403).json({ error: "Forbidden" });
+
+    const entries = await db.select().from(parkWaitlistEntriesTable)
+      .where(eq(parkWaitlistEntriesTable.parkId, parkId))
+      .orderBy(desc(parkWaitlistEntriesTable.createdAt));
+
+    const truckIds = [...new Set(entries.map(e => e.truckId))];
+    let trucks: any[] = [];
+    if (truckIds.length > 0) {
+      trucks = await db.select({ id: trucksTable.id, name: trucksTable.name, cuisine: trucksTable.cuisine, logoUrl: trucksTable.logoUrl })
+        .from(trucksTable).where(inArray(trucksTable.id, truckIds));
+    }
+    const truckMap = new Map(trucks.map(t => [t.id, t]));
+
+    res.json(entries.map(e => ({ ...e, truck: truckMap.get(e.truckId) ?? null })));
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch waitlist" });
+  }
+});
+
+// ── Park host: update waitlist entry ─────────────────────────────────────
+router.put("/park-waitlist/:id", requireAuth, requireRole("park_host", "admin"), async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+
+    const [entry] = await db.select().from(parkWaitlistEntriesTable).where(eq(parkWaitlistEntriesTable.id, id));
+    if (!entry) return res.status(404).json({ error: "Waitlist entry not found" });
+
+    const [park] = await db.select().from(truckParksTable).where(eq(truckParksTable.id, entry.parkId));
+    if (!park) return res.status(404).json({ error: "Park not found" });
+    if (user.role !== "admin" && park.hostUserId !== user.id) return res.status(403).json({ error: "Forbidden" });
+
+    const { status, hostMessage } = req.body;
+    const updates: any = { updatedAt: new Date() };
+    if (status) updates.status = status;
+    if (hostMessage !== undefined) updates.hostMessage = hostMessage;
+
+    const [updated] = await db.update(parkWaitlistEntriesTable).set(updates).where(eq(parkWaitlistEntriesTable.id, id)).returning();
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update waitlist entry" });
   }
 });
 

@@ -198,12 +198,36 @@ Vendor Pro feature at `/vendor/marketing`. Backed by `GET/POST /api/vendor/marke
 - **T009** — Customer → Organizer upgrade: Profile page now shows "Host an Event" CTA for customer role. Clicking opens an upgrade modal listing benefits; confirm button calls `POST /api/auth/upgrade-to-organizer` and redirects to /organizer on success.
 - **T010** — Multi-photo upload in OrganizerNewEvent: Photo upload section added below banner image; supports multiple files. First photo auto-selected as thumbnail. `photoUrls` stored as JSON array in events table; `thumbnailUrl` set from first photo.
 
+## Park Spot Marketplace
+
+Full apply/waitlist workflow for truck parks.
+
+### New DB Tables (`lib/db/src/schema/parkApplications.ts`)
+- `park_spot_applications` — vendor applications for specific park vacancies; status: pending/approved/declined
+- `park_waitlist_entries` — vendor waitlist entries when parks are full; status: waiting/contacted/approved/declined
+
+### API Routes (`artifacts/api-server/src/routes/parks.ts`)
+- `POST /api/parks/:id/apply` — vendor applies for a spot (checks for existing active application)
+- `POST /api/parks/:id/waitlist` — vendor joins park waitlist (checks for existing active entry)
+- `GET /api/vendor/park-applications` — vendor views all their own applications + waitlist entries
+- `GET /api/parks/:id/applications` — park host views all applications (with truck + vacancy details)
+- `PUT /api/park-applications/:id` — host approves/declines app, optional hostMessage
+- `GET /api/parks/:id/waitlist-entries` — park host views waitlist
+- `PUT /api/park-waitlist/:id` — host updates waitlist entry status (waiting/contacted/approved/declined)
+
+### Frontend (`artifacts/food-truck-tracker/src/`)
+- `ParkDetail.tsx` — vendor-aware CTA banner: "Apply for a Spot" (when vacancies available) or "Join Waitlist" (when full); shows current application/waitlist status with inline badge; modal form with optional notes + vacancy selector; unauthenticated users see "Sign In" prompt
+- `ParkHostDashboard.tsx` — new "Spot Applications" and "Waitlist" sections with filter tabs, approve/decline actions, inline reply form with optional hostMessage; stats row expanded to 4 cards including pending app count
+- `VendorEventSpots.tsx` — "My Applications" tab now shows three sections: Event Spot Applications, Park Spot Applications, Waitlists; badge count includes all three
+
 ## Database Schema
 
-Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`, `plans`, `vendorSubscriptions`
+Tables: `users`, `trucks`, `menuItems`, `scheduleEntries`, `events`, `eventTrucks`, `reviews`, `favorites`, `notificationPreferences`, `reservationRequests`, `truckMedia`, `plans`, `vendorSubscriptions`, `truckParks`, `parkVacancies`, `parkSpotApplications`, `parkWaitlistEntries`
 
 Key schema additions:
 - `plans.isRecommended` (boolean, default false) — marks plan for "Most Popular" badge on pricing page
+- `parkSpotApplications` — vendor park spot applications
+- `parkWaitlistEntries` — vendor park waitlist entries
 
 Truck fields include `logoUrl`, `coverImageUrl` (updated automatically when media is attached).
 Truck status logic (open/closing_soon/opening_later/closed) computed in `artifacts/api-server/src/lib/truckStatus.ts`.
