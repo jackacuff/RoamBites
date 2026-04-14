@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable, messagesTable } from "@workspace/db";
+import { db, eventsTable, eventTrucksTable, trucksTable, scheduleEntriesTable, messagesTable, eventDaysTable, eventSpotsTable } from "@workspace/db";
 import { eq, and, gt, inArray } from "drizzle-orm";
 import { InviteTruckToEventBody, RespondToEventInviteBody } from "@workspace/api-zod";
 import { requireRole, requireAuth, optionalAuth } from "../lib/auth";
@@ -39,10 +39,30 @@ const EventWriteSchema = z.object({
   additionalInfo: z.string().nullish(),
 });
 
+const EventDaySchema = z.object({
+  date: z.string().min(1),
+  startTime: z.string().min(1),
+  endTime: z.string().min(1),
+  label: z.string().optional(),
+});
+
+const EventSpotInputSchema = z.object({
+  name: z.string().min(1).optional(),
+  totalSlots: z.number().int().min(1),
+  priceInCents: z.number().int().min(0),
+  isInstantBook: z.boolean().optional(),
+  requirements: z.string().optional(),
+  vendorRules: z.string().optional(),
+});
+
 const CreateEventSchema = EventWriteSchema.extend({
   name: z.string().min(1),
   venueName: z.string().min(1),
   city: z.string().min(1),
+  startDateTime: z.coerce.date().optional(),
+  endDateTime: z.coerce.date().optional(),
+  days: z.array(EventDaySchema).optional(),
+  spot: EventSpotInputSchema.optional(),
 });
 
 const UpdateEventSchema = EventWriteSchema.partial();
@@ -160,6 +180,11 @@ router.get("/events/:id", optionalAuth, async (req, res): Promise<void> => {
     );
   }
 
+  // Fetch event days
+  const days = await db.select().from(eventDaysTable)
+    .where(eq(eventDaysTable.eventId, event.id))
+    .orderBy(eventDaysTable.sortOrder);
+
   res.json({
     id: event.id,
     name: event.name,
@@ -180,6 +205,7 @@ router.get("/events/:id", optionalAuth, async (req, res): Promise<void> => {
     organizerUserId: event.organizerUserId,
     createdAt: event.createdAt,
     trucks,
+    days,
   });
 });
 
@@ -191,6 +217,23 @@ router.post("/events", requireRole("organizer", "admin"), async (req, res): Prom
   }
   const userId = (req as any).user.id;
   const data = parsed.data;
+  const { days, spot, ...eventData } = data;
+
+  // Derive startDateTime / endDateTime from days if provided
+  let startDateTime: Date;
+  let endDateTime: Date;
+  if (days && days.length > 0) {
+    const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
+    startDateTime = new Date(`${sorted[0].date}T${sorted[0].startTime}:00`);
+    endDateTime = new Date(`${sorted[sorted.length - 1].date}T${sorted[sorted.length - 1].endTime}:00`);
+  } else if (eventData.startDateTime && eventData.endDateTime) {
+    startDateTime = new Date(eventData.startDateTime);
+    endDateTime = new Date(eventData.endDateTime);
+  } else {
+    res.status(400).json({ error: "Either days or startDateTime+endDateTime is required" });
+    return;
+  }
+
   const baseSlug = slugify(data.name);
   let slug = baseSlug;
   let counter = 1;
@@ -203,17 +246,48 @@ router.post("/events", requireRole("organizer", "admin"), async (req, res): Prom
   const [event] = await db
     .insert(eventsTable)
     .values({
-      ...data,
+      ...eventData,
       organizerUserId: userId,
       slug,
-      startDateTime: new Date(data.startDateTime),
-      endDateTime: new Date(data.endDateTime),
-      latitude: data.latitude ?? null,
-      longitude: data.longitude ?? null,
+      startDateTime,
+      endDateTime,
+      latitude: eventData.latitude ?? null,
+      longitude: eventData.longitude ?? null,
     })
     .returning();
 
-  res.status(201).json({ ...event, trucks: [] });
+  // Insert event days if provided
+  let insertedDays: any[] = [];
+  if (days && days.length > 0) {
+    insertedDays = await db.insert(eventDaysTable).values(
+      days.map((d, i) => ({
+        eventId: event.id,
+        date: d.date,
+        startTime: d.startTime,
+        endTime: d.endTime,
+        label: d.label ?? `Day ${i + 1}`,
+        sortOrder: i,
+      }))
+    ).returning();
+  }
+
+  // Insert event spot if provided
+  let insertedSpot: any = null;
+  if (spot) {
+    const [s] = await db.insert(eventSpotsTable).values({
+      eventId: event.id,
+      name: spot.name ?? "Vendor Spot",
+      totalSlots: spot.totalSlots,
+      priceInCents: spot.priceInCents,
+      isInstantBook: spot.isInstantBook ?? false,
+      requirements: spot.requirements ?? null,
+      vendorRules: spot.vendorRules ?? null,
+      isActive: true,
+    }).returning();
+    insertedSpot = s;
+  }
+
+  res.status(201).json({ ...event, trucks: [], days: insertedDays, spot: insertedSpot });
 });
 
 router.put("/events/:id", requireRole("organizer", "admin"), async (req, res): Promise<void> => {

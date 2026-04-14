@@ -1,0 +1,206 @@
+Create a new multi-step “Create New Event” workflow for Event Organizers in RoamBites that captures all required event and food truck spot information before an event can be published.
+
+GOAL
+The current Create New Event flow needs to be improved so organizers are guided through all required setup details in a clean, easy-to-use way, even if that means multiple screens/steps.
+
+The workflow should make sure event organizers provide everything needed for:
+- event details
+- food truck spot setup
+- pricing
+- schedule by day
+- requirements
+
+This should feel simple and structured, not overwhelming.
+
+--------------------------------------------------
+1. REBUILD CREATE NEW EVENT AS A MULTI-STEP FLOW
+--------------------------------------------------
+
+Convert “Create New Event” into a guided multi-step workflow.
+
+Suggested high-level steps:
+
+1. Basic Event Info
+2. Event Schedule
+3. Food Truck Spots
+4. Requirements / Vendor Info
+5. Review & Publish
+
+You do not have to use these exact labels, but the workflow should be clearly broken into steps.
+
+Requirements:
+- show progress indicator
+- allow back/next navigation
+- save entered info as user progresses
+- do not allow publishing until required steps are completed
+
+--------------------------------------------------
+2. BASIC EVENT INFO STEP
+--------------------------------------------------
+
+Collect standard event info such as:
+- event name
+- event description
+- venue/location
+- city
+- address
+- event image(s) if already supported
+- public/private
+- any other existing core fields
+
+Keep this clean and easy.
+
+--------------------------------------------------
+3. EVENT SCHEDULE STEP (IMPORTANT)
+--------------------------------------------------
+
+The organizer must be able to define the schedule by day.
+
+This must support:
+- 1-day event
+- multi-day event (example: 2-day, 3-day, 4-day, etc.)
+
+For each day, the organizer should be able to specify:
+- date
+- start time
+- end time
+
+Important:
+- each day may have different start/end times
+- do NOT assume the same hours for all days
+
+Example:
+- Friday: 4 PM – 10 PM
+- Saturday: 11 AM – 10 PM
+- Sunday: 12 PM – 6 PM
+
+UI requirements:
+- make this very easy to use
+- allow organizer to add/remove event days
+- use a clean repeated day-entry interface
+- clearly label each event day
+- avoid a confusing or cluttered layout
+
+Optional but helpful:
+- default to one day
+- allow “Add Another Day” button
+- allow copying a previous day’s hours and then editing
+
+--------------------------------------------------
+4. FOOD TRUCK SPOTS STEP (HIGH PRIORITY)
+--------------------------------------------------
+
+The organizer must be required to define food truck spot details before publishing.
+
+Collect at minimum:
+- number of available food truck spots
+- price per spot
+- whether spots are:
+  - application-based
+  - reserve instantly
+- whether waitlist is enabled if full
+- any spot-specific notes if relevant
+
+Optional but recommended:
+- max number of trucks allowed
+- whether spots are free or paid
+- whether the organizer approves vendors manually
+
+This step should make it impossible to publish an event without defining the truck spot setup.
+
+--------------------------------------------------
+5. REQUIREMENTS / VENDOR INFO STEP
+--------------------------------------------------
+
+Allow organizer to define:
+- vendor requirements
+- special instructions
+- insurance/permit expectations if needed
+- acknowledgement requirement if supported
+
+This should connect to the vendor application flow.
+
+--------------------------------------------------
+6. REVIEW & PUBLISH STEP
+--------------------------------------------------
+
+Before publishing, show a clear review screen summarizing:
+
+- event name
+- location
+- each event day with times
+- number of truck spots
+- spot price
+- application/reservation setup
+- vendor requirements
+
+This should give the organizer confidence that everything is correct before publishing.
+
+Add:
+- Publish Event button
+- ability to go back and edit prior sections
+
+--------------------------------------------------
+7. VALIDATION RULES
+--------------------------------------------------
+
+Do not allow event publishing unless the organizer has completed all required event setup.
+
+At minimum, publishing should require:
+- event name
+- location
+- at least one day with valid start/end time
+- number of truck spots
+- spot pricing / fee setup
+- any required vendor flow settings
+
+Show clear validation messages if anything is missing.
+
+--------------------------------------------------
+8. UX REQUIREMENTS
+--------------------------------------------------
+
+The whole flow should feel:
+- structured
+- easy to understand
+- mobile-friendly
+- not overwhelming
+
+Important:
+- even though this may be multi-step, it should feel easier than one giant form
+- keep fields grouped logically
+- maintain clean spacing and hierarchy
+
+--------------------------------------------------
+9. BACKEND / DATA REQUIREMENTS
+--------------------------------------------------
+
+Ensure the backend supports:
+- multi-day event schedules
+- different start/end times by day
+- structured truck spot setup
+- publish gating based on required fields
+
+If current event model is too limited, update it appropriately.
+
+--------------------------------------------------
+10. IMPORTANT
+--------------------------------------------------
+
+This is not just a visual change.
+The event creation workflow should ensure all required information is actually collected and stored correctly before publishing.
+
+The final workflow should make sense for:
+- a 1-day event
+- a multi-day event
+- paid or free food truck spots
+- application-based or reserve-now events
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of the new Create New Event workflow
+2. The steps/screens included
+3. What fields are now required before publishing
+4. Any backend/data model changes made to support multi-day scheduling and truck spots
