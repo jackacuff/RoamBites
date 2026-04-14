@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { CalendarCheck, MapPin, DollarSign, Loader2, ArrowLeft, CheckCircle, Clock, XCircle, Ticket, Map, List, Wifi, Zap, Droplets, Users, Phone, Globe, ChevronRight, Layers, CreditCard } from "lucide-react";
+import { CalendarCheck, MapPin, DollarSign, Loader2, ArrowLeft, CheckCircle, Clock, XCircle, Ticket, Map, List, Wifi, Zap, Droplets, Users, Phone, Globe, ChevronRight, Layers, CreditCard, ClipboardList, LayoutList } from "lucide-react";
 import { Link } from "wouter";
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -316,12 +316,27 @@ export default function SpotMarketplace() {
   const [payLoading, setPayLoading] = useState<number | null>(null);
   const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
 
+  // Park applications state
+  const [myParkApplications, setMyParkApplications] = useState<any[]>([]);
+  const [myParkWaitlist, setMyParkWaitlist] = useState<any[]>([]);
+
+  const loadParkApplications = () => {
+    fetch(getApiUrl("/api/vendor/park-applications"), { headers: authHeaders() })
+      .then(r => r.json())
+      .then(d => {
+        if (d.applications) setMyParkApplications(d.applications);
+        if (d.waitlist) setMyParkWaitlist(d.waitlist);
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetch(getApiUrl("/api/events"), { headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d)) setEvents(d.filter((e) => new Date(e.endDateTime) > new Date())); })
       .catch(() => {});
     loadMyReservations();
+    loadParkApplications();
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("payment") === "success") {
@@ -397,11 +412,20 @@ export default function SpotMarketplace() {
     myReservations.filter((r) => r.status !== "rejected" && r.status !== "cancelled").map((r) => r.spotId)
   );
   const pendingCount = myReservations.filter((r) => r.status === "pending").length;
+  const totalApplications = myReservations.length + myParkApplications.length + myParkWaitlist.length;
+
+  const PARK_APP_STATUS: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
+    pending:  { color: "bg-amber-100 text-amber-700",  label: "Pending",  icon: <Clock className="w-3.5 h-3.5" /> },
+    approved: { color: "bg-green-100 text-green-700",  label: "Approved", icon: <CheckCircle className="w-3.5 h-3.5" /> },
+    declined: { color: "bg-muted text-muted-foreground", label: "Declined", icon: <XCircle className="w-3.5 h-3.5" /> },
+    waiting:  { color: "bg-blue-100 text-blue-700",    label: "Waitlisted", icon: <LayoutList className="w-3.5 h-3.5" /> },
+    contacted:{ color: "bg-violet-100 text-violet-700", label: "Contacted", icon: <CheckCircle className="w-3.5 h-3.5" /> },
+  };
 
   const TABS: { id: Tab; label: string; badge?: string }[] = [
     { id: "event-spots", label: "Event Spots" },
     { id: "truck-parks", label: "Truck Parks" },
-    { id: "my-applications", label: "My Applications", badge: myReservations.length > 0 ? `${myReservations.length}` : undefined },
+    { id: "my-applications", label: "My Applications", badge: totalApplications > 0 ? `${totalApplications}` : undefined },
   ];
 
   return (
@@ -541,65 +565,170 @@ export default function SpotMarketplace() {
 
         {/* ── My Applications ───────────────────────────────────────────── */}
         {tab === "my-applications" && (
-          <div>
-            {myReservations.length === 0 ? (
+          <div className="space-y-8">
+
+            {/* Event Spot Applications */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Ticket className="w-5 h-5 text-primary" />
+                <h2 className="font-semibold text-foreground">Event Spot Applications</h2>
+                {myReservations.length > 0 && <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">{myReservations.length}</span>}
+              </div>
+              {myReservations.length === 0 ? (
+                <div className="bg-muted/30 border border-dashed border-border rounded-2xl p-10 text-center">
+                  <Ticket className="w-8 h-8 mx-auto text-muted-foreground opacity-40 mb-2" />
+                  <p className="text-sm text-muted-foreground">No event applications yet. Browse events to apply.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {myReservations.map((r) => {
+                    const style = STATUS_STYLES[r.status] ?? STATUS_STYLES.pending;
+                    return (
+                      <div key={r.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div>
+                            <p className="font-semibold text-foreground">{r.event?.name || "Unknown Event"}</p>
+                            <p className="text-sm text-muted-foreground">{r.spot?.name || "Spot"}</p>
+                          </div>
+                          <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${style.color}`}>
+                            {style.icon}
+                            {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                          </span>
+                        </div>
+                        {r.event && (
+                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-2">
+                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{r.event.city}</span>
+                            <span className="flex items-center gap-1"><CalendarCheck className="w-3 h-3" />{format(new Date(r.event.startDateTime), "MMM d, yyyy")}</span>
+                            {r.paymentAmountInCents > 0 && (
+                              <span className={`flex items-center gap-1 font-medium ${r.paymentStatus === "paid" ? "text-green-600" : "text-amber-600"}`}>
+                                <DollarSign className="w-3 h-3" />
+                                ${(r.paymentAmountInCents / 100).toFixed(2)} — {r.paymentStatus === "paid" ? "Paid" : "Payment due"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {r.status === "approved" && r.paymentAmountInCents > 0 && r.paymentStatus !== "paid" && (
+                          <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+                            <p className="text-sm text-muted-foreground">
+                              Payment of <span className="font-semibold text-foreground">${(r.paymentAmountInCents / 100).toFixed(2)}</span> required to confirm your spot.
+                            </p>
+                            <button
+                              onClick={() => handlePayNow(r.id)}
+                              disabled={payLoading === r.id}
+                              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 shrink-0"
+                            >
+                              {payLoading === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                              Pay Now
+                            </button>
+                          </div>
+                        )}
+                        {r.organizerMessage && (
+                          <div className="bg-muted/50 rounded-xl p-3 mt-2">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Organizer message</p>
+                            <p className="text-sm text-foreground">{r.organizerMessage}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Park Spot Applications */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <ClipboardList className="w-5 h-5 text-primary" />
+                <h2 className="font-semibold text-foreground">Park Spot Applications</h2>
+                {myParkApplications.length > 0 && <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">{myParkApplications.length}</span>}
+              </div>
+              {myParkApplications.length === 0 ? (
+                <div className="bg-muted/30 border border-dashed border-border rounded-2xl p-10 text-center">
+                  <ClipboardList className="w-8 h-8 mx-auto text-muted-foreground opacity-40 mb-2" />
+                  <p className="text-sm text-muted-foreground">No park applications yet. Visit a park page to apply for a spot.</p>
+                  <Link href="/parks">
+                    <button className="mt-3 px-4 py-2 rounded-xl border border-primary text-primary text-xs font-semibold hover:bg-primary/5 transition-colors">
+                      Browse Parks
+                    </button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {myParkApplications.map((app) => {
+                    const s = PARK_APP_STATUS[app.status] ?? PARK_APP_STATUS.pending;
+                    return (
+                      <div key={app.id} className="bg-card border border-border rounded-2xl p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <Link href={`/parks/${app.parkId}`}>
+                              <p className="font-semibold text-foreground hover:text-primary transition-colors cursor-pointer">{app.park?.name ?? `Park #${app.parkId}`}</p>
+                            </Link>
+                            {app.park?.city && <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" />{app.park.city}</p>}
+                            {app.vacancy && <p className="text-xs text-muted-foreground mt-0.5">For: {app.vacancy.title}</p>}
+                          </div>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${s.color}`}>
+                            {s.icon}{s.label}
+                          </span>
+                        </div>
+                        {app.notes && <p className="text-xs text-muted-foreground mt-2 bg-muted/50 rounded-lg px-3 py-2 italic">"{app.notes}"</p>}
+                        {app.hostMessage && (
+                          <div className="mt-2 bg-primary/5 rounded-xl p-3">
+                            <p className="text-xs font-semibold text-muted-foreground mb-0.5">Host message</p>
+                            <p className="text-sm text-foreground">{app.hostMessage}</p>
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2">{new Date(app.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Waitlist Entries */}
+            {myParkWaitlist.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <LayoutList className="w-5 h-5 text-primary" />
+                  <h2 className="font-semibold text-foreground">Waitlists</h2>
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-bold">{myParkWaitlist.length}</span>
+                </div>
+                <div className="space-y-3">
+                  {myParkWaitlist.map((entry) => {
+                    const s = PARK_APP_STATUS[entry.status] ?? PARK_APP_STATUS.waiting;
+                    return (
+                      <div key={entry.id} className="bg-card border border-border rounded-2xl p-5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <Link href={`/parks/${entry.parkId}`}>
+                              <p className="font-semibold text-foreground hover:text-primary transition-colors cursor-pointer">{entry.park?.name ?? `Park #${entry.parkId}`}</p>
+                            </Link>
+                            {entry.park?.city && <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" />{entry.park.city}</p>}
+                          </div>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${s.color}`}>
+                            {s.icon}{s.label}
+                          </span>
+                        </div>
+                        {entry.notes && <p className="text-xs text-muted-foreground mt-2 bg-muted/50 rounded-lg px-3 py-2 italic">"{entry.notes}"</p>}
+                        {entry.hostMessage && (
+                          <div className="mt-2 bg-primary/5 rounded-xl p-3">
+                            <p className="text-xs font-semibold text-muted-foreground mb-0.5">Host message</p>
+                            <p className="text-sm text-foreground">{entry.hostMessage}</p>
+                          </div>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2">{new Date(entry.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {totalApplications === 0 && (
               <div className="bg-muted/30 border border-dashed border-border rounded-2xl p-12 text-center">
                 <Ticket className="w-10 h-10 mx-auto text-muted-foreground opacity-40 mb-3" />
                 <p className="text-foreground font-medium mb-1">No applications yet</p>
-                <p className="text-sm text-muted-foreground">Browse events and apply for vendor spots.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {myReservations.map((r) => {
-                  const style = STATUS_STYLES[r.status] ?? STATUS_STYLES.pending;
-                  return (
-                    <div key={r.id} className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div>
-                          <p className="font-semibold text-foreground">{r.event?.name || "Unknown Event"}</p>
-                          <p className="text-sm text-muted-foreground">{r.spot?.name || "Spot"}</p>
-                        </div>
-                        <span className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${style.color}`}>
-                          {style.icon}
-                          {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
-                        </span>
-                      </div>
-                      {r.event && (
-                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mb-2">
-                          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{r.event.city}</span>
-                          <span className="flex items-center gap-1"><CalendarCheck className="w-3 h-3" />{format(new Date(r.event.startDateTime), "MMM d, yyyy")}</span>
-                          {r.paymentAmountInCents > 0 && (
-                            <span className={`flex items-center gap-1 font-medium ${r.paymentStatus === "paid" ? "text-green-600" : "text-amber-600"}`}>
-                              <DollarSign className="w-3 h-3" />
-                              ${(r.paymentAmountInCents / 100).toFixed(2)} — {r.paymentStatus === "paid" ? "Paid" : "Payment due"}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {r.status === "approved" && r.paymentAmountInCents > 0 && r.paymentStatus !== "paid" && (
-                        <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
-                          <p className="text-sm text-muted-foreground">
-                            Payment of <span className="font-semibold text-foreground">${(r.paymentAmountInCents / 100).toFixed(2)}</span> required to confirm your spot.
-                          </p>
-                          <button
-                            onClick={() => handlePayNow(r.id)}
-                            disabled={payLoading === r.id}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 shrink-0"
-                          >
-                            {payLoading === r.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                            Pay Now
-                          </button>
-                        </div>
-                      )}
-                      {r.organizerMessage && (
-                        <div className="bg-muted/50 rounded-xl p-3 mt-2">
-                          <p className="text-xs font-semibold text-muted-foreground mb-1">Organizer message</p>
-                          <p className="text-sm text-foreground">{r.organizerMessage}</p>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                <p className="text-sm text-muted-foreground">Browse events and parks to apply for vendor spots.</p>
               </div>
             )}
           </div>

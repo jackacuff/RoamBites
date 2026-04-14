@@ -1,0 +1,254 @@
+Update the truck park and event application workflows across RoamBites to make sure open spots can actually be applied for, closed spots can support waitlists, and the backend/admin workflows make sense for all user types involved.
+
+GOAL
+Make truck parks and events function like real two-sided marketplaces with a complete workflow for:
+- food truck vendors
+- event organizers
+- truck park owners/operators
+- admins
+
+This is not just a frontend fix. Do a full workflow and backend logic review so the system makes sense end-to-end.
+
+--------------------------------------------------
+1. TRUCK PARK OPEN SPOTS MUST BE ACTIONABLE
+--------------------------------------------------
+
+Current issue:
+- truck parks may show that spots are open
+- but vendors are not clearly able to apply for those spots
+
+Required fix:
+- if a truck park has open spots, show a clear CTA for vendors such as:
+  - “Apply for Spot”
+  - “Reserve Spot”
+  - “Request Spot”
+
+This CTA must:
+- be visible on the truck park detail page
+- only appear when appropriate
+- lead into a real application/request flow
+
+The vendor should not just see that a spot is available. They must be able to take action immediately.
+
+--------------------------------------------------
+2. WAITLIST FOR FULL TRUCK PARKS
+--------------------------------------------------
+
+If there are no open spots, vendors should still be able to express interest.
+
+Required behavior:
+- show a CTA such as:
+  - “Join Waitlist”
+  - “Request Waitlist Spot”
+
+This should:
+- create a waitlist request record
+- tie the request to the vendor/truck
+- notify or surface this request to the truck park owner/operator
+- allow the owner/operator to manage waitlist entries
+
+Waitlist requests should include:
+- truck/vendor identity
+- contact info
+- optional notes/message
+- timestamp
+- status (waiting, contacted, approved, declined, etc. if practical)
+
+--------------------------------------------------
+3. EVENT APPLICATION / WAITLIST WORKFLOW SHOULD MATCH THIS MODEL
+--------------------------------------------------
+
+Apply similar logic to events.
+
+If an event has open vendor spots:
+- vendor should be able to apply/reserve/request a spot clearly
+
+If event spots are full:
+- vendor should be able to join a waitlist or request consideration
+
+Unify the marketplace behavior so vendors have a familiar experience across:
+- truck parks
+- events
+
+The UX should feel consistent.
+
+--------------------------------------------------
+4. BACKEND CHECK: EVENT ORGANIZER CONTROLS
+--------------------------------------------------
+
+Review the backend and organizer workflow to ensure event organizers can fully control event spots.
+
+Event organizers should be able to:
+- set number of available spots
+- mark spots as open/closed
+- set spot fees
+- define application vs instant reserve flow
+- review vendor applications
+- review waitlist entries
+- approve/decline vendors
+- see payment status if spot fees apply
+- adjust spot availability over time
+
+Confirm the data model and backend logic actually support these actions correctly.
+
+--------------------------------------------------
+5. BACKEND CHECK: TRUCK PARK OWNER CONTROLS
+--------------------------------------------------
+
+Review the backend and workflow for truck park owners/operators.
+
+Truck park owners should be able to:
+- create/manage truck park listings
+- set total number of spots
+- mark spots as open/closed
+- set spot fees
+- review spot applications
+- review waitlist requests
+- approve/decline vendors
+- manage occupied vs available spots
+- communicate with interested vendors if messaging exists
+- adjust spot rules/requirements
+
+Confirm truck park management is not just visual, but actually functional.
+
+--------------------------------------------------
+6. FULL MARKETPLACE WORKFLOW REVIEW
+--------------------------------------------------
+
+Do a full backend + UX logic review for all sides to ensure the workflow makes sense.
+
+Review from the perspective of:
+
+A. Vendor
+- can I see if spots are open?
+- can I apply?
+- can I join waitlist if full?
+- can I understand fees and requirements?
+- can I track my application/request status?
+
+B. Event Organizer
+- can I control spot inventory?
+- can I control pricing?
+- can I review/approve vendors?
+- does the marketplace reflect my settings correctly?
+
+C. Truck Park Owner
+- can I control spot inventory?
+- can I control pricing?
+- can I manage applications and waitlists?
+- does the listing reflect reality?
+
+D. Admin
+- can I view and troubleshoot the system if needed?
+- can I understand application/waitlist records if something goes wrong?
+
+--------------------------------------------------
+7. APPLICATION / WAITLIST DATA MODEL
+--------------------------------------------------
+
+If needed, add or improve backend models to support:
+
+For truck parks:
+- TruckParkSpot
+- TruckParkApplication
+- TruckParkWaitlistEntry
+
+For events:
+- EventSpot
+- EventApplication
+- EventWaitlistEntry
+
+Each record should support practical status tracking such as:
+- pending
+- approved
+- declined
+- waitlisted
+- reserved
+- paid
+- cancelled
+
+Use the best structure for the current system, but make it robust enough to support a real workflow.
+
+--------------------------------------------------
+8. UI REQUIREMENTS
+--------------------------------------------------
+
+Truck park and event pages should clearly communicate:
+- spots available
+- spots full
+- fee amount if applicable
+- whether application is required
+- whether instant reserve is allowed
+- waitlist option if full
+
+Buttons/CTAs should be obvious and never dead ends.
+
+Avoid situations where:
+- page says spots are open but there is no way to act
+- page is full but there is no way to join waitlist
+
+--------------------------------------------------
+9. PAYMENT / FEE LOGIC
+--------------------------------------------------
+
+If there are spot fees:
+- surface them clearly to the vendor before applying/reserving
+- ensure backend stores fee amount and payment state where appropriate
+
+For this pass, focus on workflow correctness even if payment collection is partially handled elsewhere.
+
+But make sure fee logic is represented cleanly in the system.
+
+--------------------------------------------------
+10. STATUS VISIBILITY
+--------------------------------------------------
+
+Vendors should be able to see their status for:
+- truck park applications
+- truck park waitlists
+- event applications
+- event waitlists
+
+This can be in:
+- vendor dashboard
+- applications tab
+- opportunities section
+
+At minimum, the status must exist in backend and be usable in frontend.
+
+--------------------------------------------------
+11. DO A FULL BACKEND SANITY CHECK
+--------------------------------------------------
+
+Review the existing implementation and make sure:
+- frontend actions are backed by real logic
+- spot counts update correctly
+- applications route to the right owner/organizer
+- waitlists are tracked correctly
+- settings from organizer/park owner actually influence what vendors see
+- no workflow dead ends exist
+
+This is not just a UI task. It is a workflow integrity check.
+
+--------------------------------------------------
+12. KEEP IT PRACTICAL
+--------------------------------------------------
+
+Do not overbuild this into an enterprise system.
+Keep it practical, clear, and operationally useful.
+
+Priority:
+- correct workflow
+- actionable CTAs
+- sensible backend logic
+- consistency across events and truck parks
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of truck park workflow fixes
+2. Summary of event workflow fixes
+3. What backend models/logic were added or adjusted
+4. How open spots, full spots, and waitlists now work
+5. Confirmation that organizer and truck park owner controls were checked and are functional
