@@ -224,35 +224,58 @@ Full apply/waitlist workflow for truck parks.
 
 New unified marketplace for all hosting opportunities (truck parks, single spots, recurring hosts, pop-ups).
 
+### Request Status Model
+All requests go through host review — no instant-booking auto-approval:
+- `pending_host_approval` — vendor submitted, awaiting host decision
+- `confirmed` — host confirmed (auto-sends contact info system messages to both parties)
+- `declined` — host declined (sends decline notification message)
+- `waitlisted` — host waitlisted (sends waitlist notification message)
+- `cancelled` — vendor cancelled
+
 ### DB Tables (`lib/db/src/schema/spotMarketplace.ts`)
 - `spot_listings` — generic listing with `spotType`: `truck_park | single_spot | recurring_host | popup_opportunity`
 - `spot_listing_schedules` — recurring (day_of_week) or one_time (date) availability windows
-- `spot_listing_applications` — vendor applications; status: `pending | approved | declined | cancelled`
-- `spot_listing_waitlist` — waitlist entries for full listings
+- `spot_listing_applications` — vendor requests; status: see Request Status Model above; includes `confirmedAt` timestamp
+- `spot_listing_waitlist` — waitlist entries for full listings (external waitlist, separate from `waitlisted` status)
+
+### Messages Integration
+- `messages.spotApplicationId` — optional FK linking messages to spot applications
+- On vendor apply: auto-creates a `spot_request`-type opening message from vendor → host
+- On host confirm: auto-creates 2 system messages with contact info for both parties + email via Resend
+- On host decline/waitlist: auto-creates notification message to vendor + email via Resend
+- VendorInbox shows `spot_request` type messages with orange styling and spot application context chip
 
 ### API Routes (`artifacts/api-server/src/routes/spots.ts`)
-- `GET /api/spots` — public browse with filters (spotType, scheduleType, search, maxPrice, isInstantBook, hasWaitlist, sortBy, lat/lng)
+- `GET /api/spots` — public browse with filters (spotType, scheduleType, search, maxPrice, hasWaitlist, sortBy, lat/lng)
 - `GET /api/spots/:id` — public detail with schedules + host info
 - `POST /api/spots` — create listing (authenticated; auto-upgrades customer → spot_host)
 - `PUT /api/spots/:id` — update listing (host only)
 - `DELETE /api/spots/:id` — delete listing (host only)
-- `POST /api/spots/:id/apply` — vendor applies (with optional notes)
+- `POST /api/spots/:id/apply` — vendor submits spot request (always `pending_host_approval`)
 - `POST /api/spots/:id/waitlist` — vendor joins waitlist
-- `GET /api/vendor/spot-applications` — vendor views their applications
-- `GET /api/host/spots` — host views their listings with application counts
-- `GET /api/host/spots/:id/applications` — host views applications for a listing
-- `GET /api/host/spots/:id/waitlist` — host views waitlist for a listing
-- `PATCH /api/host/spots/applications/:id` — host approves/declines with optional message
+- `GET /api/vendor/spot-applications` — vendor views their request history
+- `GET /api/host/spots` — host views their listings
+- `GET /api/host/spots/:id/applications` — host views requests for a listing
+- `GET /api/host/spots/:id/waitlist` — host views external waitlist for a listing
+- `PATCH /api/host/spots/applications/:id` — host actions: `confirmed | declined | waitlisted | cancelled`
+
+### Email Notifications (`artifacts/api-server/src/lib/email.ts`)
+- Uses Resend API (`RESEND_API_KEY` secret) for email notifications
+- Sends email to host when vendor submits a request
+- Sends email to vendor when host confirms/declines/waitlists
+- Fire-and-forget; non-critical (silent fail if Resend not configured)
 
 ### Frontend Pages (`artifacts/food-truck-tracker/src/pages/`)
-- `SpotMarketplace.tsx` — browse/filter all listings, grid/list toggle, spot-type filters, instant-book badge
-- `SpotDetail.tsx` — detail view + vendor apply (with note) / join waitlist CTAs
+- `SpotMarketplace.tsx` — browse/filter all listings, grid/list toggle, spot-type filters
+- `SpotDetail.tsx` — detail view + "Request This Spot" CTA, pending/confirmed/waitlisted state
 - `ListASpot.tsx` — 5-step creation wizard: Type → Info → Availability → Spots & Pricing → Review
-- `SpotHostDashboard.tsx` — host dashboard: manage listings, view/approve/decline applications, waitlist
+- `SpotHostDashboard.tsx` — host dashboard: manage listings, Confirm/Decline/Waitlist request actions
+- `vendor/VendorSpotRequests.tsx` — vendor receipt/history of all spot requests (route: `/my-spots`)
 
 ### Roles
 - `spot_host` — new unified role auto-assigned when a customer creates their first listing
-- Vendors and organizers use `SpotMarketplace.tsx` to find and apply for spots
+- Vendors use `SpotMarketplace.tsx` to find spots and `VendorSpotRequests.tsx` to track their requests
+- Vendor nav includes "My Spot Requests" link under Marketplace section
 
 ## Database Schema
 

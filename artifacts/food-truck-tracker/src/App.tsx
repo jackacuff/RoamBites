@@ -48,6 +48,7 @@ import SpotMarketplace from "./pages/SpotMarketplace";
 import SpotDetail from "./pages/SpotDetail";
 import ListASpot from "./pages/ListASpot";
 import SpotHostDashboard from "./pages/SpotHostDashboard";
+import VendorSpotRequests from "./pages/vendor/VendorSpotRequests";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -101,6 +102,7 @@ function Router() {
       <Route path="/spots/new" component={ListASpot} />
       <Route path="/spots/:id" component={SpotDetail} />
       <Route path="/host" component={SpotHostDashboard} />
+      <Route path="/my-spots" component={VendorSpotRequests} />
 
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/superadmin" component={SuperAdminDashboard} />

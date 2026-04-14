@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Mail, Inbox, CheckCheck, CalendarCheck, MessageSquare, ArrowLeft, Check } from "lucide-react";
+import { Mail, Inbox, CheckCheck, CalendarCheck, MessageSquare, ArrowLeft, Check, MapPin } from "lucide-react";
 import { Link } from "wouter";
 
 interface Message {
@@ -19,12 +19,14 @@ interface Message {
   fromUser: { id: number; name: string; email: string; role: string } | null;
   truck: { id: number; name: string } | null;
   event: { id: number; name: string } | null;
+  spotApplication: { id: number; status: string; listingId: number; listingTitle: string | null } | null;
 }
 
 const TYPE_STYLES: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   invitation: { label: "Event Invitation", icon: <CalendarCheck className="w-4 h-4" />, color: "bg-blue-100 text-blue-700" },
   message: { label: "Message", icon: <MessageSquare className="w-4 h-4" />, color: "bg-muted text-muted-foreground" },
   notification: { label: "Notification", icon: <Mail className="w-4 h-4" />, color: "bg-purple-100 text-purple-700" },
+  spot_request: { label: "Spot Request", icon: <MapPin className="w-4 h-4" />, color: "bg-orange-100 text-orange-700" },
 };
 
 function renderMarkdown(text: string) {
@@ -211,8 +213,23 @@ export default function VendorInbox() {
                   })()}
                 </div>
 
-                {(selected.event || selected.truck) && (
+                {(selected.event || selected.truck || selected.spotApplication) && (
                   <div className="flex flex-wrap gap-2 mb-4">
+                    {selected.spotApplication && (
+                      <Link href={`/spots/${selected.spotApplication.listingId}`}>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-orange-50 text-orange-700 text-xs font-medium hover:bg-orange-100 transition-colors cursor-pointer border border-orange-200">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {selected.spotApplication.listingTitle ?? "Spot Listing"}
+                        </span>
+                      </Link>
+                    )}
+                    {selected.spotApplication && (
+                      <Link href="/my-spots">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors cursor-pointer">
+                          View my requests
+                        </span>
+                      </Link>
+                    )}
                     {selected.event && (
                       <Link href={`/events/${selected.event.id}`}>
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors cursor-pointer">
