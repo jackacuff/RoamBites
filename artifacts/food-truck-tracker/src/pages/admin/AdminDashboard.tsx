@@ -9,7 +9,7 @@ import {
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   Users, Truck, Activity, Package, CheckCircle, Ban,
-  CreditCard, Plus, Edit2, Gift, TrendingUp, Clock, AlertCircle, Calendar, Zap, Loader2, Shield,
+  CreditCard, Plus, Edit2, Gift, TrendingUp, Clock, AlertCircle, Calendar, Zap, Loader2, Shield, Settings, Save, DollarSign,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
@@ -82,12 +82,50 @@ const ROLE_COLORS: Record<string, string> = {
   customer: "bg-gray-100 text-gray-600",
 };
 
+function AdminSettingField({ label, hint, value, suffix, prefix, onSave, saving }: {
+  label: string; hint: string; value: string;
+  suffix?: string; prefix?: string;
+  onSave: (v: string) => void; saving: boolean;
+}) {
+  const [local, setLocal] = useState(value);
+  const [dirty, setDirty] = useState(false);
+  const handleChange = (v: string) => { setLocal(v); setDirty(v !== value); };
+  const handleSave = () => { onSave(local); setDirty(false); };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-foreground mb-1">{label}</label>
+      <p className="text-xs text-muted-foreground mb-2">{hint}</p>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{prefix}</span>}
+          <input
+            type="number"
+            value={local}
+            onChange={e => handleChange(e.target.value)}
+            className={`w-full px-3 py-2 border rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${prefix ? "pl-7" : ""} ${suffix ? "pr-8" : ""} border-border`}
+          />
+          {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{suffix}</span>}
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={!dirty || saving}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-colors"
+        >
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<"stats" | "trucks" | "users" | "plans" | "subscriptions" | "events">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "trucks" | "users" | "plans" | "subscriptions" | "events" | "settings">("stats");
   const [changingRoleFor, setChangingRoleFor] = useState<number | null>(null);
 
   useEffect(() => {
@@ -259,6 +297,44 @@ export default function AdminDashboard() {
     queryClient.invalidateQueries({ queryKey: ["/api/admin"] });
   }
 
+  // Platform settings
+  const [platformSettings, setPlatformSettings] = useState<Record<string, string>>({});
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "settings") {
+      fetch(getApiUrl("/api/admin/settings"), { headers: authHeaders() })
+        .then(r => r.json())
+        .then((rows: { key: string; value: string }[]) => {
+          const map: Record<string, string> = {};
+          for (const row of rows) map[row.key] = row.value;
+          setPlatformSettings(map);
+        })
+        .catch(() => {});
+    }
+  }, [activeTab]);
+
+  async function saveSetting(key: string, value: string) {
+    setSettingsSaving(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/admin/settings/${key}`), {
+        method: "PUT",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+      });
+      if (res.ok) {
+        toast({ title: "Setting saved" });
+        setPlatformSettings(prev => ({ ...prev, [key]: value }));
+      } else {
+        toast({ title: "Failed to save", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error saving setting", variant: "destructive" });
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
   const tabs = [
     { id: "stats", label: "Overview", icon: Activity },
     { id: "trucks", label: "Trucks", icon: Truck },
@@ -266,6 +342,7 @@ export default function AdminDashboard() {
     { id: "events", label: "Events", icon: Calendar },
     { id: "plans", label: "Plans", icon: Package },
     { id: "subscriptions", label: "Subscriptions", icon: CreditCard },
+    { id: "settings", label: "Settings", icon: Settings },
   ] as const;
 
   return (
@@ -766,6 +843,76 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── Settings ────────────────────────────────────────────── */}
+        {activeTab === "settings" && (
+          <div className="max-w-3xl space-y-8">
+            <div>
+              <h2 className="text-xl font-bold text-foreground mb-1">Platform Settings</h2>
+              <p className="text-muted-foreground text-sm">Configure platform-wide behavior. Changes take effect immediately for new transactions.</p>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><DollarSign className="w-5 h-5" /></div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Payment & Fees</h3>
+                  <p className="text-xs text-muted-foreground">Control how RoamBites earns from marketplace transactions.</p>
+                </div>
+              </div>
+              <div className="px-6 py-6 space-y-6">
+                <AdminSettingField
+                  label="Platform Transaction Fee"
+                  hint="Percentage taken from each event spot payment via Stripe Connect. Applied to all paid spot reservations."
+                  suffix="%"
+                  value={platformSettings["transaction_fee_percent"] ?? "10"}
+                  onSave={v => saveSetting("transaction_fee_percent", v)}
+                  saving={settingsSaving}
+                />
+                <AdminSettingField
+                  label="Event Publish Fee"
+                  hint="Amount organizers pay (in dollars) to publish a new event. Set to 0 for free publishing."
+                  prefix="$"
+                  value={String((parseFloat(platformSettings["publish_fee_cents"] ?? "0") / 100).toFixed(2))}
+                  onSave={v => saveSetting("publish_fee_cents", String(Math.round(parseFloat(v) * 100)))}
+                  saving={settingsSaving}
+                />
+                <AdminSettingField
+                  label="Featured Event Fee"
+                  hint="Amount organizers pay (in dollars) to feature their event on the public homepage."
+                  prefix="$"
+                  value={String((parseFloat(platformSettings["featured_event_fee_cents"] ?? "2900") / 100).toFixed(2))}
+                  onSave={v => saveSetting("featured_event_fee_cents", String(Math.round(parseFloat(v) * 100)))}
+                  saving={settingsSaving}
+                />
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-muted/30">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><Activity className="w-5 h-5" /></div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Homepage & Display</h3>
+                </div>
+              </div>
+              <div className="px-6 py-6">
+                <AdminSettingField
+                  label="Max Featured Events on Homepage"
+                  hint="How many featured events appear in the highlighted section of the public homepage."
+                  value={platformSettings["homepage_featured_max"] ?? "3"}
+                  onSave={v => saveSetting("homepage_featured_max", v)}
+                  saving={settingsSaving}
+                />
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-700">
+              <p className="font-semibold mb-1">Note on fee changes</p>
+              <p>Transaction fee changes apply to new reservations only. Existing checkout sessions already have the fee baked in to their Stripe payment intent.</p>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ── Grant Trial Modal ── */}

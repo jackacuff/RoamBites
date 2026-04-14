@@ -1,8 +1,16 @@
 import { Router, type IRouter } from "express";
-import { db, eventSpotsTable, eventSpotReservationsTable, eventsTable, trucksTable, usersTable } from "@workspace/db";
+import { db, eventSpotsTable, eventSpotReservationsTable, eventsTable, trucksTable, usersTable, platformSettingsTable, SETTINGS_KEYS, DEFAULT_SETTINGS } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { requireRole, requireAuth } from "../lib/auth";
 import { getUncachableStripeClient } from "../lib/stripeClient";
+
+async function getPlatformFeePercent(): Promise<number> {
+  try {
+    const rows = await db.select().from(platformSettingsTable).where(eq(platformSettingsTable.key, SETTINGS_KEYS.TRANSACTION_FEE_PERCENT));
+    if (rows.length > 0) return parseFloat(rows[0].value) || 10;
+  } catch {}
+  return parseFloat(DEFAULT_SETTINGS[SETTINGS_KEYS.TRANSACTION_FEE_PERCENT]) || 10;
+}
 
 const router: IRouter = Router();
 
@@ -41,19 +49,23 @@ router.post("/events/:eventId/spots", requireRole("organizer", "admin"), async (
     return;
   }
 
-  const { name, description, totalSlots, priceInCents, platformFeeInCents, requirements, vendorRules, isInstantBook } = req.body;
+  const { name, description, totalSlots, priceInCents, requirements, vendorRules, isInstantBook } = req.body;
   if (!name || !totalSlots) {
     res.status(400).json({ error: "name and totalSlots are required" });
     return;
   }
+
+  const price = parseInt(priceInCents) || 0;
+  const feePercent = await getPlatformFeePercent();
+  const computedPlatformFee = price > 0 ? Math.round(price * feePercent / 100) : 0;
 
   const [spot] = await db.insert(eventSpotsTable).values({
     eventId,
     name: name.trim(),
     description: description || null,
     totalSlots: parseInt(totalSlots) || 1,
-    priceInCents: parseInt(priceInCents) || 0,
-    platformFeeInCents: parseInt(platformFeeInCents) || 0,
+    priceInCents: price,
+    platformFeeInCents: computedPlatformFee,
     requirements: requirements || null,
     vendorRules: vendorRules || null,
     isInstantBook: Boolean(isInstantBook),
@@ -124,17 +136,50 @@ router.post("/events/:eventId/spots/:spotId/apply", requireAuth, async (req, res
   if (approvedCount >= spot.totalSlots) { res.status(409).json({ error: "No spots available" }); return; }
 
   const status = spot.isInstantBook ? "approved" : "pending";
+  const feePercent = await getPlatformFeePercent();
+  const platformFeeInCents = spot.priceInCents > 0 ? Math.round(spot.priceInCents * feePercent / 100) : 0;
+
   const [reservation] = await db.insert(eventSpotReservationsTable).values({
     spotId,
     eventId,
     truckId: truck.id,
     status,
     paymentStatus: "unpaid",
-    paymentAmountInCents: spot.priceInCents + spot.platformFeeInCents,
+    paymentAmountInCents: spot.priceInCents,
     notes: req.body.notes || null,
   }).returning();
 
-  res.status(201).json({ ...reservation, truck: { id: truck.id, name: truck.name } });
+  // For instant book + paid spots, return a checkout URL so the frontend can redirect immediately
+  let checkoutUrl: string | null = null;
+  if (spot.isInstantBook && spot.priceInCents > 0) {
+    try {
+      const [event] = await db.select({ id: eventsTable.id, name: eventsTable.name, organizerUserId: eventsTable.organizerUserId })
+        .from(eventsTable).where(eq(eventsTable.id, eventId));
+      if (event) {
+        const [organizer] = await db.select({ stripeConnectAccountId: usersTable.stripeConnectAccountId, stripeConnectOnboardingComplete: usersTable.stripeConnectOnboardingComplete })
+          .from(usersTable).where(eq(usersTable.id, event.organizerUserId));
+        if (organizer?.stripeConnectAccountId && organizer.stripeConnectOnboardingComplete) {
+          const stripe = await getUncachableStripeClient();
+          const origin = (req.headers.origin as string) || "http://localhost:5173";
+          const applicationFeeAmount = Math.round(spot.priceInCents * feePercent / 100);
+          const session = await stripe.checkout.sessions.create({
+            mode: "payment",
+            line_items: [{ price_data: { currency: "usd", unit_amount: spot.priceInCents, product_data: { name: `${spot.name} — ${event.name}` } }, quantity: 1 }],
+            payment_intent_data: { application_fee_amount: applicationFeeAmount, transfer_data: { destination: organizer.stripeConnectAccountId } },
+            success_url: `${origin}/vendor/event-spots?payment=success&reservation=${reservation.id}`,
+            cancel_url: `${origin}/vendor/event-spots?payment=cancelled`,
+            metadata: { reservationId: String(reservation.id), type: "spot_payment" },
+          });
+          await db.update(eventSpotReservationsTable).set({ stripeCheckoutSessionId: session.id }).where(eq(eventSpotReservationsTable.id, reservation.id));
+          checkoutUrl = session.url;
+        }
+      }
+    } catch (e) {
+      // checkout creation failed — reservation still created, vendor can pay later
+    }
+  }
+
+  res.status(201).json({ ...reservation, truck: { id: truck.id, name: truck.name }, checkoutUrl, platformFeePercent: feePercent });
 });
 
 router.put("/events/:eventId/spot-reservations/:reservationId", requireRole("organizer", "admin"), async (req, res): Promise<void> => {
@@ -206,8 +251,8 @@ router.post("/vendor/spot-reservations/:reservationId/checkout", requireAuth, as
   }
 
   const stripe = await getUncachableStripeClient();
-
-  const applicationFeeAmount = Math.round(spot.priceInCents * 0.10);
+  const feePercent = await getPlatformFeePercent();
+  const applicationFeeAmount = Math.round(spot.priceInCents * feePercent / 100);
   const origin = (req.headers.origin as string) || "http://localhost:5173";
 
   const session = await stripe.checkout.sessions.create({
@@ -237,6 +282,12 @@ router.post("/vendor/spot-reservations/:reservationId/checkout", requireAuth, as
     .where(eq(eventSpotReservationsTable.id, reservationId));
 
   res.json({ url: session.url });
+});
+
+// Public endpoint — organizers and vendors can fetch the current platform fee
+router.get("/platform/fee", async (_req, res): Promise<void> => {
+  const feePercent = await getPlatformFeePercent();
+  res.json({ feePercent });
 });
 
 export default router;
