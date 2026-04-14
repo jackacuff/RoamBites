@@ -126,14 +126,14 @@ function getRoleConfig(
     // ── Vendor ────────────────────────────────────────────────────────────────
     vendor: {
       primaryCta: {
-        label: "Find Gigs",
-        href: "/vendor/event-spots",
+        label: "Find Opportunities",
+        href: "/vendor/opportunities",
         icon: <Briefcase className="w-4 h-4" />,
       },
       summaryItems: [
-        { label: "Check new booking requests", icon: <Zap className="w-3.5 h-3.5" />, color: "text-orange-500" },
+        { label: "Find events and spots to operate", icon: <Briefcase className="w-3.5 h-3.5" />, color: "text-orange-500" },
         { label: "Manage your live status", icon: <Radio className="w-3.5 h-3.5" />, color: "text-green-600" },
-        { label: "Review upcoming gigs", icon: <Calendar className="w-3.5 h-3.5" />, color: "text-blue-500" },
+        { label: "Track your confirmed placements", icon: <Calendar className="w-3.5 h-3.5" />, color: "text-blue-500" },
       ],
       sections: [
         {
@@ -141,16 +141,15 @@ function getRoleConfig(
           items: [
             { label: "Vendor Dashboard", href: "/vendor", icon: <LayoutDashboard className="w-4 h-4" /> },
             { label: "My Business", href: "/vendor/truck", icon: <Truck className="w-4 h-4" /> },
-            { label: "Availability & Schedule", href: "/vendor/schedule", icon: <CalendarRange className="w-4 h-4" /> },
+            { label: "Schedule & Commitments", href: "/vendor/schedule", icon: <CalendarRange className="w-4 h-4" /> },
           ],
         },
         {
           title: "Marketplace",
           items: [
-            { label: "Find Gigs", href: "/vendor/event-spots", icon: <Briefcase className="w-4 h-4" /> },
-            { label: "Find a Spot", href: "/spots", icon: <MapPin className="w-4 h-4" /> },
-            { label: "My Spot Requests", href: "/my-spots", icon: <Zap className="w-4 h-4" /> },
+            { label: "Find Opportunities", href: "/vendor/opportunities", icon: <Briefcase className="w-4 h-4" /> },
             { label: "Events", href: "/events", icon: <Calendar className="w-4 h-4" /> },
+            { label: "List a Spot", href: "/spots/new", icon: <Plus className="w-4 h-4" /> },
           ],
         },
         {
