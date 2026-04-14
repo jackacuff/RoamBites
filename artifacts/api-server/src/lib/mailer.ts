@@ -99,8 +99,9 @@ function baseTemplate(body: string) {
 </html>`;
 }
 
-export async function sendVerificationEmail(to: string, token: string): Promise<void> {
-  const link = `${getAppUrl()}/verify-email?token=${token}`;
+export async function sendVerificationEmail(to: string, token: string, baseUrl?: string): Promise<void> {
+  const base = baseUrl ?? getAppUrl();
+  const link = `${base}/verify-email?token=${token}`;
   await sendMail(
     to,
     "Verify your RoamBites email",
@@ -113,8 +114,9 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
   );
 }
 
-export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
-  const link = `${getAppUrl()}/reset-password?token=${token}`;
+export async function sendPasswordResetEmail(to: string, token: string, baseUrl?: string): Promise<void> {
+  const base = baseUrl ?? getAppUrl();
+  const link = `${base}/reset-password?token=${token}`;
   await sendMail(
     to,
     "Reset your RoamBites password",
