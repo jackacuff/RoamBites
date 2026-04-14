@@ -53,8 +53,9 @@ router.post("/auth/signup", async (req, res): Promise<void> => {
     }
   }
 
+  const origin = (req.headers.origin as string | undefined) ?? undefined;
   try {
-    await sendVerificationEmail(email, verificationToken);
+    await sendVerificationEmail(email, verificationToken, origin);
   } catch (err) {
     console.error("Failed to send verification email:", err);
   }
@@ -209,8 +210,9 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
     await db.update(usersTable)
       .set({ passwordResetToken: token, passwordResetExpires: expires })
       .where(eq(usersTable.id, user.id));
+    const origin = (req.headers.origin as string | undefined) ?? undefined;
     try {
-      await sendPasswordResetEmail(user.email, token);
+      await sendPasswordResetEmail(user.email, token, origin);
     } catch (err) {
       console.error("Failed to send password reset email:", err);
     }
