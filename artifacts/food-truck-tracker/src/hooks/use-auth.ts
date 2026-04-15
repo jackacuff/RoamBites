@@ -17,16 +17,9 @@ export function useAuth() {
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (data) => {
-        // Save token for customFetch assuming it checks localStorage
         if (data.token) localStorage.setItem("token", data.token);
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        
-        // Redirect based on role
-        if (data.user.role === 'superadmin') setLocation('/superadmin');
-        else if (data.user.role === 'admin') setLocation('/admin');
-        else if (data.user.role === 'vendor') setLocation('/vendor');
-        else if (data.user.role === 'organizer') setLocation('/organizer');
-        else setLocation('/');
+        setLocation('/');
       }
     }
   });
@@ -36,10 +29,7 @@ export function useAuth() {
       onSuccess: (data) => {
         if (data.token) localStorage.setItem("token", data.token);
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-        
-        if (data.user.role === 'vendor') setLocation('/vendor');
-        else if (data.user.role === 'organizer') setLocation('/organizer');
-        else setLocation('/');
+        setLocation('/');
       }
     }
   });
