@@ -1,0 +1,145 @@
+Update the event detail page to support role-based UI so that vendors (food trucks) see event application functionality, while customers/foodies see a consumer-focused view. Also ensure this is fully integrated into the vendor workflow, not treated like a disconnected one-off page.
+
+GOAL
+Make the event page dynamically adapt based on the user type, ensuring vendors can easily apply and track event opportunities, while customers are not shown irrelevant vendor tools.
+
+IMPORTANT
+- Vendor-facing event functionality must feel like part of the broader vendor workflow
+- Vendors should be able to move naturally from opportunity discovery to event detail to application to status tracking
+- Do NOT make vendor event actions feel disconnected from the rest of the vendor experience
+
+--------------------------------------------------
+1. DETECT USER ROLE
+--------------------------------------------------
+
+Determine if the user is:
+- Vendor (food truck account)
+- Customer / Guest
+
+Use existing user role logic.
+
+--------------------------------------------------
+2. CREATE A VENDOR-ONLY SECTION
+--------------------------------------------------
+
+If user is a vendor:
+
+Display a prominent “Vendor Opportunity” section near the top of the event page.
+
+This should include:
+- Spots available (e.g. 3 of 10)
+- Price per spot
+- Event date/time
+- Application deadline if available
+- Current application status if already applied
+
+--------------------------------------------------
+3. ADD DYNAMIC APPLICATION CTA
+--------------------------------------------------
+
+The primary vendor button should change based on status:
+
+- Not applied → “Apply to Event”
+- Applied → “Application Submitted”
+- Approved → “Confirmed for Event”
+- Full → “Join Waitlist”
+- Closed → “Applications Closed”
+
+Ensure this button is:
+- clearly visible
+- above the fold
+- never a dead end
+
+--------------------------------------------------
+4. SHOW VENDOR-SPECIFIC DETAILS
+--------------------------------------------------
+
+For vendors, include:
+- event type
+- vendor notes/instructions
+- fee/price
+- spot availability
+- waitlist status if full
+
+This should be easy to scan and not buried.
+
+--------------------------------------------------
+5. HIDE VENDOR UI FROM CUSTOMERS
+--------------------------------------------------
+
+If user is:
+- not logged in
+- or not a vendor
+
+Then:
+- do NOT show vendor application tools
+- show only consumer-facing event content
+
+--------------------------------------------------
+6. OPTIONAL GUEST CONVERSION
+--------------------------------------------------
+
+If user is not logged in:
+
+Show a light CTA such as:
+“Are you a food truck? Apply to join this event.”
+
+With:
+- Sign up to apply
+
+--------------------------------------------------
+7. ENSURE APPLY CTA WORKS CORRECTLY
+--------------------------------------------------
+
+When vendor clicks “Apply to Event”:
+- open the actual application flow or modal
+- do NOT lead to a dead-end event page
+- ensure any required fields or acknowledgements are included if needed
+
+--------------------------------------------------
+8. INTEGRATE THIS INTO THE VENDOR WORKFLOW
+--------------------------------------------------
+
+Ensure vendors can move naturally through this workflow:
+
+1. Find Opportunities
+2. Open Event
+3. See Vendor Opportunity section
+4. Apply / Join Waitlist
+5. Track status later
+
+Ensure:
+- event pages connect to vendor marketplace flow
+- applied events appear in vendor applications / schedule / tracking
+- vendors can revisit event pages and see their current status immediately
+
+--------------------------------------------------
+9. VENDOR STATUS PERSISTENCE
+--------------------------------------------------
+
+If a vendor already interacted with an event, reflect that clearly on the page:
+
+- Application Submitted
+- Pending Organizer Approval
+- Confirmed for Event
+- Waitlisted
+- Declined
+
+--------------------------------------------------
+10. KEEP UX CLEAN
+--------------------------------------------------
+
+Ensure:
+- vendor section is clearly separated visually
+- customer experience remains clean
+- vendor tools do not clutter the page
+- page still feels unified
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of vendor vs customer event page differences
+2. Confirmation that vendor CTA is visible and functional
+3. How this fits into the vendor workflow
+4. Where vendor application status is reflected after applying

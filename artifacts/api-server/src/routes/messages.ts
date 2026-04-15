@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, messagesTable, trucksTable, usersTable, eventsTable, spotListingApplicationsTable, spotListingsTable } from "@workspace/db";
-import { eq, and, or, desc, inArray } from "drizzle-orm";
+import { eq, and, or, desc, asc, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sendNewMessageEmail } from "../lib/email";
 
@@ -125,6 +125,176 @@ router.put("/messages/read-all", requireAuth, async (req, res): Promise<void> =>
     .set({ isRead: true })
     .where(eq(messagesTable.toUserId, user.id));
   res.json({ ok: true });
+});
+
+// ── Conversation threads list ─────────────────────────────────────────────────
+// Groups all messages into threads by spotApplicationId (or participant pair
+// for non-application messages like event invitations).
+router.get("/messages/threads", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const user = (req as any).user;
+
+    const msgs = await db
+      .select()
+      .from(messagesTable)
+      .where(or(eq(messagesTable.toUserId, user.id), eq(messagesTable.fromUserId, user.id)))
+      .orderBy(desc(messagesTable.createdAt));
+
+    // Group messages into threads
+    const threadMap = new Map<string, typeof msgs>();
+    for (const msg of msgs) {
+      const key = msg.spotApplicationId
+        ? `app:${msg.spotApplicationId}`
+        : `pair:${Math.min(msg.fromUserId, msg.toUserId)}-${Math.max(msg.fromUserId, msg.toUserId)}-${msg.eventId ?? 0}`;
+      if (!threadMap.has(key)) threadMap.set(key, []);
+      threadMap.get(key)!.push(msg);
+    }
+
+    const allUserIds = [...new Set(msgs.flatMap(m => [m.fromUserId, m.toUserId]))];
+    const appIds = [...new Set(msgs.filter(m => m.spotApplicationId).map(m => m.spotApplicationId!))];
+
+    const [users, apps] = await Promise.all([
+      allUserIds.length > 0
+        ? db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role })
+            .from(usersTable)
+            .where(inArray(usersTable.id, allUserIds))
+        : Promise.resolve([]),
+      appIds.length > 0
+        ? db.select({
+            id: spotListingApplicationsTable.id,
+            status: spotListingApplicationsTable.status,
+            vendorUserId: spotListingApplicationsTable.vendorUserId,
+            listingId: spotListingApplicationsTable.listingId,
+            listingTitle: spotListingsTable.title,
+            hostUserId: spotListingsTable.hostUserId,
+          })
+            .from(spotListingApplicationsTable)
+            .leftJoin(spotListingsTable, eq(spotListingApplicationsTable.listingId, spotListingsTable.id))
+            .where(inArray(spotListingApplicationsTable.id, appIds))
+        : Promise.resolve([]),
+    ]);
+
+    const userMap = new Map((users as any[]).map(u => [u.id, u]));
+    const appMap = new Map((apps as any[]).map(a => [a.id, a]));
+
+    const threads = [];
+    for (const [key, threadMsgs] of threadMap.entries()) {
+      const latest = threadMsgs[0];
+      const unreadCount = threadMsgs.filter(m => m.toUserId === user.id && !m.isRead).length;
+
+      let appInfo: any = null;
+      if (latest.spotApplicationId) {
+        appInfo = appMap.get(latest.spotApplicationId) || null;
+      }
+
+      // Determine the other user
+      const otherUserId = appInfo
+        ? (appInfo.vendorUserId === user.id ? appInfo.hostUserId : appInfo.vendorUserId)
+        : (latest.fromUserId === user.id ? latest.toUserId : latest.fromUserId);
+
+      threads.push({
+        key,
+        applicationId: latest.spotApplicationId || null,
+        listingId: appInfo?.listingId || null,
+        listingTitle: appInfo?.listingTitle || null,
+        applicationStatus: appInfo?.status || null,
+        otherUser: userMap.get(otherUserId) || null,
+        lastMessage: {
+          body: latest.body,
+          createdAt: latest.createdAt,
+          fromUserId: latest.fromUserId,
+        },
+        unreadCount,
+        messageCount: threadMsgs.length,
+        type: latest.type,
+        eventId: latest.eventId || null,
+      });
+    }
+
+    res.json(threads);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load threads" });
+  }
+});
+
+// ── Single thread view ────────────────────────────────────────────────────────
+// Returns all messages for a spot application thread, chronological, with
+// application status and participant info.
+router.get("/messages/thread/:applicationId", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const user = (req as any).user;
+    const applicationId = parseInt(req.params.applicationId);
+    if (isNaN(applicationId)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+    const [app] = await db
+      .select({
+        id: spotListingApplicationsTable.id,
+        status: spotListingApplicationsTable.status,
+        notes: spotListingApplicationsTable.notes,
+        hostMessage: spotListingApplicationsTable.hostMessage,
+        vendorUserId: spotListingApplicationsTable.vendorUserId,
+        createdAt: spotListingApplicationsTable.createdAt,
+        confirmedAt: spotListingApplicationsTable.confirmedAt,
+        listingId: spotListingApplicationsTable.listingId,
+        listingTitle: spotListingsTable.title,
+        listingSpotType: spotListingsTable.spotType,
+        hostUserId: spotListingsTable.hostUserId,
+      })
+      .from(spotListingApplicationsTable)
+      .leftJoin(spotListingsTable, eq(spotListingApplicationsTable.listingId, spotListingsTable.id))
+      .where(eq(spotListingApplicationsTable.id, applicationId));
+
+    if (!app) { res.status(404).json({ error: "Thread not found" }); return; }
+
+    // Verify caller is a participant
+    if (app.vendorUserId !== user.id && app.hostUserId !== user.id) {
+      res.status(403).json({ error: "Forbidden" }); return;
+    }
+
+    const msgs = await db
+      .select()
+      .from(messagesTable)
+      .where(eq(messagesTable.spotApplicationId, applicationId))
+      .orderBy(asc(messagesTable.createdAt));
+
+    // Mark messages addressed to this user as read
+    await db.update(messagesTable)
+      .set({ isRead: true })
+      .where(and(
+        eq(messagesTable.spotApplicationId, applicationId),
+        eq(messagesTable.toUserId, user.id),
+        eq(messagesTable.isRead, false),
+      ));
+
+    const userIds = [...new Set(msgs.flatMap(m => [m.fromUserId, m.toUserId]))];
+    const participantIds = [app.vendorUserId, app.hostUserId].filter(Boolean) as number[];
+    const allIds = [...new Set([...userIds, ...participantIds])];
+
+    const users = allIds.length > 0
+      ? await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role })
+          .from(usersTable)
+          .where(inArray(usersTable.id, allIds))
+      : [];
+
+    const userMap = new Map((users as any[]).map(u => [u.id, u]));
+
+    const enriched = msgs.map(m => ({
+      ...m,
+      fromUser: userMap.get(m.fromUserId) || null,
+      toUser: userMap.get(m.toUserId) || null,
+    }));
+
+    const otherUserId = app.vendorUserId === user.id ? app.hostUserId : app.vendorUserId;
+
+    res.json({
+      application: app,
+      otherUser: userMap.get(otherUserId!) || null,
+      currentUser: userMap.get(user.id) || null,
+      messages: enriched,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load thread" });
+  }
 });
 
 export default router;

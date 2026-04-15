@@ -399,11 +399,16 @@ router.post("/spots/:id/apply", requireAuth, async (req, res) => {
       );
     if (existing) return res.status(409).json({ error: "Already requested" });
 
-    const [truck] = await db
-      .select({ id: trucksTable.id, name: trucksTable.name })
-      .from(trucksTable)
-      .where(and(eq(trucksTable.vendorUserId, vendorUser.id), eq(trucksTable.isApproved, true)))
-      .limit(1);
+    const [[truck], [vendorRecord]] = await Promise.all([
+      db.select({ id: trucksTable.id, name: trucksTable.name })
+        .from(trucksTable)
+        .where(and(eq(trucksTable.vendorUserId, vendorUser.id), eq(trucksTable.isApproved, true)))
+        .limit(1),
+      db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+        .from(usersTable)
+        .where(eq(usersTable.id, vendorUser.id))
+        .limit(1),
+    ]);
 
     const { notes } = req.body;
 
@@ -420,9 +425,10 @@ router.post("/spots/:id/apply", requireAuth, async (req, res) => {
 
     // Auto-create opening message from vendor to host
     const subject = `Spot Request: ${listing.title}`;
+    const senderName = vendorRecord?.name || vendorRecord?.email || "A vendor";
     const truckLine = truck?.name ? ` My truck is **${truck.name}**.` : "";
-    const notesLine = notes ? `\n\n"${notes}"` : "";
-    const msgBody = `**${vendorUser.name}** has submitted a spot request for **${listing.title}**.${truckLine}${notesLine}\n\nThis request is **pending your review**. You can confirm, decline, or waitlist this request from your Host Dashboard.`;
+    const notesLine = notes ? `\n\n${notes}` : "";
+    const msgBody = `Hi, I'd like to request this spot.${truckLine}${notesLine}`;
 
     await createSystemMessage({
       fromUserId: vendorUser.id,
@@ -436,9 +442,9 @@ router.post("/spots/:id/apply", requireAuth, async (req, res) => {
     // Notify host by email
     notifyByEmail(
       listing.hostUserId,
-      vendorUser.name,
+      senderName,
       subject,
-      msgBody,
+      `${senderName} has requested the spot: ${listing.title}.\n\n${msgBody}`,
       `Spot request for: ${listing.title}`
     );
 
@@ -634,17 +640,19 @@ router.patch("/host/spots/applications/:applicationId", requireAuth, async (req,
         .where(eq(spotListingsTable.id, app.listingId));
     }
 
-    // Get vendor info for messaging
-    const [vendor] = await db
-      .select({ name: usersTable.name, email: usersTable.email })
-      .from(usersTable)
-      .where(eq(usersTable.id, app.vendorUserId));
+    // Get vendor AND host info for messaging (JWT only carries id/role)
+    const [[vendor], [hostRecord]] = await Promise.all([
+      db.select({ name: usersTable.name, email: usersTable.email })
+        .from(usersTable).where(eq(usersTable.id, app.vendorUserId)),
+      db.select({ name: usersTable.name, email: usersTable.email })
+        .from(usersTable).where(eq(usersTable.id, hostUser.id)),
+    ]);
 
     const subject = `Re: Spot Request — ${listing.title}`;
 
     if (status === "confirmed") {
       // Auto-send contact info system message to vendor
-      const contactMsg = `✅ **Your spot request has been confirmed by the host!**\n\n**${listing.title}** — you're all set.\n\n---\n**Contact information for both parties:**\n\n**Host:** ${hostUser.name} · ${hostUser.email}\n\n**Vendor:** ${vendor?.name ?? "—"} · ${vendor?.email ?? "—"}\n\n---\n\nPlease coordinate directly to finalize timing and logistics. Welcome aboard!`;
+      const contactMsg = `✅ **Your spot request has been confirmed by the host!**\n\n**${listing.title}** — you're all set.\n\n---\n**Contact information for both parties:**\n\n**Host:** ${hostRecord?.name ?? "—"} · ${hostRecord?.email ?? "—"}\n\n**Vendor:** ${vendor?.name ?? "—"} · ${vendor?.email ?? "—"}\n\n---\n\nPlease coordinate directly to finalize timing and logistics. Welcome aboard!`;
 
       await createSystemMessage({
         fromUserId: hostUser.id,
@@ -665,7 +673,7 @@ router.patch("/host/spots/applications/:applicationId", requireAuth, async (req,
         type: "spot_request",
       });
 
-      notifyByEmail(app.vendorUserId, hostUser.name, `✅ Confirmed: ${listing.title}`, contactMsg, `Spot: ${listing.title}`);
+      notifyByEmail(app.vendorUserId, hostRecord?.name ?? "Host", `✅ Confirmed: ${listing.title}`, contactMsg, `Spot: ${listing.title}`);
 
     } else if (status === "declined") {
       const reason = hostMessage ? `\n\nHost note: "${hostMessage}"` : "";
@@ -680,7 +688,7 @@ router.patch("/host/spots/applications/:applicationId", requireAuth, async (req,
         type: "spot_request",
       });
 
-      notifyByEmail(app.vendorUserId, hostUser.name, `Request declined: ${listing.title}`, body, `Spot: ${listing.title}`);
+      notifyByEmail(app.vendorUserId, hostRecord?.name ?? "Host", `Request declined: ${listing.title}`, body, `Spot: ${listing.title}`);
 
     } else if (status === "waitlisted") {
       const body = `Your spot request for **${listing.title}** has been placed on the **waitlist**. The host will reach out if a spot opens up.`;
@@ -694,7 +702,7 @@ router.patch("/host/spots/applications/:applicationId", requireAuth, async (req,
         type: "spot_request",
       });
 
-      notifyByEmail(app.vendorUserId, hostUser.name, `Waitlisted: ${listing.title}`, body, `Spot: ${listing.title}`);
+      notifyByEmail(app.vendorUserId, hostRecord?.name ?? "Host", `Waitlisted: ${listing.title}`, body, `Spot: ${listing.title}`);
     }
 
     res.json(updated);

@@ -1,0 +1,137 @@
+Fix the messaging system so that spot/event requests create proper conversation threads and display messages from the correct user perspective.
+
+GOAL
+When a user submits a spot request, it should feel like the start of a real conversation between vendor and host — not a system notification written from the wrong perspective.
+
+--------------------------------------------------
+1. FIX MESSAGE PERSPECTIVE (CRITICAL)
+--------------------------------------------------
+
+Current issue:
+- sender sees message written for receiver
+- example: “undefined has submitted a spot request”
+
+Fix:
+- messages must render differently depending on viewer
+
+For sender (vendor):
+- “You submitted a request for [listing name]”
+
+For receiver (host):
+- “[Vendor Name] submitted a request for [listing name]”
+
+Ensure:
+- no message is shown from the wrong perspective
+
+--------------------------------------------------
+2. REMOVE “undefined” BUG
+--------------------------------------------------
+
+Fix data mapping so:
+- user name is always correctly populated
+- truck name is correctly populated if used
+
+Never show:
+- undefined
+- null
+- blank sender names
+
+--------------------------------------------------
+3. USE REAL CHAT THREADS (NOT SYSTEM CARDS)
+--------------------------------------------------
+
+When a request is submitted:
+
+- create or open a conversation thread between:
+  - vendor
+  - host
+
+- DO NOT show only a static “sent message card”
+
+Instead:
+- navigate user into the chat thread
+
+--------------------------------------------------
+4. INITIAL MESSAGE STRUCTURE
+--------------------------------------------------
+
+First message in thread should be:
+
+From vendor:
+- their message (if provided)
+- OR a default message like:
+  “Hi, I’d like to request this spot. My truck is [Truck Name].”
+
+System message (optional):
+- “Request submitted — pending host approval”
+
+--------------------------------------------------
+5. MAKE IT A REAL CONVERSATION
+--------------------------------------------------
+
+Ensure:
+- both users can reply immediately
+- thread behaves like standard messaging
+- messages are chronological
+- user avatars/names are correct
+
+--------------------------------------------------
+6. CONNECT MESSAGE TO REQUEST STATUS
+--------------------------------------------------
+
+Within the chat thread, show:
+- request status (Pending, Confirmed, Declined)
+- update this dynamically
+
+Example:
+- “This request is pending host approval”
+- “You have been approved for this spot”
+
+--------------------------------------------------
+7. FIX “SENT” VIEW UX
+--------------------------------------------------
+
+Current issue:
+- “Sent” feels like a log, not conversations
+
+Fix:
+- Sent tab should show conversation threads
+- each item = a conversation, not a system message
+
+--------------------------------------------------
+8. AUTO-OPEN CHAT AFTER ACTION
+--------------------------------------------------
+
+After:
+- submitting a request
+
+Immediately:
+- redirect user into the chat thread
+
+Do NOT:
+- leave them in inbox with no context
+
+--------------------------------------------------
+9. FULL WORKFLOW VALIDATION
+--------------------------------------------------
+
+Test:
+
+Vendor:
+- submits request
+- lands in chat
+- sees correct message perspective
+
+Host:
+- receives request
+- sees correct sender name
+- can reply in thread
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of messaging system changes
+2. Confirmation that perspective is correct for sender vs receiver
+3. Confirmation that “undefined” issue is fixed
+4. Confirmation that requests now open real chat threads
