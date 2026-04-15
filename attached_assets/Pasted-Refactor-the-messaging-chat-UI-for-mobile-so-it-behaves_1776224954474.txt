@@ -1,0 +1,106 @@
+Refactor the messaging/chat UI for mobile so it behaves like a modern chat experience instead of a compressed web layout.
+
+GOAL
+Make the message thread easy to read, scroll, and interact with on mobile devices. It should feel like a real messaging app (iMessage/WhatsApp style), not a stacked card layout.
+
+--------------------------------------------------
+1. FULL-SCREEN CHAT LAYOUT
+--------------------------------------------------
+
+On mobile:
+
+- chat should take up the full screen
+- remove unnecessary footer elements (e.g., RoamBites footer/logo)
+- reduce padding/margins that waste vertical space
+
+--------------------------------------------------
+2. STICKY MESSAGE INPUT (CRITICAL)
+--------------------------------------------------
+
+- message input must be fixed to bottom of screen
+- always visible when scrolling
+- increase input height for usability
+- make send button more prominent and accessible
+
+--------------------------------------------------
+3. CONVERT MESSAGES TO CHAT BUBBLES
+--------------------------------------------------
+
+Replace current message blocks/cards with chat-style bubbles:
+
+- sender (vendor) → right aligned
+- receiver (host) → left aligned
+- system messages → centered, minimal styling
+
+Ensure:
+- clear visual distinction between sender and receiver
+- consistent spacing
+
+--------------------------------------------------
+4. REDUCE SYSTEM MESSAGE SIZE
+--------------------------------------------------
+
+Current issue:
+- system messages take too much space
+
+Fix:
+- display system messages as small inline status messages
+
+Examples:
+- “Request submitted”
+- “Pending host approval”
+
+Do NOT render them as large cards.
+
+--------------------------------------------------
+5. SIMPLIFY HEADER
+--------------------------------------------------
+
+Top of chat should include:
+- host name
+- listing name (smaller text)
+- back button
+
+Remove:
+- large duplicated listing cards
+- excessive metadata blocks
+
+--------------------------------------------------
+6. IMPROVE SCROLL EXPERIENCE
+--------------------------------------------------
+
+- reduce vertical spacing between messages
+- allow smooth scrolling
+- ensure latest message is visible by default
+
+--------------------------------------------------
+7. FIX DATA DISPLAY BUGS
+--------------------------------------------------
+
+Ensure:
+- no “undefined” values appear
+- sender name is always correct
+- truck name is displayed properly when relevant
+
+--------------------------------------------------
+8. MOBILE-FIRST DESIGN PRIORITY
+--------------------------------------------------
+
+Prioritize:
+- readability
+- thumb usability
+- minimal clutter
+
+Avoid:
+- large stacked UI blocks
+- multi-section layouts inside chat
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of chat UI improvements
+2. Confirmation that input is sticky on mobile
+3. Confirmation that messages now render as chat bubbles
+4. Confirmation that system messages are reduced in size
+5. Confirmation that “undefined” issue is fixed
