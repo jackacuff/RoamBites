@@ -223,6 +223,17 @@ router.post("/spots", requireAuth, async (req, res) => {
 
     if (!title || !spotType) return res.status(400).json({ error: "title and spotType are required" });
 
+    // Pop-Ups are limited to 1 spot — enforce server-side
+    if (spotType === "popup_opportunity" && spotsTotal && spotsTotal > 1) {
+      return res.status(400).json({ error: "Pop-Ups are for single truck opportunities. For multiple trucks, please create an Event." });
+    }
+    // Pop-Ups must be one-time — enforce server-side
+    if (spotType === "popup_opportunity" && scheduleType === "recurring") {
+      return res.status(400).json({ error: "Pop-Up listings must use a one-time schedule, not recurring." });
+    }
+
+    const resolvedSpotsTotal = spotType === "popup_opportunity" ? 1 : (spotsTotal ?? 1);
+
     const [listing] = await db
       .insert(spotListingsTable)
       .values({
@@ -235,8 +246,8 @@ router.post("/spots", requireAuth, async (req, res) => {
         latitude: latitude ?? null,
         longitude: longitude ?? null,
         spotType: spotType ?? "single_spot",
-        spotsTotal: spotsTotal ?? 1,
-        spotsAvailable: spotsTotal ?? 1,
+        spotsTotal: resolvedSpotsTotal,
+        spotsAvailable: resolvedSpotsTotal,
         priceInCents: priceInCents ?? 0,
         isInstantBook: false,
         hasWaitlist: hasWaitlist ?? false,
@@ -284,6 +295,23 @@ router.put("/spots/:id", requireAuth, async (req, res) => {
     const [existing] = await db.select().from(spotListingsTable).where(eq(spotListingsTable.id, id));
     if (!existing) return res.status(404).json({ error: "Not found" });
     if (existing.hostUserId !== userId) return res.status(403).json({ error: "Forbidden" });
+
+    // Determine effective spotType (existing or being updated)
+    const effectiveSpotType = req.body.spotType ?? existing.spotType;
+
+    // Pop-Up listings cannot be updated to have more than 1 spot or recurring schedule
+    if (effectiveSpotType === "popup_opportunity") {
+      if (req.body.spotsTotal && req.body.spotsTotal > 1) {
+        return res.status(400).json({ error: "Pop-Ups are for single truck opportunities. For multiple trucks, please create an Event." });
+      }
+      if (req.body.scheduleType && req.body.scheduleType === "recurring") {
+        return res.status(400).json({ error: "Pop-Up listings must use a one-time schedule, not recurring." });
+      }
+      // Always enforce 1 spot
+      req.body.spotsTotal = 1;
+      req.body.spotsAvailable = Math.min(req.body.spotsAvailable ?? existing.spotsAvailable ?? 1, 1);
+      req.body.scheduleType = "one_time";
+    }
 
     const allowed = [
       "title","description","hostName","address","city","latitude","longitude",
