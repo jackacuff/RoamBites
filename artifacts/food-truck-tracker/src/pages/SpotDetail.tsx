@@ -101,12 +101,11 @@ export default function SpotDetail() {
         return;
       }
       if (!res.ok) throw new Error("Failed");
+      const application = await res.json();
       setUserStatus("pending");
       setShowRequestForm(false);
-      toast({
-        title: "Request submitted!",
-        description: "The host will review your request. You'll be notified of their decision.",
-      });
+      // Navigate into the conversation thread
+      navigate(`/vendor/inbox?thread=${application.id}`);
     } catch {
       toast({ title: "Error", description: "Failed to submit request. Please try again.", variant: "destructive" });
     } finally {
