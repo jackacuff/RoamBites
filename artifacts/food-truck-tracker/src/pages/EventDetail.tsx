@@ -8,9 +8,10 @@ import {
   Calendar, MapPin, Users, Clock, FileText, Globe, ExternalLink,
   Share2, Check, ChevronRight, X, ChevronLeft, ImageIcon, Phone,
   Mail, Zap, DollarSign, Maximize2, BookmarkPlus, BookmarkCheck,
-  Navigation, CalendarPlus,
+  Navigation, CalendarPlus, Store, Tag, AlertCircle, ArrowRight,
+  CheckCircle, Loader2, Ticket, CreditCard,
 } from "lucide-react";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, authHeaders } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -178,6 +179,30 @@ function EventMapLeaflet({
   return <div ref={mapRef} className="w-full h-full" />;
 }
 
+interface EventSpot {
+  id: number;
+  eventId: number;
+  name: string;
+  description: string | null;
+  totalSlots: number;
+  availableSlots: number;
+  priceInCents: number;
+  requirements: string | null;
+  vendorRules: string | null;
+  isInstantBook: boolean;
+}
+
+interface MyReservation {
+  id: number;
+  spotId: number;
+  eventId: number;
+  status: string;
+  paymentStatus: string;
+  paymentAmountInCents: number;
+  notes: string | null;
+  spot: { id: number; name: string } | null;
+}
+
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: event, isLoading } = useGetEvent(Number(id) || 0, {
@@ -195,10 +220,98 @@ export default function EventDetail() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
+  const isVendor = isAuthenticated && user?.role === "vendor";
   const canSeeLogistics = isAuthenticated && (
     user?.role === "organizer" || user?.role === "vendor" ||
     user?.role === "admin" || user?.role === "superadmin"
   );
+
+  const [spots, setSpots] = useState<EventSpot[]>([]);
+  const [myReservation, setMyReservation] = useState<MyReservation | null>(null);
+  const [spotsLoading, setSpotsLoading] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [applyNotes, setApplyNotes] = useState("");
+  const [applying, setApplying] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    const eventId = Number(id);
+    if (!eventId) return;
+    setSpotsLoading(true);
+    fetch(getApiUrl(`/api/events/${eventId}/spots`))
+      .then(r => r.json())
+      .then(data => setSpots(Array.isArray(data) ? data : []))
+      .catch(() => setSpots([]))
+      .finally(() => setSpotsLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!isVendor || !id) return;
+    const eventId = Number(id);
+    if (!eventId) return;
+    fetch(getApiUrl("/api/vendor/spot-reservations"), { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        const found = data.find((r: any) => r.eventId === eventId) || null;
+        setMyReservation(found);
+      })
+      .catch(() => {});
+  }, [isVendor, id]);
+
+  const handleApply = async () => {
+    if (!id || spots.length === 0) return;
+    const spot = spots.find(s => s.availableSlots > 0) || spots[0];
+    if (!spot) return;
+    setApplying(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/events/${id}/spots/${spot.id}/apply`), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: applyNotes }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Application failed", description: data.error || "Could not submit application.", variant: "destructive" });
+        return;
+      }
+      setMyReservation({ ...data, spot: { id: spot.id, name: spot.name } });
+      setShowApplyModal(false);
+      setApplyNotes("");
+      if (data.checkoutUrl) {
+        toast({ title: "Redirecting to payment…" });
+        window.location.href = data.checkoutUrl;
+      } else {
+        toast({ title: "Application submitted!", description: "The organizer will review your request." });
+      }
+    } catch {
+      toast({ title: "Error", description: "Something went wrong. Try again.", variant: "destructive" });
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const vendorCtaProps = (() => {
+    if (!isVendor) return null;
+    if (spotsLoading) return { label: "Checking availability…", disabled: true, action: null, variant: "ghost" };
+    if (!myReservation) {
+      const available = spots.filter(s => s.availableSlots > 0);
+      const waitlistable = spots.filter(s => s.availableSlots === 0);
+      if (spots.length === 0) return { label: "No spots available", disabled: true, action: null, variant: "ghost" };
+      if (available.length > 0) return { label: "Apply to Event", disabled: false, action: () => setShowApplyModal(true), variant: "primary" };
+      if (waitlistable.length > 0) return { label: "Join Waitlist", disabled: false, action: () => setShowApplyModal(true), variant: "secondary" };
+      return { label: "Applications Closed", disabled: true, action: null, variant: "ghost" };
+    }
+    const statusMap: Record<string, { label: string; variant: string }> = {
+      pending:   { label: "Application Submitted", variant: "amber" },
+      approved:  { label: "Confirmed for Event", variant: "green" },
+      rejected:  { label: "Application Declined", variant: "ghost" },
+      cancelled: { label: "Application Cancelled", variant: "ghost" },
+      waitlisted:{ label: "On Waitlist", variant: "blue" },
+    };
+    const s = statusMap[myReservation.status] || { label: "Applied", variant: "amber" };
+    return { ...s, disabled: true, action: null };
+  })();
 
   const toggleSave = () => {
     setSavedEvent((s) => {
@@ -387,6 +500,183 @@ export default function EventDetail() {
           </button>
         </div>
       </div>
+
+      {/* ── Vendor Opportunity Banner ─────────────────── */}
+      {isVendor && (
+        <div className="border-b border-border bg-gradient-to-r from-primary/5 via-background to-secondary/5">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <Store className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h3 className="font-display font-bold text-foreground text-base">Vendor Opportunity</h3>
+                  {myReservation && (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      myReservation.status === "approved"  ? "bg-green-100 text-green-700" :
+                      myReservation.status === "pending"   ? "bg-amber-100 text-amber-700" :
+                      myReservation.status === "rejected"  ? "bg-muted text-muted-foreground" :
+                      myReservation.status === "waitlisted"? "bg-blue-100 text-blue-700" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {myReservation.status === "approved"   && <><CheckCircle className="w-3 h-3" /> Confirmed</>}
+                      {myReservation.status === "pending"    && <><Clock className="w-3 h-3" /> Pending Review</>}
+                      {myReservation.status === "rejected"   && <><X className="w-3 h-3" /> Declined</>}
+                      {myReservation.status === "waitlisted" && <><Tag className="w-3 h-3" /> Waitlisted</>}
+                      {myReservation.status === "cancelled"  && <><X className="w-3 h-3" /> Cancelled</>}
+                    </span>
+                  )}
+                </div>
+                {spotsLoading ? (
+                  <p className="text-sm text-muted-foreground">Checking spot availability…</p>
+                ) : spots.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    {(() => {
+                      const totalSlots = spots.reduce((s, sp) => s + sp.totalSlots, 0);
+                      const availableSlots = spots.reduce((s, sp) => s + sp.availableSlots, 0);
+                      const minPrice = Math.min(...spots.map(sp => sp.priceInCents));
+                      return (
+                        <>
+                          <span className="flex items-center gap-1.5">
+                            <Ticket className="w-3.5 h-3.5 text-primary/60" />
+                            {availableSlots > 0
+                              ? <>{availableSlots} of {totalSlots} spot{totalSlots !== 1 ? "s" : ""} open</>
+                              : <span className="text-amber-600 font-medium">Waitlist available</span>
+                            }
+                          </span>
+                          {minPrice > 0 && (
+                            <span className="flex items-center gap-1.5">
+                              <CreditCard className="w-3.5 h-3.5 text-primary/60" />
+                              ${(minPrice / 100).toFixed(0)} / spot
+                            </span>
+                          )}
+                          {minPrice === 0 && (
+                            <span className="flex items-center gap-1.5 text-accent font-medium">
+                              <DollarSign className="w-3.5 h-3.5" /> Free to participate
+                            </span>
+                          )}
+                          {spots[0]?.vendorRules && (
+                            <span className="flex items-center gap-1.5">
+                              <FileText className="w-3.5 h-3.5 text-primary/60" />
+                              Vendor rules apply
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No vendor spots set up for this event yet.</p>
+                )}
+              </div>
+
+              <div className="shrink-0">
+                {vendorCtaProps && (
+                  vendorCtaProps.action ? (
+                    <button
+                      onClick={vendorCtaProps.action}
+                      className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm ${
+                        vendorCtaProps.variant === "primary"
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : vendorCtaProps.variant === "secondary"
+                          ? "bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                          : "bg-muted text-muted-foreground cursor-default"
+                      }`}
+                    >
+                      {vendorCtaProps.label}
+                      {!vendorCtaProps.disabled && <ArrowRight className="w-4 h-4" />}
+                    </button>
+                  ) : (
+                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm border ${
+                      vendorCtaProps.variant === "green"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : vendorCtaProps.variant === "amber"
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : vendorCtaProps.variant === "blue"
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : "bg-muted text-muted-foreground border-border"
+                    }`}>
+                      {vendorCtaProps.variant === "green"  && <CheckCircle className="w-4 h-4" />}
+                      {vendorCtaProps.variant === "amber"  && <Clock className="w-4 h-4" />}
+                      {vendorCtaProps.variant === "blue"   && <Tag className="w-4 h-4" />}
+                      {vendorCtaProps.label}
+                    </div>
+                  )
+                )}
+                {myReservation && (
+                  <Link
+                    href="/vendor/event-spots"
+                    className="mt-2 flex items-center justify-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    View in My Applications <ChevronRight className="w-3 h-3" />
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Vendor-specific details panel — shown only when no existing reservation */}
+            {!myReservation && !spotsLoading && spots.length > 0 && (
+              <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                {spots.filter(sp => sp.availableSlots > 0 || sp.totalSlots > 0).slice(0, 2).map(sp => (
+                  <div key={sp.id} className="p-4 bg-card border border-border rounded-xl shadow-sm">
+                    <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                      <p className="font-semibold text-foreground text-sm">{sp.name}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        sp.availableSlots > 0 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                      }`}>
+                        {sp.availableSlots > 0 ? `${sp.availableSlots} open` : "Waitlist"}
+                      </span>
+                    </div>
+                    {sp.description && <p className="text-xs text-muted-foreground mb-2">{sp.description}</p>}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="w-3 h-3 text-primary/50" />
+                        {sp.priceInCents === 0 ? "Free" : `$${(sp.priceInCents / 100).toFixed(0)}`}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-primary/50" />
+                        {sp.availableSlots}/{sp.totalSlots} available
+                      </span>
+                      {sp.isInstantBook && (
+                        <span className="flex items-center gap-1 text-green-600 font-medium">
+                          <CheckCircle className="w-3 h-3" /> Instant book
+                        </span>
+                      )}
+                    </div>
+                    {sp.requirements && (
+                      <div className="mt-2 p-2 bg-amber-50 border border-amber-100 rounded-lg">
+                        <p className="text-xs text-amber-700"><span className="font-semibold">Requirements:</span> {sp.requirements}</p>
+                      </div>
+                    )}
+                    {sp.vendorRules && (
+                      <div className="mt-2 p-2 bg-muted/40 border border-border rounded-lg">
+                        <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Rules:</span> {sp.vendorRules}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* If approved — show confirmation */}
+            {myReservation?.status === "approved" && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-800">You're confirmed for this event!</p>
+                  {myReservation.paymentStatus === "unpaid" && myReservation.paymentAmountInCents > 0 && (
+                    <p className="text-xs text-green-700 mt-0.5">Payment required · ${(myReservation.paymentAmountInCents / 100).toFixed(2)} due</p>
+                  )}
+                </div>
+                <Link href="/vendor/event-spots" className="ml-auto flex items-center gap-1 text-xs text-green-700 font-semibold hover:underline shrink-0">
+                  Manage <ChevronRight className="w-3 h-3" />
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Photo Gallery Strip ───────────────────────── */}
       {photoGallery.length > 0 && (
@@ -603,8 +893,8 @@ export default function EventDetail() {
             )}
           </div>
 
-          {/* Right: Truck Lineup */}
-          <div className="lg:col-span-2" ref={lineupRef}>
+          {/* Right: Truck Lineup + Guest CTA */}
+          <div className="lg:col-span-2 space-y-6" ref={lineupRef}>
             <div className="mb-5">
               <h2 className="text-2xl font-display font-bold text-foreground mb-1">Food Truck Lineup</h2>
               {confirmedTrucks.length > 0 ? (
@@ -696,9 +986,157 @@ export default function EventDetail() {
                 <p className="text-sm text-muted-foreground mt-1">Check back closer to the event date.</p>
               </div>
             )}
+
+            {/* Guest CTA — only shown to non-authenticated visitors */}
+            {!isAuthenticated && spots.length > 0 && (
+              <div className="mt-2 p-5 bg-gradient-to-r from-primary/8 to-secondary/8 border border-primary/20 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                  <Store className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm">Are you a food truck?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {spots.reduce((s, sp) => s + sp.availableSlots, 0) > 0
+                      ? `${spots.reduce((s, sp) => s + sp.availableSlots, 0)} vendor spot${spots.reduce((s, sp) => s + sp.availableSlots, 0) !== 1 ? "s" : ""} still open — apply to join this event.`
+                      : "This event has a vendor waitlist — sign up to join."}
+                  </p>
+                </div>
+                <Link
+                  href="/signup"
+                  className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  Sign up to apply <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* ── Apply Modal ────────────────────────────────── */}
+      {showApplyModal && isVendor && (
+        <div
+          className="fixed inset-0 z-[9500] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowApplyModal(false); }}
+        >
+          <div className="bg-card rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="px-6 py-5 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 className="font-display font-bold text-foreground text-lg">Apply to Event</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{event.name}</p>
+              </div>
+              <button
+                onClick={() => setShowApplyModal(false)}
+                className="w-9 h-9 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Event summary */}
+              <div className="p-4 bg-muted/30 rounded-xl space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Calendar className="w-4 h-4 text-primary/60 shrink-0" />
+                  {format(new Date(event.startDateTime), "EEEE, MMMM d, yyyy · h:mm a")}
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="w-4 h-4 text-primary/60 shrink-0" />
+                  {event.venueName}, {event.city}
+                </div>
+              </div>
+
+              {/* Spot details */}
+              {(() => {
+                const spot = spots.find(s => s.availableSlots > 0) || spots[0];
+                if (!spot) return null;
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">{spot.name}</p>
+                        {spot.description && <p className="text-xs text-muted-foreground mt-0.5">{spot.description}</p>}
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <p className="font-bold text-foreground text-lg">
+                          {spot.priceInCents === 0 ? "Free" : `$${(spot.priceInCents / 100).toFixed(0)}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">per spot</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Ticket className="w-3 h-3 text-primary/60" />
+                        {spot.availableSlots}/{spot.totalSlots} spots available
+                      </span>
+                      {spot.isInstantBook && (
+                        <span className="flex items-center gap-1 text-green-600 font-medium">
+                          <CheckCircle className="w-3 h-3" /> Instant book
+                        </span>
+                      )}
+                    </div>
+                    {spot.requirements && (
+                      <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                        <p className="text-xs font-semibold text-amber-700 mb-1 flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5" /> Requirements
+                        </p>
+                        <p className="text-xs text-amber-800">{spot.requirements}</p>
+                      </div>
+                    )}
+                    {spot.vendorRules && (
+                      <div className="p-3 bg-muted/40 border border-border rounded-xl">
+                        <p className="text-xs font-semibold text-foreground mb-1">Vendor Rules</p>
+                        <p className="text-xs text-muted-foreground">{spot.vendorRules}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                  Message to Organizer <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <textarea
+                  value={applyNotes}
+                  onChange={e => setApplyNotes(e.target.value)}
+                  placeholder="Tell the organizer about your truck, specialties, or any questions you have…"
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl bg-background text-foreground placeholder:text-muted-foreground/60 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
+                />
+              </div>
+
+              {/* Payment notice */}
+              {spots.some(s => s.priceInCents > 0) && (
+                <div className="flex items-start gap-2.5 p-3 bg-primary/5 border border-primary/15 rounded-xl text-xs text-foreground/70">
+                  <CreditCard className="w-4 h-4 text-primary/60 shrink-0 mt-0.5" />
+                  <p>If approved, you'll be redirected to complete payment via Stripe. No charge until the organizer confirms your spot.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-border bg-muted/20 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowApplyModal(false)}
+                disabled={applying}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground border border-border bg-background hover:bg-muted/40 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApply}
+                disabled={applying}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+              >
+                {applying && <Loader2 className="w-4 h-4 animate-spin" />}
+                {applying ? "Submitting…" : "Submit Application"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Expanded Map Modal ────────────────────────── */}
       {mapExpanded && event.latitude && event.longitude && (
