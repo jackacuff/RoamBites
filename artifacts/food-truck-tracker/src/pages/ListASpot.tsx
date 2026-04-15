@@ -4,6 +4,7 @@ import { Layout } from "@/components/Layout";
 import {
   Building2, Home, Repeat, Zap, MapPin, Calendar, DollarSign,
   ChevronLeft, ChevronRight, CheckCircle, Plus, Trash2, Clock, Users,
+  Lock, ExternalLink, Info,
 } from "lucide-react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,7 +14,7 @@ const SPOT_TYPES = [
   { value: "truck_park", label: "Truck Park", icon: <Building2 className="w-6 h-6" />, desc: "Multiple spaces for food trucks to operate long-term or regularly." },
   { value: "single_spot", label: "Single Spot", icon: <Home className="w-6 h-6" />, desc: "One parking space, lot, or area available at a business or property." },
   { value: "recurring_host", label: "Recurring Host", icon: <Repeat className="w-6 h-6" />, desc: "Brewery, office park, or business that hosts trucks on a schedule." },
-  { value: "popup_opportunity", label: "Pop-Up", icon: <Zap className="w-6 h-6" />, desc: "Short-term, event-based, or spontaneous opportunity to serve." },
+  { value: "popup_opportunity", label: "Pop-Up", icon: <Zap className="w-6 h-6" />, desc: "A one-time opportunity for a single food truck to operate at your location." },
 ];
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -88,8 +89,18 @@ export default function ListASpot() {
     amenities: [],
   });
 
+  const isPopUp = form.spotType === "popup_opportunity";
+
   function set(key: keyof FormData, value: any) {
     setForm(f => ({ ...f, [key]: value }));
+  }
+
+  function selectSpotType(type: string) {
+    if (type === "popup_opportunity") {
+      setForm(f => ({ ...f, spotType: type, spotsTotal: 1, scheduleType: "one_time", hasWaitlist: false }));
+    } else {
+      set("spotType", type);
+    }
   }
 
   function addSchedule() {
@@ -177,7 +188,7 @@ export default function ListASpot() {
               {SPOT_TYPES.map(t => (
                 <button
                   key={t.value}
-                  onClick={() => set("spotType", t.value)}
+                  onClick={() => selectSpotType(t.value)}
                   className={`flex flex-col gap-3 p-5 rounded-2xl border-2 text-left transition-all hover:border-primary/60 ${form.spotType === t.value ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border bg-card"}`}
                 >
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${form.spotType === t.value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
@@ -190,6 +201,25 @@ export default function ListASpot() {
                 </button>
               ))}
             </div>
+
+            {/* Pop-Up callout shown when selected */}
+            {isPopUp && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3 mt-2">
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Pop-Up is for single truck opportunities</p>
+                  <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                    One-time, one truck only. For multiple trucks or a structured event with vendor applications,
+                    use the event creation flow instead.
+                  </p>
+                  <Link href="/organizer/events/new">
+                    <button className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900 transition-colors">
+                      Create an Event instead <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -272,17 +302,26 @@ export default function ListASpot() {
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-foreground mb-1">When is this spot available?</h2>
 
-            <div className="flex gap-3">
-              {["one_time", "recurring"].map(type => (
-                <button
-                  key={type}
-                  onClick={() => { set("scheduleType", type); set("schedules", [{}]); }}
-                  className={`flex-1 py-3 rounded-2xl text-sm font-semibold border-2 transition-all ${form.scheduleType === type ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
-                >
-                  {type === "one_time" ? "One-time / specific dates" : "Recurring schedule"}
-                </button>
-              ))}
-            </div>
+            {/* Pop-Up: one-time only — lock the toggle */}
+            {isPopUp ? (
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-2xl border border-border">
+                <Lock className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium text-foreground">One-time date</span>
+                <span className="ml-auto text-xs text-muted-foreground">Pop-Ups are always one-time only</span>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                {["one_time", "recurring"].map(type => (
+                  <button
+                    key={type}
+                    onClick={() => { set("scheduleType", type); set("schedules", [{}]); }}
+                    className={`flex-1 py-3 rounded-2xl text-sm font-semibold border-2 transition-all ${form.scheduleType === type ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                  >
+                    {type === "one_time" ? "One-time / specific dates" : "Recurring schedule"}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {form.scheduleType === "one_time" ? (
               <div className="space-y-3">
@@ -368,16 +407,47 @@ export default function ListASpot() {
           <div className="space-y-6">
             <h2 className="text-lg font-bold text-foreground mb-1">Spots & pricing</h2>
 
+            {/* Pop-Up single-truck enforcement banner */}
+            {isPopUp && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex gap-3">
+                <Lock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-800">Limited to 1 spot</p>
+                  <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                    Pop-Ups are for single truck opportunities only. The spot count is fixed at 1 and cannot be changed.
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Need multiple trucks?{" "}
+                    <Link href="/organizer/events/new">
+                      <span className="font-semibold underline underline-offset-2 cursor-pointer hover:text-amber-900 inline-flex items-center gap-1">
+                        Create an Event instead <ExternalLink className="w-3 h-3" />
+                      </span>
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
-                <label className="text-sm font-medium text-foreground block mb-1.5">Number of spots</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.spotsTotal}
-                  onChange={e => set("spotsTotal", parseInt(e.target.value) || 1)}
-                  className="w-full px-4 py-3 rounded-2xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
+                <label className="text-sm font-medium text-foreground flex items-center gap-2 mb-1.5">
+                  Number of spots
+                  {isPopUp && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+                </label>
+                {isPopUp ? (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-border bg-muted/50 text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">1 spot</span>
+                    <span className="text-xs">(fixed for Pop-Up)</span>
+                  </div>
+                ) : (
+                  <input
+                    type="number"
+                    min="1"
+                    value={form.spotsTotal}
+                    onChange={e => set("spotsTotal", parseInt(e.target.value) || 1)}
+                    className="w-full px-4 py-3 rounded-2xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-1.5">Price per spot</label>
@@ -410,18 +480,21 @@ export default function ListASpot() {
                   <p className="text-xs text-muted-foreground">Vendors can reserve immediately without waiting for your approval.</p>
                 </div>
               </label>
-              <label className="flex items-start gap-3 cursor-pointer group">
-                <div className={`w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center transition-colors shrink-0 ${form.hasWaitlist ? "border-primary bg-primary" : "border-border group-hover:border-primary/40"}`}
-                  onClick={() => set("hasWaitlist", !form.hasWaitlist)}>
-                  {form.hasWaitlist && <CheckCircle className="w-3 h-3 text-primary-foreground" />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-amber-500" /> Enable waitlist
-                  </p>
-                  <p className="text-xs text-muted-foreground">Let vendors join a waitlist when spots are full.</p>
-                </div>
-              </label>
+              {/* Waitlist is not applicable for single-spot Pop-Ups */}
+              {!isPopUp && (
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div className={`w-5 h-5 mt-0.5 rounded-md border-2 flex items-center justify-center transition-colors shrink-0 ${form.hasWaitlist ? "border-primary bg-primary" : "border-border group-hover:border-primary/40"}`}
+                    onClick={() => set("hasWaitlist", !form.hasWaitlist)}>
+                    {form.hasWaitlist && <CheckCircle className="w-3 h-3 text-primary-foreground" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-500" /> Enable waitlist
+                    </p>
+                    <p className="text-xs text-muted-foreground">Let vendors join a waitlist when spots are full.</p>
+                  </div>
+                </label>
+              )}
             </div>
 
             <div className="border-t border-border pt-5">

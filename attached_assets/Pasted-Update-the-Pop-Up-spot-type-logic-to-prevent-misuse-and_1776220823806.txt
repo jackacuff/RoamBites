@@ -1,0 +1,104 @@
+Update the “Pop-Up” spot type logic to prevent misuse and ensure it does not replace proper event creation.
+
+GOAL
+Ensure Pop-Up listings are used ONLY for single-truck, short-term opportunities, and cannot be used to bypass the event creation workflow.
+
+--------------------------------------------------
+1. DEFINE POP-UP CLEARLY
+--------------------------------------------------
+
+Pop-Up should represent:
+- a one-time opportunity
+- for a SINGLE food truck
+- at a host location
+
+It should NOT function as:
+- a multi-truck event
+- an organized vendor event
+- a workaround for event creation
+
+--------------------------------------------------
+2. ENFORCE SINGLE TRUCK LIMIT
+--------------------------------------------------
+
+When creating a Pop-Up listing:
+
+- limit number of available spots to 1
+- do NOT allow multiple vendor slots
+
+If the user attempts to:
+- increase spots above 1
+- allow multiple vendors
+
+Then:
+- block the action
+- show a message:
+  “Pop-Ups are for single truck opportunities. For multiple trucks, please create an Event.”
+
+--------------------------------------------------
+3. ADD EVENT REDIRECTION LOGIC
+--------------------------------------------------
+
+If user behavior indicates event-like setup, such as:
+- multiple trucks
+- multiple vendor slots
+- multi-day structured scheduling
+- vendor application workflows
+
+Then:
+- prompt:
+  “This looks like an event. Let’s set it up properly.”
+- redirect user to Create Event flow
+
+--------------------------------------------------
+4. UPDATE POP-UP DESCRIPTION IN UI
+--------------------------------------------------
+
+Replace current description with:
+
+“A one-time opportunity for a single food truck to operate at your location.”
+
+Also add a helper note:
+
+“For multiple trucks or organized events, create an Event instead.”
+
+--------------------------------------------------
+5. ADD TRUCK COUNT STEP (OPTIONAL BUT RECOMMENDED)
+--------------------------------------------------
+
+During Pop-Up creation:
+
+Ask:
+“How many trucks can this accommodate?”
+
+If:
+- 1 → continue Pop-Up flow
+- more than 1 → redirect to Event creation
+
+--------------------------------------------------
+6. ALIGN MONETIZATION LOGIC
+--------------------------------------------------
+
+Ensure:
+- Pop-Ups remain lightweight and simple
+- Events remain the primary structure for multi-truck opportunities
+
+Do NOT allow Pop-Ups to replace event-level functionality.
+
+--------------------------------------------------
+7. VALIDATE FULL WORKFLOW
+--------------------------------------------------
+
+Confirm:
+- users cannot create multi-truck Pop-Ups
+- users are redirected to Events when appropriate
+- UI clearly communicates the difference
+- marketplace quality is preserved
+
+--------------------------------------------------
+AFTER IMPLEMENTING, PROVIDE
+--------------------------------------------------
+
+1. Summary of Pop-Up restrictions
+2. How event redirection works
+3. Confirmation that multi-truck Pop-Ups are blocked
