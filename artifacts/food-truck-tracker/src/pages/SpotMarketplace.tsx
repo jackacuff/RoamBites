@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
+import { SpotCardMap } from "@/components/SpotCardMap";
 
 const SPOT_TYPE_LABELS: Record<string, string> = {
   truck_park: "Truck Park",
@@ -65,7 +66,9 @@ function SpotCard({ listing, view }: { listing: any; view: "grid" | "list" }) {
       <Link href={`/spots/${listing.id}`}>
         <div className="group flex gap-4 bg-card border border-border rounded-2xl p-4 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer">
           <div className="w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
-            {listing.imageUrl ? (
+            {listing.latitude && listing.longitude ? (
+              <SpotCardMap lat={listing.latitude} lng={listing.longitude} className="w-full h-full" />
+            ) : listing.imageUrl ? (
               <img src={listing.imageUrl} alt={listing.title} className="w-full h-full object-cover" />
             ) : (
               <MapPin className="w-8 h-8 text-primary/40" />
@@ -110,7 +113,9 @@ function SpotCard({ listing, view }: { listing: any; view: "grid" | "list" }) {
     <Link href={`/spots/${listing.id}`}>
       <div className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col">
         <div className="h-36 bg-gradient-to-br from-primary/10 to-secondary/10 relative">
-          {listing.imageUrl ? (
+          {listing.latitude && listing.longitude ? (
+            <SpotCardMap lat={listing.latitude} lng={listing.longitude} className="w-full h-full" />
+          ) : listing.imageUrl ? (
             <img src={listing.imageUrl} alt={listing.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
