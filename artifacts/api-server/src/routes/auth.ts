@@ -204,6 +204,8 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.trim().toLowerCase()));
 
+  let devResetLink: string | undefined;
+
   if (user) {
     const token = generateToken();
     const expires = new Date(Date.now() + 60 * 60 * 1000);
@@ -214,13 +216,19 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
       ? req.body.appUrl
       : (req.headers.origin as string | undefined) ?? undefined;
     try {
-      await sendPasswordResetEmail(user.email, token, baseUrl);
+      const result = await sendPasswordResetEmail(user.email, token, baseUrl);
+      if (!result.delivered && process.env.NODE_ENV !== "production") {
+        devResetLink = result.link;
+      }
     } catch (err) {
       console.error("Failed to send password reset email:", err);
     }
   }
 
-  res.json({ message: "If an account exists for this email, a reset link has been sent." });
+  res.json({
+    message: "If an account exists for this email, a reset link has been sent.",
+    ...(devResetLink ? { devResetLink } : {}),
+  });
 });
 
 router.post("/auth/reset-password", async (req, res): Promise<void> => {
