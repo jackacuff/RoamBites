@@ -160,7 +160,7 @@ export default function SpotDetail() {
           </button>
         </Link>
 
-        {listing.latitude && listing.longitude ? (
+        {(listing.latitude && listing.longitude) || listing.address || listing.city ? (
           <div className="mb-6">
             <SpotLocationMap
               lat={listing.latitude}
