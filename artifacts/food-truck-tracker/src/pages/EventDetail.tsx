@@ -9,7 +9,7 @@ import {
   Share2, Check, ChevronRight, X, ChevronLeft, ImageIcon, Phone,
   Mail, Zap, DollarSign, Maximize2, BookmarkPlus, BookmarkCheck,
   Navigation, CalendarPlus, Store, Tag, AlertCircle, ArrowRight,
-  CheckCircle, Loader2, Ticket, CreditCard,
+  CheckCircle, Loader2, Ticket, CreditCard, MessageSquare, Send,
 } from "lucide-react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -232,6 +232,10 @@ export default function EventDetail() {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applyNotes, setApplyNotes] = useState("");
   const [applying, setApplying] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [requestMessage, setRequestMessage] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -291,13 +295,40 @@ export default function EventDetail() {
     }
   };
 
+  const handleRequestSpace = async () => {
+    if (!event || !requestMessage.trim()) return;
+    setRequesting(true);
+    try {
+      const res = await fetch(getApiUrl("/api/messages"), {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toUserId: event.organizerUserId,
+          eventId: event.id,
+          subject: `Space Request: ${event.name}`,
+          body: requestMessage.trim(),
+          type: "vendor_inquiry",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to send");
+      setRequestSent(true);
+      setShowRequestModal(false);
+      setRequestMessage("");
+      toast({ title: "Request sent!", description: "The organizer will get back to you via your inbox." });
+    } catch {
+      toast({ title: "Couldn't send request", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setRequesting(false);
+    }
+  };
+
   const vendorCtaProps = (() => {
     if (!isVendor) return null;
     if (spotsLoading) return { label: "Checking availability…", disabled: true, action: null, variant: "ghost" };
     if (!myReservation) {
       const available = spots.filter(s => s.availableSlots > 0);
       const waitlistable = spots.filter(s => s.availableSlots === 0);
-      if (spots.length === 0) return { label: "No spots available", disabled: true, action: null, variant: "ghost" };
+      if (spots.length === 0) return { label: "Request Space", disabled: false, action: () => setShowRequestModal(true), variant: "primary" };
       if (available.length > 0) return { label: "Apply to Event", disabled: false, action: () => setShowApplyModal(true), variant: "primary" };
       if (waitlistable.length > 0) return { label: "Join Waitlist", disabled: false, action: () => setShowApplyModal(true), variant: "secondary" };
       return { label: "Applications Closed", disabled: true, action: null, variant: "ghost" };
@@ -566,8 +597,12 @@ export default function EventDetail() {
                       );
                     })()}
                   </div>
+                ) : requestSent ? (
+                  <p className="text-sm text-green-600 font-medium flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4" /> Request sent — check your inbox for a reply.
+                  </p>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No vendor spots set up for this event yet.</p>
+                  <p className="text-sm text-muted-foreground">No vendor spots set up yet — message the organizer to express interest.</p>
                 )}
               </div>
 
@@ -611,6 +646,14 @@ export default function EventDetail() {
                   >
                     View in My Applications <ChevronRight className="w-3 h-3" />
                   </Link>
+                )}
+                {!myReservation && !requestSent && spots.length > 0 && (
+                  <button
+                    onClick={() => setShowRequestModal(true)}
+                    className="mt-2 flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <MessageSquare className="w-3 h-3" /> Message organizer
+                  </button>
                 )}
               </div>
             </div>
@@ -1132,6 +1175,89 @@ export default function EventDetail() {
               >
                 {applying && <Loader2 className="w-4 h-4 animate-spin" />}
                 {applying ? "Submitting…" : "Submit Application"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Request Space Modal ───────────────────────── */}
+      {showRequestModal && isVendor && event && (
+        <div
+          className="fixed inset-0 z-[9500] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRequestModal(false); }}
+        >
+          <div className="bg-card rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-200">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 className="font-display font-bold text-foreground text-lg">Request Space</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{event.name}</p>
+              </div>
+              <button
+                onClick={() => setShowRequestModal(false)}
+                className="w-9 h-9 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center text-foreground transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Event summary */}
+              <div className="p-4 bg-muted/30 rounded-xl space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Calendar className="w-4 h-4 text-primary/60 shrink-0" />
+                  {format(new Date(event.startDateTime), "EEEE, MMMM d, yyyy · h:mm a")}
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="w-4 h-4 text-primary/60 shrink-0" />
+                  {event.venueName}, {event.city}
+                </div>
+              </div>
+
+              {/* Helper prompt */}
+              <p className="text-sm text-muted-foreground">
+                Introduce yourself and let the organizer know why you'd be a great fit. They'll reply to your inbox.
+              </p>
+
+              {/* Message */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">
+                  Your message <span className="text-muted-foreground font-normal text-xs">(required)</span>
+                </label>
+                <textarea
+                  value={requestMessage}
+                  onChange={e => setRequestMessage(e.target.value)}
+                  placeholder={`Hi! I'd love to participate in ${event.name}. My truck serves [cuisine type] and I typically do [x] covers per event. Is there space available?`}
+                  rows={5}
+                  className="w-full px-3.5 py-2.5 text-sm border border-border rounded-xl bg-background text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
+                />
+                <p className="text-xs text-muted-foreground mt-1 text-right">{requestMessage.length} chars</p>
+              </div>
+
+              {/* Inbox note */}
+              <div className="flex items-start gap-2.5 p-3 bg-primary/5 border border-primary/15 rounded-xl text-xs text-foreground/70">
+                <MessageSquare className="w-4 h-4 text-primary/60 shrink-0 mt-0.5" />
+                <p>This sends a direct message to the event organizer. Replies will appear in your <Link href="/vendor/inbox" className="text-primary font-medium hover:underline">inbox</Link>.</p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-border bg-muted/20 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowRequestModal(false)}
+                disabled={requesting}
+                className="px-4 py-2 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground border border-border bg-background hover:bg-muted/40 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRequestSpace}
+                disabled={requesting || !requestMessage.trim()}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {requesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {requesting ? "Sending…" : "Send Request"}
               </button>
             </div>
           </div>
