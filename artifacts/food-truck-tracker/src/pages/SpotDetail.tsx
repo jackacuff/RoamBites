@@ -8,6 +8,7 @@ import {
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { SpotLocationMap } from "@/components/SpotLocationMap";
 
 const SPOT_TYPE_LABELS: Record<string, string> = {
   truck_park: "Truck Park",
@@ -159,15 +160,26 @@ export default function SpotDetail() {
           </button>
         </Link>
 
-        <div className="w-full h-52 rounded-3xl overflow-hidden mb-6 bg-gradient-to-br from-primary/10 to-secondary/10">
-          {listing.imageUrl ? (
+        {listing.latitude && listing.longitude ? (
+          <div className="mb-6">
+            <SpotLocationMap
+              lat={listing.latitude}
+              lng={listing.longitude}
+              title={listing.title}
+              address={listing.address}
+              city={listing.city}
+              height="220px"
+            />
+          </div>
+        ) : listing.imageUrl ? (
+          <div className="w-full h-52 rounded-3xl overflow-hidden mb-6">
             <img src={listing.imageUrl} alt={listing.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <MapPin className="w-16 h-16 text-primary/20" />
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="w-full h-52 rounded-3xl overflow-hidden mb-6 bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
+            <MapPin className="w-16 h-16 text-primary/20" />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
