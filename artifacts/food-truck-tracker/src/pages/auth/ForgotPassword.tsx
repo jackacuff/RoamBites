@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { getApiUrl } from "@/lib/api";
-import { UtensilsCrossed, AlertCircle, Mail, CheckCircle, ArrowLeft } from "lucide-react";
+import { UtensilsCrossed, AlertCircle, Mail, CheckCircle, ArrowLeft, ExternalLink } from "lucide-react";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [devResetLink, setDevResetLink] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +22,9 @@ export default function ForgotPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), appUrl: window.location.origin }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Something went wrong.");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
+      if (data.devResetLink) setDevResetLink(data.devResetLink);
       setSent(true);
     } catch (err: any) {
       setError(err?.message ?? "Network error. Please try again.");
@@ -48,6 +48,23 @@ export default function ForgotPassword() {
                 <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                   If an account exists for <strong className="text-foreground">{email}</strong>, we've sent a password reset link. Check your spam folder if you don't see it within a minute.
                 </p>
+
+                {devResetLink && (
+                  <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-left">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Dev mode — email not delivered</p>
+                    <p className="text-xs text-amber-600 mb-3 leading-relaxed">
+                      Email delivery isn't configured yet. Use this link directly to reset your password:
+                    </p>
+                    <a
+                      href={devResetLink}
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline break-all"
+                    >
+                      <ExternalLink className="w-4 h-4 shrink-0" />
+                      Open reset link
+                    </a>
+                  </div>
+                )}
+
                 <Link
                   href="/login"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"

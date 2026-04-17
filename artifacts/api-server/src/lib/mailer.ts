@@ -52,9 +52,9 @@ async function sendViaSMTP(to: string, subject: string, html: string): Promise<b
   return true;
 }
 
-async function sendMail(to: string, subject: string, html: string): Promise<void> {
-  if (await sendViaResend(to, subject, html)) return;
-  if (await sendViaSMTP(to, subject, html)) return;
+async function sendMail(to: string, subject: string, html: string): Promise<boolean> {
+  if (await sendViaResend(to, subject, html)) return true;
+  if (await sendViaSMTP(to, subject, html)) return true;
 
   const linkMatch = html.match(/href="([^"]+)"/);
   const link = linkMatch ? linkMatch[1] : "(no link found)";
@@ -64,6 +64,7 @@ async function sendMail(to: string, subject: string, html: string): Promise<void
   console.log(`    Subject: ${subject}`);
   console.log(`    Link:    ${link}`);
   console.log("═══════════════════════════════════════════════════════\n");
+  return false;
 }
 
 function baseTemplate(body: string) {
@@ -99,10 +100,14 @@ function baseTemplate(body: string) {
 </html>`;
 }
 
-export async function sendVerificationEmail(to: string, token: string, baseUrl?: string): Promise<void> {
+export async function sendVerificationEmail(
+  to: string,
+  token: string,
+  baseUrl?: string
+): Promise<{ delivered: boolean; link: string }> {
   const base = baseUrl ?? getAppUrl();
   const link = `${base}/verify-email?token=${token}`;
-  await sendMail(
+  const delivered = await sendMail(
     to,
     "Verify your RoamBites email",
     baseTemplate(`
@@ -112,12 +117,17 @@ export async function sendVerificationEmail(to: string, token: string, baseUrl?:
       <p class="note">Or copy and paste this URL: ${link}</p>
     `)
   );
+  return { delivered, link };
 }
 
-export async function sendPasswordResetEmail(to: string, token: string, baseUrl?: string): Promise<void> {
+export async function sendPasswordResetEmail(
+  to: string,
+  token: string,
+  baseUrl?: string
+): Promise<{ delivered: boolean; link: string }> {
   const base = baseUrl ?? getAppUrl();
   const link = `${base}/reset-password?token=${token}`;
-  await sendMail(
+  const delivered = await sendMail(
     to,
     "Reset your RoamBites password",
     baseTemplate(`
@@ -127,4 +137,6 @@ export async function sendPasswordResetEmail(to: string, token: string, baseUrl?
       <p class="note">Or copy and paste this URL: ${link}</p>
     `)
   );
+  return { delivered, link };
 }
+
