@@ -2,7 +2,7 @@ import { useRoute, Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { MapView } from "@/components/MapView";
 import { StatusBadge } from "@/components/StatusBadge";
-import { MapPin, Globe, Phone, Calendar, Clock, ChevronLeft, ChevronRight, X, Heart, Star, Bell, Send, Loader2, CalendarCheck, Share2 } from "lucide-react";
+import { MapPin, Globe, Phone, Calendar, Clock, ChevronLeft, ChevronRight, X, Heart, Star, Bell, Send, Loader2, CalendarCheck, Share2, AlertTriangle } from "lucide-react";
 import { SocialShareButton } from "@/components/SocialShare";
 import { useGetTruck } from "@workspace/api-client-react";
 import { format } from "date-fns";
@@ -224,6 +224,7 @@ export default function TruckDetail() {
   const [resSubmitting, setResSubmitting] = useState(false);
   const [resSuccess, setResSuccess] = useState(false);
   const [resError, setResError] = useState("");
+  const [dateConflict, setDateConflict] = useState<string | null>(null);
 
   const [media, setMedia] = useState<any[]>([]);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -363,7 +364,10 @@ export default function TruckDetail() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...resForm, truckId }),
       });
-      if (!res.ok) {
+      if (res.status === 409) {
+        const err = await res.json();
+        setResError(err.error || "This truck is already booked on that date.");
+      } else if (!res.ok) {
         const err = await res.json();
         setResError(err.error || "Failed to send reservation request.");
       } else {
@@ -371,6 +375,16 @@ export default function TruckDetail() {
       }
     } catch { setResError("Network error. Please try again."); }
     setResSubmitting(false);
+  };
+
+  const handleDateChange = (dateStr: string) => {
+    setResForm(f => ({ ...f, eventDate: dateStr }));
+    setResError("");
+    if (!dateStr || !truck?.scheduleEntries) { setDateConflict(null); return; }
+    const conflict = (truck.scheduleEntries as any[]).find(entry => {
+      return new Date(entry.startDateTime).toISOString().slice(0, 10) === dateStr;
+    });
+    setDateConflict(conflict ? `${truck.name} is already scheduled at ${conflict.venueName} on this day.` : null);
   };
 
   if (isLoading) {
@@ -624,16 +638,98 @@ export default function TruckDetail() {
                   </div>
                 ) : (
                   <form onSubmit={submitReservation} className="space-y-3">
+                    {/* Name + Email */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input required value={resForm.name} onChange={e => setResForm(f => ({ ...f, name: e.target.value }))} placeholder="Your name" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary" />
-                      <input required type="email" value={resForm.email} onChange={e => setResForm(f => ({ ...f, email: e.target.value }))} placeholder="Email address" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary" />
-                      <input value={resForm.phone} onChange={e => setResForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone (optional)" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary" />
-                      <input required type="date" value={resForm.eventDate} onChange={e => setResForm(f => ({ ...f, eventDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary" />
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Your name *</label>
+                        <input
+                          required
+                          value={resForm.name}
+                          onChange={e => setResForm(f => ({ ...f, name: e.target.value }))}
+                          placeholder="Jane Smith"
+                          className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Email address *</label>
+                        <input
+                          required
+                          type="email"
+                          value={resForm.email}
+                          onChange={e => setResForm(f => ({ ...f, email: e.target.value }))}
+                          placeholder="jane@example.com"
+                          className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                      </div>
                     </div>
-                    <input required value={resForm.eventLocation} onChange={e => setResForm(f => ({ ...f, eventLocation: e.target.value }))} placeholder="Event location / address" className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary" />
-                    <textarea required value={resForm.message} onChange={e => setResForm(f => ({ ...f, message: e.target.value }))} placeholder="Tell them about your event (expected attendance, duration, etc.)" rows={3} className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:border-primary resize-none" />
-                    {resError && <p className="text-sm text-destructive">{resError}</p>}
-                    <button type="submit" disabled={resSubmitting} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50">
+
+                    {/* Phone + Date */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Phone <span className="font-normal normal-case">(optional)</span></label>
+                        <input
+                          value={resForm.phone}
+                          onChange={e => setResForm(f => ({ ...f, phone: e.target.value }))}
+                          placeholder="(405) 555-0100"
+                          className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Event date *</label>
+                        <input
+                          required
+                          type="date"
+                          value={resForm.eventDate}
+                          min={new Date().toISOString().slice(0, 10)}
+                          onChange={e => handleDateChange(e.target.value)}
+                          className={`w-full px-3 py-2.5 rounded-xl border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all ${dateConflict ? "border-amber-400 focus:border-amber-400 focus:ring-amber-200" : "border-border focus:border-primary"}`}
+                          style={{ colorScheme: "light" }}
+                        />
+                        {dateConflict && (
+                          <div className="flex items-start gap-1.5 mt-1 text-amber-700">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                            <p className="text-xs leading-snug">{dateConflict} You can still send a request and they may be able to accommodate you.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Event location / address *</label>
+                      <input
+                        required
+                        value={resForm.eventLocation}
+                        onChange={e => setResForm(f => ({ ...f, eventLocation: e.target.value }))}
+                        placeholder="123 Main St, Oklahoma City, OK"
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      />
+                    </div>
+
+                    {/* Message */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tell them about your event *</label>
+                      <textarea
+                        required
+                        value={resForm.message}
+                        onChange={e => setResForm(f => ({ ...f, message: e.target.value }))}
+                        placeholder="Expected attendance, event duration, special requests…"
+                        rows={3}
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none transition-all"
+                      />
+                    </div>
+
+                    {resError && (
+                      <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/8 border border-destructive/20">
+                        <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                        <p className="text-sm text-destructive leading-snug">{resError}</p>
+                      </div>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={resSubmitting}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
                       {resSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       Send Request
                     </button>
