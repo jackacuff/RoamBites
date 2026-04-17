@@ -11,7 +11,7 @@ import {
   Loader2, MessageSquare, CreditCard, AlertTriangle, CheckCircle, Clock, ExternalLink,
   Sparkles, BarChart2, ChevronRight, Rocket,
 } from "lucide-react";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { getApiUrl, authHeaders } from "@/lib/api";
 import { format } from "date-fns";
 
@@ -138,6 +138,7 @@ export default function VendorDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const promoteRef = useRef<HTMLDivElement>(null);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [billingLoading, setBillingLoading] = useState(false);
   const [parks, setParks] = useState<{ id: number; name: string; city: string; openSpots: number }[]>([]);
@@ -241,21 +242,53 @@ export default function VendorDashboard() {
     } catch { toast({ title: "Error checking out", variant: "destructive" }); }
   };
 
-  const shareUrl = myTruck ? `${window.location.origin}/trucks/${myTruck.slug}` : "";
+  const shareTruckId = myTruck?.slug || myTruck?.id;
+  const shareUrl = myTruck ? `${window.location.origin}/trucks/${shareTruckId}` : "";
   const shareCaption = myTruck?.currentLocation
     ? `We're out today at ${myTruck.currentLocation}! Come find us 🔥\n${shareUrl}`
     : `Find ${myTruck?.name} on RoamBites!\n${shareUrl}`;
 
   const copyText = async (text: string, key: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(key);
-    setTimeout(() => setCopied(null), 2000);
-    toast({ title: "Copied!" });
+    let success = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        success = true;
+      }
+    } catch {}
+    if (!success) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        success = true;
+      } catch {}
+    }
+    if (success) {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+      toast({ title: "Copied!" });
+    } else {
+      toast({ title: "Copy failed", description: "Please copy the text manually.", variant: "destructive" });
+    }
   };
 
   const nativeShare = async () => {
-    if (navigator.share) await navigator.share({ title: myTruck?.name, text: shareCaption, url: shareUrl });
-    else copyText(shareUrl, "url");
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: myTruck?.name, text: shareCaption, url: shareUrl });
+      } catch (err: any) {
+        if (err?.name !== "AbortError") copyText(shareUrl, "url");
+      }
+    } else {
+      copyText(shareUrl, "url");
+    }
   };
 
   if (isLoading) return <Layout><LoadingSpinner /></Layout>;
@@ -435,7 +468,12 @@ export default function VendorDashboard() {
               </button>
 
               {/* Share Today */}
-              <button onClick={() => setPromoteOpen(o => !o)}
+              <button onClick={() => {
+                setPromoteOpen(o => {
+                  if (!o) setTimeout(() => promoteRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                  return !o;
+                });
+              }}
                 className={`flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border text-xs font-semibold transition-all hover:shadow-sm ${promoteOpen ? "bg-primary/10 border-primary/30 text-primary" : "bg-card border-card-border text-foreground hover:border-primary/40"}`}>
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Share2 className="w-4.5 h-4.5 text-primary" />
@@ -509,7 +547,7 @@ export default function VendorDashboard() {
             </div>
 
             {/* ── SECTION 4: Promote Your Truck ────────────────────────────── */}
-            <div className="mb-6">
+            <div className="mb-6" ref={promoteRef}>
               <SectionLabel>Promote Your Truck</SectionLabel>
               <div className="bg-gradient-to-r from-primary/8 to-secondary/8 border border-primary/15 rounded-2xl overflow-hidden">
                 <button
