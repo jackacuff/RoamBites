@@ -320,7 +320,20 @@ export default function VendorSchedule() {
   };
 
   const updateDay = (id: string, field: "startDateTime" | "endDateTime", value: string) => {
-    setDays(d => d.map(row => row.id === id ? { ...row, [field]: value } : row));
+    setDays(d => d.map(row => {
+      if (row.id !== id) return row;
+      const updated = { ...row, [field]: value };
+      if (field === "startDateTime" && value) {
+        const newStart = new Date(value);
+        const currentEnd = new Date(updated.endDateTime);
+        if (currentEnd <= newStart) {
+          const newEnd = new Date(newStart);
+          newEnd.setHours(newEnd.getHours() + 4);
+          updated.endDateTime = toLocalDatetimeString(newEnd);
+        }
+      }
+      return updated;
+    }));
   };
 
   const removeDay = (id: string) => {
@@ -340,6 +353,21 @@ export default function VendorSchedule() {
     e.preventDefault();
     if (!myTruck || !location.venueName || !location.city) return;
     if (days.length === 0) { toast({ title: "Add at least one date", variant: "destructive" }); return; }
+
+    for (let i = 0; i < days.length; i++) {
+      const day = days[i];
+      const start = new Date(day.startDateTime);
+      const end = new Date(day.endDateTime);
+      if (end <= start) {
+        toast({
+          title: `Invalid time on entry ${i + 1}`,
+          description: "End time must be after start time.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSubmitting(true);
     let successCount = 0;
     for (const day of days) {
@@ -667,40 +695,59 @@ export default function VendorSchedule() {
                   Date &amp; Time — {days.length} {days.length === 1 ? "day" : "days"}
                 </h3>
                 <div className="space-y-2">
-                  {days.map((day, i) => (
-                    <div key={day.id} className="flex items-center gap-2 p-3 bg-muted/40 rounded-xl border border-border/60">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-                        {i + 1}
+                  {days.map((day, i) => {
+                    const endBeforeStart = day.endDateTime && day.startDateTime
+                      ? new Date(day.endDateTime) <= new Date(day.startDateTime)
+                      : false;
+                    return (
+                    <div key={day.id} className="p-3 bg-muted/40 rounded-xl border border-border/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                            {i + 1}
+                          </div>
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            {days.length === 1 ? "Date & Time" : `Day ${i + 1}`}
+                          </span>
+                        </div>
+                        {days.length > 1 && (
+                          <button type="button" onClick={() => removeDay(day.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                      <div className="flex flex-1 gap-2 flex-wrap sm:flex-nowrap">
-                        <div className="flex-1 min-w-0">
-                          <label className="block text-xs text-muted-foreground mb-0.5">Start</label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-1">
+                            Start *
+                          </label>
                           <input
                             required
                             type="datetime-local"
                             value={day.startDateTime}
                             onChange={e => updateDay(day.id, "startDateTime", e.target.value)}
-                            className="w-full px-2 py-1.5 border border-input rounded-lg bg-background text-foreground text-sm"
+                            className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:border-primary"
+                            style={{ colorScheme: "light" }}
                           />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <label className="block text-xs text-muted-foreground mb-0.5">End</label>
+                        <div>
+                          <label className={`block text-xs font-medium mb-1 ${endBeforeStart ? "text-destructive" : "text-muted-foreground"}`}>
+                            End * {endBeforeStart && <span className="font-normal normal-case">(must be after start)</span>}
+                          </label>
                           <input
                             required
                             type="datetime-local"
                             value={day.endDateTime}
+                            min={day.startDateTime}
                             onChange={e => updateDay(day.id, "endDateTime", e.target.value)}
-                            className="w-full px-2 py-1.5 border border-input rounded-lg bg-background text-foreground text-sm"
+                            className={`w-full px-3 py-2 border rounded-lg bg-background text-foreground text-sm focus:outline-none transition-colors ${endBeforeStart ? "border-destructive focus:border-destructive" : "border-input focus:border-primary"}`}
+                            style={{ colorScheme: "light" }}
                           />
                         </div>
                       </div>
-                      {days.length > 1 && (
-                        <button type="button" onClick={() => removeDay(day.id)} className="flex-shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1">
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="flex flex-wrap gap-2 mt-3">

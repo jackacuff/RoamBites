@@ -452,8 +452,8 @@ export const CreateScheduleEntryBody = zod.object({
   city: zod.string(),
   latitude: zod.number().nullish(),
   longitude: zod.number().nullish(),
-  startDateTime: zod.date(),
-  endDateTime: zod.date(),
+  startDateTime: zod.coerce.date(),
+  endDateTime: zod.coerce.date(),
   isRecurring: zod.boolean().optional(),
   notes: zod.string().nullish(),
 });
