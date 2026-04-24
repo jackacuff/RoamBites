@@ -14,9 +14,21 @@
       "backgroundColor": "#FBFAF8"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RoamBites shares your truck's location with nearby customers while your shift is active.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "RoamBites shares your truck's location with nearby customers only while your shift is active. It stops when you end your shift.",
+        "NSLocationAlwaysUsageDescription": "RoamBites shares your truck's location with nearby customers only while your shift is active."
+      }
     },
-    "android": {},
+    "android": {
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,7 +40,13 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "RoamBites shares your truck's location with nearby customers only while your shift is active."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

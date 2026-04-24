@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seedIfEmpty } from "./lib/seed";
+import { startExpireStaleShiftsJob } from "./jobs/expireStaleShifts";
 
 const rawPort = process.env["PORT"];
 
@@ -49,6 +50,10 @@ async function initStripe() {
 
 await seedIfEmpty();
 await initStripe();
+
+if (process.env["FEATURE_LIVE_TRACKING"] !== "false") {
+  startExpireStaleShiftsJob();
+}
 
 app.listen(port, (err) => {
   if (err) {

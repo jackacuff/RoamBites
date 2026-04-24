@@ -36,6 +36,10 @@ export const trucksTable = pgTable("trucks", {
   liveStartedAt: timestamp("live_started_at", { withTimezone: true }),
   liveUntil: timestamp("live_until", { withTimezone: true }),
   liveOutsideSchedule: boolean("live_outside_schedule").default(false),
+  currentLocationUpdatedAt: timestamp("current_location_updated_at", { withTimezone: true }),
+  currentLocationAccuracyMeters: real("current_location_accuracy_meters"),
+  currentHeadingDegrees: real("current_heading_degrees"),
+  currentSpeedMps: real("current_speed_mps"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

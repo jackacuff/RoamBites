@@ -22,3 +22,4 @@ export * from "./truckViews";
 export * from "./socialPosts";
 export * from "./platformSettings";
 export * from "./spotMarketplace";
+export * from "./truckLocationHistory";

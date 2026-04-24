@@ -18,6 +18,7 @@ import {
 } from "@/components/MapViewWrapper";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useColors } from "@/hooks/useColors";
+import { useLiveTrucks } from "@/hooks/useLiveTrucks";
 
 const OKC_REGION: Region = {
   latitude: 35.4676,
@@ -41,6 +42,7 @@ export default function MapScreen() {
   const isWeb = Platform.OS === "web";
 
   const { data: trucks, isLoading } = useListTrucks({ openNow: true });
+  const { data: liveTrucks } = useLiveTrucks();
 
   useEffect(() => {
     requestLocation();
@@ -92,18 +94,32 @@ export default function MapScreen() {
         (t.activeSchedule?.latitude != null && t.activeSchedule?.longitude != null)
     );
 
+  // Live data from the 30s polled feed takes priority over the static list data
+  const liveById = new Map(liveTrucks.map((l) => [l.id, l]));
+
   const markers = trucksWithLocation.map((t) => {
+    const fresh = liveById.get(t.id);
     const useLiveCoords =
       t.isLive && t.currentLatitude != null && t.currentLongitude != null;
     return {
       id: t.id,
-      latitude: useLiveCoords ? t.currentLatitude! : t.activeSchedule!.latitude!,
-      longitude: useLiveCoords
-        ? t.currentLongitude!
-        : t.activeSchedule!.longitude!,
-      color: t.isLive ? colors.accent : colors.primary,
+      latitude: fresh?.latitude ?? (useLiveCoords ? t.currentLatitude! : t.activeSchedule!.latitude!),
+      longitude: fresh?.longitude ?? (useLiveCoords ? t.currentLongitude! : t.activeSchedule!.longitude!),
+      color: fresh || t.isLive ? colors.accent : colors.primary,
     };
   });
+
+  // Add any trucks that are live in the polled feed but missing from the static list
+  const listIds = new Set(trucksWithLocation.map((t) => t.id));
+  for (const l of liveTrucks) {
+    if (listIds.has(l.id)) continue;
+    markers.push({
+      id: l.id,
+      latitude: l.latitude,
+      longitude: l.longitude,
+      color: colors.accent,
+    });
+  }
 
   const handleMarkerPress = (id: number) => {
     const truck = trucksWithLocation.find((t) => t.id === id);

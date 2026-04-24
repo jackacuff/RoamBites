@@ -21,6 +21,7 @@ import {
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { LiveShiftController } from "@/features/liveShift/LiveShiftController";
 
 export default function VendorDashboard() {
   const colors = useColors();
@@ -231,6 +232,12 @@ export default function VendorDashboard() {
                 </Text>
               </View>
             )}
+
+            <LiveShiftController
+              truckId={truck.id}
+              isLive={!!truck.isLive}
+              onShiftEnded={refetch}
+            />
           </View>
 
           {/* Subscription */}

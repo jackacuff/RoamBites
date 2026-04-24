@@ -1,9 +1,21 @@
 import { Router, type IRouter } from "express";
-import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable, vendorSubscriptionsTable, favoritesTable } from "@workspace/db";
-import { eq, and, ilike, or, inArray, avg, count, asc } from "drizzle-orm";
+import { db, trucksTable, scheduleEntriesTable, menuItemsTable, eventsTable, eventTrucksTable, usersTable, reviewsTable, vendorSubscriptionsTable, favoritesTable, truckLocationHistoryTable } from "@workspace/db";
+import { eq, and, ilike, or, inArray, avg, count, asc, gte, isNotNull } from "drizzle-orm";
+import { z } from "zod/v4";
 import { CreateTruckBody, UpdateTruckBody, CheckInTruckBody } from "@workspace/api-zod";
 import { requireAuth, requireRole, optionalAuth } from "../lib/auth";
 import { computeTruckStatus, slugify } from "../lib/truckStatus";
+
+const LIVE_FRESHNESS_MS = 90_000;
+
+const HeartbeatBody = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracyMeters: z.number().min(0).max(10_000).nullish(),
+  headingDegrees: z.number().min(0).max(360).nullish(),
+  speedMps: z.number().min(0).max(200).nullish(),
+  recordedAt: z.string().datetime().nullish(),
+});
 
 const router: IRouter = Router();
 
@@ -201,9 +213,63 @@ router.get("/trucks/featured", optionalAuth, async (req, res): Promise<void> => 
   res.json({ trucks, mode });
 });
 
+// Public: trucks that are currently live AND have a fresh heartbeat
+router.get("/trucks/live", async (req, res): Promise<void> => {
+  const freshnessMs = LIVE_FRESHNESS_MS;
+  const cutoff = new Date(Date.now() - freshnessMs);
+
+  const rows = await db
+    .select()
+    .from(trucksTable)
+    .where(
+      and(
+        eq(trucksTable.isLive, true),
+        eq(trucksTable.isApproved, true),
+        isNotNull(trucksTable.currentLatitude),
+        isNotNull(trucksTable.currentLongitude),
+        isNotNull(trucksTable.currentLocationUpdatedAt),
+        gte(trucksTable.currentLocationUpdatedAt, cutoff),
+      ),
+    );
+
+  const { bbox } = req.query as { bbox?: string };
+  let filtered = rows;
+  if (bbox) {
+    const parts = bbox.split(",").map((s) => parseFloat(s));
+    if (parts.length === 4 && parts.every((n) => !Number.isNaN(n))) {
+      const [minLng, minLat, maxLng, maxLat] = parts;
+      filtered = rows.filter(
+        (t) =>
+          t.currentLatitude! >= minLat &&
+          t.currentLatitude! <= maxLat &&
+          t.currentLongitude! >= minLng &&
+          t.currentLongitude! <= maxLng,
+      );
+    }
+  }
+
+  res.json(
+    filtered.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      cuisine: t.cuisine,
+      imageUrl: t.imageUrl,
+      latitude: t.currentLatitude,
+      longitude: t.currentLongitude,
+      accuracyMeters: t.currentLocationAccuracyMeters,
+      headingDegrees: t.currentHeadingDegrees,
+      speedMps: t.currentSpeedMps,
+      locationUpdatedAt: t.currentLocationUpdatedAt?.toISOString() ?? null,
+      liveStartedAt: t.liveStartedAt?.toISOString() ?? null,
+      liveUntil: t.liveUntil?.toISOString() ?? null,
+    })),
+  );
+});
+
 router.get("/trucks/:id", optionalAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  
+
   let truck: any;
   const numId = parseInt(rawId, 10);
   if (!isNaN(numId)) {
@@ -453,9 +519,32 @@ router.post("/trucks/:id/checkin", requireRole("vendor", "admin"), async (req, r
       liveStartedAt,
       liveUntil,
       liveOutsideSchedule,
-      ...(lat !== null && lng !== null ? { currentLatitude: lat, currentLongitude: lng } : {}),
+      ...(lat !== null && lng !== null
+        ? {
+            currentLatitude: lat,
+            currentLongitude: lng,
+            currentLocationUpdatedAt: liveStartedAt,
+            currentLocationAccuracyMeters: null,
+            currentHeadingDegrees: null,
+            currentSpeedMps: null,
+          }
+        : {}),
     })
     .where(eq(trucksTable.id, id));
+
+  if (lat !== null && lng !== null) {
+    await db.insert(truckLocationHistoryTable).values({
+      truckId: id,
+      liveStartedAt,
+      latitude: lat,
+      longitude: lng,
+      accuracyMeters: null,
+      headingDegrees: null,
+      speedMps: null,
+      source: "manual",
+      recordedAt: liveStartedAt,
+    });
+  }
 
   if (parsed.success && parsed.data.scheduleEntryId) {
     await db
@@ -472,7 +561,18 @@ router.post("/trucks/:id/checkout", requireRole("vendor", "admin"), async (req, 
   const id = parseInt(rawId, 10);
 
   await db.update(trucksTable)
-    .set({ isLive: false, currentLatitude: null, currentLongitude: null, liveUntil: null, liveStartedAt: null, liveOutsideSchedule: false })
+    .set({
+      isLive: false,
+      currentLatitude: null,
+      currentLongitude: null,
+      currentLocationUpdatedAt: null,
+      currentLocationAccuracyMeters: null,
+      currentHeadingDegrees: null,
+      currentSpeedMps: null,
+      liveUntil: null,
+      liveStartedAt: null,
+      liveOutsideSchedule: false,
+    })
     .where(eq(trucksTable.id, id));
   await db
     .update(scheduleEntriesTable)
@@ -481,5 +581,92 @@ router.post("/trucks/:id/checkout", requireRole("vendor", "admin"), async (req, 
 
   res.json({ message: "Truck checked out" });
 });
+
+// Continuous location stream from a live vendor
+router.post(
+  "/trucks/:id/heartbeat",
+  requireRole("vendor", "admin"),
+  async (req, res): Promise<void> => {
+    const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const id = parseInt(rawId, 10);
+    if (Number.isNaN(id)) {
+      res.status(400).json({ error: "Invalid truck id" });
+      return;
+    }
+
+    const parsed = HeartbeatBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const [truck] = await db.select().from(trucksTable).where(eq(trucksTable.id, id));
+    if (!truck) {
+      res.status(404).json({ error: "Truck not found" });
+      return;
+    }
+
+    const user = (req as any).user;
+    if (user.role !== "admin" && truck.vendorUserId !== user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const now = new Date();
+    const liveExpired = truck.liveUntil && new Date(truck.liveUntil) <= now;
+    if (!truck.isLive || liveExpired) {
+      res.status(409).json({ error: "No active live session", code: "NOT_LIVE" });
+      return;
+    }
+
+    const recordedAt = parsed.data.recordedAt ? new Date(parsed.data.recordedAt) : now;
+    // Reject future-dated or wildly stale points (>10m old)
+    if (recordedAt.getTime() > now.getTime() + 60_000 || now.getTime() - recordedAt.getTime() > 10 * 60_000) {
+      res.status(400).json({ error: "recordedAt out of acceptable range" });
+      return;
+    }
+
+    await db
+      .update(trucksTable)
+      .set({
+        currentLatitude: parsed.data.latitude,
+        currentLongitude: parsed.data.longitude,
+        currentLocationUpdatedAt: recordedAt,
+        currentLocationAccuracyMeters: parsed.data.accuracyMeters ?? null,
+        currentHeadingDegrees: parsed.data.headingDegrees ?? null,
+        currentSpeedMps: parsed.data.speedMps ?? null,
+      })
+      .where(eq(trucksTable.id, id));
+
+    await db.insert(truckLocationHistoryTable).values({
+      truckId: id,
+      liveStartedAt: truck.liveStartedAt,
+      latitude: parsed.data.latitude,
+      longitude: parsed.data.longitude,
+      accuracyMeters: parsed.data.accuracyMeters ?? null,
+      headingDegrees: parsed.data.headingDegrees ?? null,
+      speedMps: parsed.data.speedMps ?? null,
+      source: "gps",
+      recordedAt,
+    });
+
+    res.json({
+      ok: true,
+      liveUntil: truck.liveUntil?.toISOString() ?? null,
+      recordedAt: recordedAt.toISOString(),
+    });
+  },
+);
+
+// POS presence signal — wiring deferred; shape documented for Square/Clover/Toast
+router.post(
+  "/trucks/:id/pos-activity",
+  (_req, res): void => {
+    res.status(501).json({
+      error: "POS activity integration not yet enabled",
+      code: "NOT_IMPLEMENTED",
+    });
+  },
+);
 
 export default router;
